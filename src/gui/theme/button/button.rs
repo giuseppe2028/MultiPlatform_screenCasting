@@ -43,17 +43,18 @@ impl MyButton {
                 row![
                     icon(_icon).size(18),
                     horizontal_space(8),
-                    bold(self.text.clone()).size(16)
+                    bold(self.text.clone()).size(20)
                 ]
                 .align_items(iced::Alignment::Center),
             )
-            .padding([0, 24, 0, 19])
+            .padding([0, 49, 0, 44])
         } else {
-            button(row![bold(self.text.clone()).size(16)].align_items(iced::Alignment::Center))
-                .padding([0, 24, 0, 24])
+            button(row![bold(self.text.clone()).size(20)].align_items(iced::Alignment::Center))
+                .padding([0, 54, 0, 54])
         }
         .style(Box::new(self) as _)
-        .height(40)
+        .height(60)
+
     }
 }
 

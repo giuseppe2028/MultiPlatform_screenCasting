@@ -7,11 +7,13 @@ use crate::gui::component::home::Home;
 use crate::gui::component::home::Role;
 use crate::gui::theme::widget::Element;
 use crate::gui::component::{home, Component};
+use crate::gui::component::receiver_ip::Receiver_ip;
 
 pub struct App {
     current_page: Page,
     home: Home,
-    connection: Connection
+    connection: Connection,
+    receiver_ip: Receiver_ip
 }
 
 #[derive(Debug, Clone)]
@@ -40,7 +42,8 @@ impl Application for App {
             Self {
                 current_page: Page::Home,
                 home: Home{},
-                connection: Connection{ ip_address: "127.0.0.1".to_string()}
+                connection: Connection{ ip_address: "127.0.0.1".to_string()},
+                receiver_ip: Receiver_ip {}
             },
             Command::none(),
         )
@@ -89,7 +92,9 @@ impl Application for App {
             Page::Home => {
                 self.home.view()
             },
-            Page::Selection => todo!(),
+            Page::Selection => {
+                self.receiver_ip.view()
+            },
             Page::Connection => {
                 self.connection.view()
             },
