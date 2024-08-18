@@ -17,7 +17,7 @@ pub struct App {
 }
 
 #[derive(Debug, Clone)]
-enum Page {
+pub enum Page {
     Home,
     Selection,
     Connection,

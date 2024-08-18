@@ -6,7 +6,7 @@ pub fn get(file: String) -> String {
 pub mod font {
     pub const ICON: iced::Font = iced::Font::External {
         name: "Icons",
-        bytes: include_bytes!("../../resources/Material-Icons.ttf"),
+        bytes: include_bytes!("../../resources/home-icon.ttf"),
     };
 
     pub const BARLOW: iced::Font = iced::Font::External {

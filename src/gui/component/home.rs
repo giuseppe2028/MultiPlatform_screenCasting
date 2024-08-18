@@ -8,8 +8,10 @@ use crate::gui::app;
 use crate::gui::component::Component;
 use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;
+use crate::gui::theme::icon::Icon;
 use crate::gui::theme::text::bold;
 use crate::gui::theme::widget::Element;
+// use crate::gui::theme::widget::TextInput;
 
 pub struct Home {}
 
@@ -56,9 +58,11 @@ impl<'a> Component<'a> for Home {
                 row![bold("MAKE YOUR CHOICE").size(60)],
                 row![MyButton::new("CASTER")
                     .style(Style::Primary)
+                    .icon(Icon::CasterHome)
                     .build()
                     .on_press(Message::ChosenRole(Role::Caster).into()),
                     MyButton::new("RECEIVER")
+                    .icon(Icon::ReceiverHome)
                     .style(Style::Primary)
                     .build()
                     .on_press(Message::ChosenRole(Role::Receiver).into())].spacing(20)

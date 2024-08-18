@@ -8,6 +8,7 @@ pub mod container;
 pub mod icon;
 pub mod text;
 pub mod widget;
+pub mod textinput;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Default, Copy)]

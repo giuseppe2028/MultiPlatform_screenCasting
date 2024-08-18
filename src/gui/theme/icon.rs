@@ -2,6 +2,8 @@
 /// https://fonts.google.com/icons
 #[derive(Debug, Clone, Copy)]
 pub enum Icon {
+    CasterHome,
+    ReceiverHome,
     ContentCopy,
     PlayCircle,
     StopCircle,
@@ -15,6 +17,8 @@ pub enum Icon {
 impl From<&Icon> for char {
     fn from(icon: &Icon) -> Self {
         match icon {
+            Icon::CasterHome => '\u{F108}',
+            Icon::ReceiverHome => '\u{E800}',
             Icon::ContentCopy => '\u{e14d}',
             Icon::PlayCircle => '\u{e1c4}',
             Icon::StopCircle => '\u{ef71}',

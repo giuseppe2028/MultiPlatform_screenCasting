@@ -4,7 +4,8 @@ use iced::alignment::{Horizontal, Vertical};
 
 use crate::column_iced;
 use crate::gui::component::Component;
-use crate::gui::theme::text::bold;
+use crate::gui::theme::text::{bold, text};
+use crate::gui::theme::textinput::textinput;
 use crate::gui::theme::button::Style;
 
 use crate::gui::theme::button::MyButton;
@@ -37,12 +38,14 @@ impl<'a> Component<'a> for Connection {
     fn view(&self /*, props: Self::ViewProps*/) -> crate::gui::theme::widget::Element<'_, crate::gui::app::Message> {
         container(
             column_iced![
-                row![bold("IP ADDRESS").size(60)],
-                row![bold(self.ip_address.clone()).size(40)],
+                row![textinput("ciao", "")],
+                row![bold("Your IP address").size(50)].align_items(iced::Alignment::Center),
+                row![text(self.ip_address.clone()).size(30)].align_items(iced::Alignment::Center),
                 row![MyButton::new("CONNECT")
                     .style(Style::Primary)
-                    .build()]
-            ]
+                    .build()
+                    .on_press(Message::StartSharing.into())].align_items(iced::Alignment::Center)
+            ].align_items(iced::Alignment::Center).spacing(20)
         )
         .width(Fill)
         .height(Fill)
