@@ -32,7 +32,8 @@ pub enum Message {
     StartSharing/*(connection::Message)*/,
     RoleChosen(home::Message),
     ReceiverSharing(String),
-    Back(Page)
+    ReceiverInputIp(receiver_ip::Message),
+    Back(Page),
 }
 
 impl Application for App {
@@ -107,6 +108,10 @@ impl Application for App {
                         self.current_page = Page::Home;
                     },
                 }
+                Command::none()
+            },
+            Message::ReceiverInputIp(message) => {
+                self.receiver_ip.update(message);
                 Command::none()
             },
         }

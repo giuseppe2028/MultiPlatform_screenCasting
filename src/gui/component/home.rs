@@ -60,12 +60,12 @@ impl<'a> Component<'a> for Home {
                     .style(Style::Primary)
                     .icon(Icon::CasterHome)
                     .build()
-                    .on_press(Message::ChosenRole(Role::Caster).into()),
+                    .on_press(Self::Message::ChosenRole(Role::Caster).into()),
                     MyButton::new("RECEIVER")
                     .icon(Icon::ReceiverHome)
                     .style(Style::Primary)
                     .build()
-                    .on_press(Message::ChosenRole(Role::Receiver).into())].spacing(20)
+                    .on_press(Self::Message::ChosenRole(Role::Receiver).into())].spacing(20)
             ]
             .align_items(iced::Alignment::Center).spacing(20),
         )

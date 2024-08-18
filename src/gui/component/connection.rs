@@ -35,7 +35,7 @@ impl<'a> Component<'a> for Connection {
         }
     }
     
-    fn view(&self /*, props: Self::ViewProps*/) -> crate::gui::theme::widget::Element<'_, crate::gui::app::Message> {
+    fn view(&self /*, props: Self::ViewProps*/) -> crate::gui::theme::widget::Element<'_, app::Message> {
         container(
             column_iced![
                 row![bold("Your IP address").size(50)].align_items(iced::Alignment::Center),

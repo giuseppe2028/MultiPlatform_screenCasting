@@ -15,20 +15,20 @@ use crate::gui::theme::textinput::textinput;
 use crate::gui::theme::widget::Element;
 
 pub struct ReceiverIp {
-    pub(crate) indirizzo_ip: String,
+    pub indirizzo_ip: String,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     ChangeInput(String),
-    Pressed,
+    Pressed(String),
 }
 
 impl From<Message> for app::Message {
     fn from(message: Message) -> Self {
         match message {
-            Message::ChangeInput(input) => app::Message::ReceiverSharing(input),
-            Message::Pressed => app::Message::Back(app::Page::ReceiverIp),
+            Message::ChangeInput(input) => app::Message::ReceiverInputIp(Message::ChangeInput(input)),
+            Message::Pressed(ip) => app::Message::ReceiverSharing(ip)
         }
     }
 }
@@ -37,20 +37,21 @@ impl<'a> Component<'a> for ReceiverIp {
     type Message = Message;
 
     fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
+        println!("sium");
         match message {
             Message::ChangeInput(new_value) => {
+                println!("UPDATE");
                 self.indirizzo_ip = new_value;
                 Command::none()
             }
-            Message::Pressed => {
-                //connect to IndirizzoIp
-                app::Message::ReceiverSharing(self.indirizzo_ip.to_string());
+            Message::Pressed(ip) => {
                 Command::none()
-            }
+            },
         }
     }
 
     fn view(&self) -> Element<'_, app::Message> {
+        println!("VIEW");
 
         let back_button = container(row![MyButton::new("back")
             .style(Style::Danger)
@@ -69,11 +70,11 @@ impl<'a> Component<'a> for ReceiverIp {
                 row![bold("Insert IP address").size(60)],
                 row![textinput("192.168.1.1", self.indirizzo_ip.as_str())
                     .width(300)
-                    .on_input(|written_ip| receiver_ip::Message::ChangeInput(written_ip).into())],
+                    .on_input(|written_ip| {println!("ON INPUT"); receiver_ip::Message::ChangeInput(written_ip).into() })],
                 row![MyButton::new("Connect")
                     .style(Style::Primary)
                     .build()
-                    .on_press(Message::Pressed.into())]
+                    .on_press(Message::Pressed(self.indirizzo_ip.clone()).into())]
                 .spacing(20)
             ]
             .align_items(iced::Alignment::Center)
