@@ -23,6 +23,7 @@ pub enum Page {
     Home,
     Selection,
     Connection,
+    ReceiverIp,
 }
 
 #[derive(Debug, Clone)]
@@ -30,7 +31,8 @@ pub enum Message {
     Router(Page),
     StartSharing/*(connection::Message)*/,
     RoleChosen(home::Message),
-    ReceiverSharing(receiver_ip::Message)
+    ReceiverSharing(String),
+    Back(Page)
 }
 
 impl Application for App {
@@ -92,6 +94,21 @@ impl Application for App {
                 //aggiungere funzione backend
                 Command::none()
             },
+            Message::Back(page) => {
+                match page {
+                    Page::Home => {},
+                    Page::Selection => {
+                        self.current_page = Page::Home;
+                    },
+                    Page::Connection => {
+                        self.current_page = Page::Home;
+                    },
+                    Page::ReceiverIp => {
+                        self.current_page = Page::Home;
+                    },
+                }
+                Command::none()
+            },
         }
     }
 
@@ -105,6 +122,9 @@ impl Application for App {
             },
             Page::Connection => {
                 self.connection.view()
+            },
+            Page::ReceiverIp => {
+                self.receiver_ip.view()
             },
         }
     }

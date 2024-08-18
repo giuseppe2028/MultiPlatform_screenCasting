@@ -9,6 +9,7 @@ use crate::gui::component::receiver_ip;
 use crate::gui::component::Component;
 use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;
+use crate::gui::theme::icon::Icon;
 use crate::gui::theme::text::bold;
 use crate::gui::theme::textinput::textinput;
 use crate::gui::theme::widget::Element;
@@ -25,7 +26,10 @@ pub enum Message {
 
 impl From<Message> for app::Message {
     fn from(message: Message) -> Self {
-        app::Message::ReceiverSharing(message)
+        match message {
+            Message::ChangeInput(input) => app::Message::ReceiverSharing(input),
+            Message::Pressed => app::Message::Back(app::Page::ReceiverIp),
+        }
     }
 }
 
@@ -40,19 +44,32 @@ impl<'a> Component<'a> for ReceiverIp {
             }
             Message::Pressed => {
                 //connect to IndirizzoIp
+                app::Message::ReceiverSharing(self.indirizzo_ip.to_string());
                 Command::none()
             }
         }
     }
 
     fn view(&self) -> Element<'_, app::Message> {
-        //inserire esternamente al container il bottone per tornare indietro
-        //position fixed in alto a sinistra perOgni finestra
-        container(
+
+        let back_button = container(row![MyButton::new("back")
+            .style(Style::Danger)
+            .icon(Icon::BackUndo)
+            .build()
+            .on_press(app::Message::Back(app::Page::ReceiverIp))
+            .padding(20)])
+        .padding([6, 0, 0, 6])
+        .width(iced::Length::Shrink)
+        .height(iced::Length::Shrink)
+        .align_x(Horizontal::Left)
+        .align_y(Vertical::Top);
+
+        let main_content = container(
             column_iced![
                 row![bold("Insert IP address").size(60)],
                 row![textinput("192.168.1.1", self.indirizzo_ip.as_str())
-                    .on_input(|value| receiver_ip::Message::ChangeInput(value).into())],
+                    .width(300)
+                    .on_input(|written_ip| receiver_ip::Message::ChangeInput(written_ip).into())],
                 row![MyButton::new("Connect")
                     .style(Style::Primary)
                     .build()
@@ -62,6 +79,16 @@ impl<'a> Component<'a> for ReceiverIp {
             .align_items(iced::Alignment::Center)
             .spacing(20),
         )
+        .width(Fill)
+        .height(Fill)
+        .align_x(Horizontal::Center)
+        .align_y(Vertical::Center);
+
+        // Unire il pulsante "Back" con il contenuto principale in un layout a strati
+        container(column_iced![
+            back_button,  // Il pulsante back è al primo posto e separato dal resto
+            main_content  // Contenuto principale
+        ])
         .width(Fill)
         .height(Fill)
         .align_x(Horizontal::Center)

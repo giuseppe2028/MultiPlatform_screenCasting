@@ -3,6 +3,9 @@
 #[derive(Debug, Clone, Copy)]
 pub enum Icon {
     CasterHome,
+    BackUndo,
+    BackLeft,
+    BackOpen,
     ReceiverHome,
     ContentCopy,
     PlayCircle,
@@ -27,6 +30,9 @@ impl From<&Icon> for char {
             Icon::Close => '\u{e5cd}',
             Icon::Done => '\u{e876}',
             Icon::PersonRemove => '\u{ef66}',
+            Icon::BackUndo => '\u{E801}',
+            Icon::BackLeft => '\u{E802}',
+            Icon::BackOpen => '\u{E803}',
         }
     }
 }
