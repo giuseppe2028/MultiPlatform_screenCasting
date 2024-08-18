@@ -7,13 +7,15 @@ use crate::gui::component::home::Home;
 use crate::gui::component::home::Role;
 use crate::gui::theme::widget::Element;
 use crate::gui::component::{home, Component};
-use crate::gui::component::receiver_ip::Receiver_ip;
+use crate::gui::component::receiver_ip::ReceiverIp;
+
+use super::component::receiver_ip;
 
 pub struct App {
     current_page: Page,
     home: Home,
     connection: Connection,
-    receiver_ip: Receiver_ip
+    receiver_ip: ReceiverIp
 }
 
 #[derive(Debug, Clone)]
@@ -27,7 +29,8 @@ pub enum Page {
 pub enum Message {
     Router(Page),
     StartSharing/*(connection::Message)*/,
-    RoleChosen(home::Message)
+    RoleChosen(home::Message),
+    ReceiverSharing(receiver_ip::Message)
 }
 
 impl Application for App {
@@ -43,7 +46,7 @@ impl Application for App {
                 current_page: Page::Home,
                 home: Home{},
                 connection: Connection{ ip_address: "127.0.0.1".to_string()},
-                receiver_ip: Receiver_ip {}
+                receiver_ip: ReceiverIp { indirizzo_ip: "".to_string() }
             },
             Command::none(),
         )
@@ -81,6 +84,11 @@ impl Application for App {
             },
             Message::StartSharing => {
                 //self.current_page = Page::Sharing
+                //aggiungere funzione backend
+                Command::none()
+            },
+            Message::ReceiverSharing(_) => {
+                //self.current_page = Page::Connection
                 //aggiungere funzione backend
                 Command::none()
             },
