@@ -27,8 +27,10 @@ pub enum Message {
 impl From<Message> for app::Message {
     fn from(message: Message) -> Self {
         match message {
-            Message::ChangeInput(input) => app::Message::ReceiverInputIp(Message::ChangeInput(input)),
-            Message::Pressed(ip) => app::Message::ReceiverSharing(ip)
+            Message::ChangeInput(input) => {
+                app::Message::ReceiverInputIp(Message::ChangeInput(input))
+            }
+            Message::Pressed(ip) => app::Message::ReceiverSharing(ip),
         }
     }
 }
@@ -44,9 +46,7 @@ impl<'a> Component<'a> for ReceiverIp {
                 self.indirizzo_ip = new_value;
                 Command::none()
             }
-            Message::Pressed(ip) => {
-                Command::none()
-            },
+            Message::Pressed(ip) => Command::none(),
         }
     }
 
@@ -70,7 +70,10 @@ impl<'a> Component<'a> for ReceiverIp {
                 row![bold("Insert IP address").size(60)],
                 row![textinput("192.168.1.1", self.indirizzo_ip.as_str())
                     .width(300)
-                    .on_input(|written_ip| {println!("ON INPUT"); receiver_ip::Message::ChangeInput(written_ip).into() })],
+                    .on_input(|written_ip| {
+                        println!("ON INPUT");
+                        receiver_ip::Message::ChangeInput(written_ip).into()
+                    })],
                 row![MyButton::new("Connect")
                     .style(Style::Primary)
                     .build()

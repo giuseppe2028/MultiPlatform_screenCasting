@@ -1,5 +1,5 @@
-use iced::{Application, Settings};
 use crate::gui::app::App;
+use iced::{Application, Settings};
 
 mod gui;
 

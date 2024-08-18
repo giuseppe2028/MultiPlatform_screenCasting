@@ -1,13 +1,12 @@
-
 use iced::{executor, Application, Command};
 
 use crate::gui::component::connection::Connection;
-use crate::gui::theme::Theme;
 use crate::gui::component::home::Home;
 use crate::gui::component::home::Role;
-use crate::gui::theme::widget::Element;
-use crate::gui::component::{home, Component};
 use crate::gui::component::receiver_ip::ReceiverIp;
+use crate::gui::component::{home, Component};
+use crate::gui::theme::widget::Element;
+use crate::gui::theme::Theme;
 
 use super::component::receiver_ip;
 
@@ -15,7 +14,7 @@ pub struct App {
     current_page: Page,
     home: Home,
     connection: Connection,
-    receiver_ip: ReceiverIp
+    receiver_ip: ReceiverIp,
 }
 
 #[derive(Debug, Clone)]
@@ -29,7 +28,7 @@ pub enum Page {
 #[derive(Debug, Clone)]
 pub enum Message {
     Router(Page),
-    StartSharing/*(connection::Message)*/,
+    StartSharing, /*(connection::Message)*/
     RoleChosen(home::Message),
     ReceiverSharing(String),
     ReceiverInputIp(receiver_ip::Message),
@@ -47,9 +46,13 @@ impl Application for App {
         (
             Self {
                 current_page: Page::Home,
-                home: Home{},
-                connection: Connection{ ip_address: "127.0.0.1".to_string()},
-                receiver_ip: ReceiverIp { indirizzo_ip: "".to_string() }
+                home: Home {},
+                connection: Connection {
+                    ip_address: "127.0.0.1".to_string(),
+                },
+                receiver_ip: ReceiverIp {
+                    indirizzo_ip: "".to_string(),
+                },
             },
             Command::none(),
         )
@@ -68,69 +71,57 @@ impl Application for App {
             Message::Router(route) => {
                 self.current_page = route;
                 Command::none()
-            },
-            Message::RoleChosen(role) => {
-                match role {
-                    home::Message::ChosenRole(role) => {
-                        match role {
-                            Role::Caster => {
-                                self.current_page = Page::Connection;
-                                Command::none()
-                            },
-                            Role::Receiver => {
-                                self.current_page = Page::Selection;
-                                Command::none()
-                            }
-                        }
-                    },
-                }
+            }
+            Message::RoleChosen(role) => match role {
+                home::Message::ChosenRole(role) => match role {
+                    Role::Caster => {
+                        self.current_page = Page::Connection;
+                        Command::none()
+                    }
+                    Role::Receiver => {
+                        self.current_page = Page::Selection;
+                        Command::none()
+                    }
+                },
             },
             Message::StartSharing => {
                 //self.current_page = Page::Sharing
                 //aggiungere funzione backend
                 Command::none()
-            },
+            }
             Message::ReceiverSharing(_) => {
                 //self.current_page = Page::Connection
                 //aggiungere funzione backend
                 Command::none()
-            },
+            }
             Message::Back(page) => {
                 match page {
-                    Page::Home => {},
+                    Page::Home => {}
                     Page::Selection => {
                         self.current_page = Page::Home;
-                    },
+                    }
                     Page::Connection => {
                         self.current_page = Page::Home;
-                    },
+                    }
                     Page::ReceiverIp => {
                         self.current_page = Page::Home;
-                    },
+                    }
                 }
                 Command::none()
-            },
+            }
             Message::ReceiverInputIp(message) => {
                 self.receiver_ip.update(message);
                 Command::none()
-            },
+            }
         }
     }
 
     fn view(&self) -> Element<Message> {
         match self.current_page {
-            Page::Home => {
-                self.home.view()
-            },
-            Page::Selection => {
-                self.receiver_ip.view()
-            },
-            Page::Connection => {
-                self.connection.view()
-            },
-            Page::ReceiverIp => {
-                self.receiver_ip.view()
-            },
+            Page::Home => self.home.view(),
+            Page::Selection => self.receiver_ip.view(),
+            Page::Connection => self.connection.view(),
+            Page::ReceiverIp => self.receiver_ip.view(),
         }
     }
 }

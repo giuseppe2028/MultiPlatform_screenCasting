@@ -4,10 +4,10 @@ use iced::{Background, Color};
 use std::default::Default;
 
 use crate::gui::theme::button::Style::*;
+use crate::gui::theme::button::{Style, Themed};
+use crate::gui::theme::color::ColorExt;
 use crate::gui::theme::icon::Icon;
 use crate::gui::theme::text::{bold, icon};
-use crate::gui::theme::color::ColorExt;
-use crate::gui::theme::button::{Style, Themed};
 use crate::gui::theme::widget::Button;
 use crate::gui::theme::Theme;
 
@@ -54,7 +54,6 @@ impl MyButton {
         }
         .style(Box::new(self) as _)
         .height(60)
-
     }
 }
 

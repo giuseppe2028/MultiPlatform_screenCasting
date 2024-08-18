@@ -1,7 +1,7 @@
+use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{container, row};
 use iced::Command;
 use iced::Length::Fill;
-use iced::alignment::{Horizontal, Vertical};
 
 use crate::column_iced;
 use crate::gui::app;
@@ -37,16 +37,14 @@ impl<'a> Component<'a> for Home {
 
     fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
-            Message::ChosenRole(role) => {
-                match role {
-                    Role::Caster => {
-                        app::Message::RoleChosen(Message::ChosenRole(Role::Caster));
-                        Command::none()
-                    },
-                    Role::Receiver => {
-                        app::Message::RoleChosen(Message::ChosenRole(Role::Receiver));
-                        Command::none()
-                    },
+            Message::ChosenRole(role) => match role {
+                Role::Caster => {
+                    app::Message::RoleChosen(Message::ChosenRole(Role::Caster));
+                    Command::none()
+                }
+                Role::Receiver => {
+                    app::Message::RoleChosen(Message::ChosenRole(Role::Receiver));
+                    Command::none()
                 }
             },
         }
@@ -56,18 +54,22 @@ impl<'a> Component<'a> for Home {
         container(
             column_iced![
                 row![bold("MAKE YOUR CHOICE").size(60)],
-                row![MyButton::new("CASTER")
-                    .style(Style::Primary)
-                    .icon(Icon::CasterHome)
-                    .build()
-                    .on_press(Self::Message::ChosenRole(Role::Caster).into()),
+                row![
+                    MyButton::new("CASTER")
+                        .style(Style::Primary)
+                        .icon(Icon::CasterHome)
+                        .build()
+                        .on_press(Self::Message::ChosenRole(Role::Caster).into()),
                     MyButton::new("RECEIVER")
-                    .icon(Icon::ReceiverHome)
-                    .style(Style::Primary)
-                    .build()
-                    .on_press(Self::Message::ChosenRole(Role::Receiver).into())].spacing(20)
+                        .icon(Icon::ReceiverHome)
+                        .style(Style::Primary)
+                        .build()
+                        .on_press(Self::Message::ChosenRole(Role::Receiver).into())
+                ]
+                .spacing(20)
             ]
-            .align_items(iced::Alignment::Center).spacing(20),
+            .align_items(iced::Alignment::Center)
+            .spacing(20),
         )
         .width(Fill)
         .height(Fill)
