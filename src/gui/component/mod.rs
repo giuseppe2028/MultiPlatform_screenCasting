@@ -8,8 +8,9 @@ use crate::gui::theme::widget::Element;
 pub mod connection;
 pub mod home;
 pub mod receiver_ip;
-pub mod receiver_streamimg;
+pub mod receiver_streaming;
 pub mod caster_settings;
+pub mod caster_streaming;
 
 pub trait Component<'a> {
     type Message: Into<app::Message> + Clone + Debug;

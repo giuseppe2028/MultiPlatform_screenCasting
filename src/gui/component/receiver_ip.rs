@@ -6,7 +6,7 @@ use iced::Length::Fill;
 use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::receiver_ip;
-use crate::gui::component::receiver_streamimg::ReceiverStreaming;
+use crate::gui::component::receiver_streaming::ReceiverStreaming;
 use crate::gui::component::Component;
 use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;

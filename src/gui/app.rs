@@ -1,17 +1,18 @@
 use iced::{executor, Application, Command};
 
+use crate::gui::component::caster_settings;
+use crate::gui::component::caster_settings::CasterSettings;
+use crate::gui::component::caster_streaming::CasterStreaming;
 use crate::gui::component::connection::Connection;
 use crate::gui::component::home::Home;
 use crate::gui::component::home::Role;
+use crate::gui::component::receiver_ip;
 use crate::gui::component::receiver_ip::ReceiverIp;
+use crate::gui::component::receiver_streaming;
+use crate::gui::component::receiver_streaming::ReceiverStreaming;
 use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
-use crate::gui::component::caster_settings::CasterSettings;
-use crate::gui::component::caster_settings;
-use crate::gui::component::receiver_ip;
-use crate::gui::component::receiver_streamimg::ReceiverStreaming;
-
 
 pub struct App {
     current_page: Page,
@@ -20,6 +21,7 @@ pub struct App {
     receiver_ip: ReceiverIp,
     caster_settings: CasterSettings,
     receiver_streamimg: ReceiverStreaming,
+    caster_streaming: CasterStreaming,
 }
 
 #[derive(Debug, Clone)]
@@ -30,6 +32,7 @@ pub enum Page {
     ReceiverIp,
     CasterSettings,
     ReceiverStreaming,
+    CasterStreaming,
 }
 
 #[derive(Debug, Clone)]
@@ -41,6 +44,7 @@ pub enum Message {
     ReceiverInputIp(receiver_ip::Message),
     SetSettingsCaster(caster_settings::Message),
     Back(Page),
+    StartRecording(receiver_streaming::Message),
 }
 
 impl Application for App {
@@ -61,8 +65,9 @@ impl Application for App {
                 receiver_ip: ReceiverIp {
                     indirizzo_ip: "".to_string(),
                 },
-                receiver_streamimg: ReceiverStreaming {},
-                caster_settings: CasterSettings {}
+                receiver_streamimg: ReceiverStreaming { recording: false },
+                caster_settings: CasterSettings {},
+                caster_streaming: CasterStreaming {},
             },
             Command::none(),
         )
@@ -95,7 +100,7 @@ impl Application for App {
                 },
             },
             Message::StartSharing => {
-                //self.current_page = Page::Sharing
+                self.current_page = Page::CasterStreaming;
                 //aggiungere funzione backend
                 Command::none()
             }
@@ -118,10 +123,13 @@ impl Application for App {
                     }
                     Page::ReceiverStreaming => {
                         self.current_page = Page::Home;
-                    },
-                    Page::CasterSettings =>{ 
+                    }
+                    Page::CasterSettings => {
                         self.current_page = Page::Home;
-                    },
+                    }
+                    Page::CasterStreaming => {
+                        self.current_page = Page::Home;
+                    }
                 }
                 Command::none()
             }
@@ -131,7 +139,12 @@ impl Application for App {
             }
             Message::SetSettingsCaster(_) => {
                 todo!();
-            },
+            }
+            Message::StartRecording(message) => {
+                //funzioni backend
+                let _ = self.receiver_streamimg.update(message);
+                Command::none()
+            }
         }
     }
 
@@ -143,6 +156,7 @@ impl Application for App {
             Page::ReceiverIp => self.receiver_ip.view(),
             Page::ReceiverStreaming => self.receiver_streamimg.view(),
             Page::CasterSettings => self.caster_settings.view(),
+            Page::CasterStreaming => self.caster_streaming.view(),
         }
     }
 }
