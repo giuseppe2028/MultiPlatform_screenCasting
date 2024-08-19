@@ -7,14 +7,17 @@ use crate::gui::component::receiver_ip::ReceiverIp;
 use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
+use iced::window::icon;
 
 use super::component::receiver_ip;
+use super::component::receiver_streamimg::ReceiverStreaming;
 
 pub struct App {
     current_page: Page,
     home: Home,
     connection: Connection,
     receiver_ip: ReceiverIp,
+    receiver_streamimg: ReceiverStreaming,
 }
 
 #[derive(Debug, Clone)]
@@ -23,6 +26,7 @@ pub enum Page {
     Selection,
     Connection,
     ReceiverIp,
+    ReceiverStreaming,
 }
 
 #[derive(Debug, Clone)]
@@ -53,6 +57,7 @@ impl Application for App {
                 receiver_ip: ReceiverIp {
                     indirizzo_ip: "".to_string(),
                 },
+                receiver_streamimg: ReceiverStreaming {},
             },
             Command::none(),
         )
@@ -90,7 +95,7 @@ impl Application for App {
                 Command::none()
             }
             Message::ReceiverSharing(_) => {
-                //self.current_page = Page::Connection
+                self.current_page = Page::ReceiverStreaming;
                 //aggiungere funzione backend
                 Command::none()
             }
@@ -106,11 +111,14 @@ impl Application for App {
                     Page::ReceiverIp => {
                         self.current_page = Page::Home;
                     }
+                    Page::ReceiverStreaming => {
+                        self.current_page = Page::Home;
+                    },
                 }
                 Command::none()
             }
             Message::ReceiverInputIp(message) => {
-                self.receiver_ip.update(message);
+                let _ = self.receiver_ip.update(message);
                 Command::none()
             }
         }
@@ -122,6 +130,7 @@ impl Application for App {
             Page::Selection => self.receiver_ip.view(),
             Page::Connection => self.connection.view(),
             Page::ReceiverIp => self.receiver_ip.view(),
+            Page::ReceiverStreaming => self.receiver_streamimg.view(),
         }
     }
 }

@@ -6,6 +6,7 @@ use iced::Length::Fill;
 use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::receiver_ip;
+use crate::gui::component::receiver_streamimg::ReceiverStreaming;
 use crate::gui::component::Component;
 use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;
@@ -39,10 +40,8 @@ impl<'a> Component<'a> for ReceiverIp {
     type Message = Message;
 
     fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
-        println!("sium");
         match message {
             Message::ChangeInput(new_value) => {
-                println!("UPDATE");
                 self.indirizzo_ip = new_value;
                 Command::none()
             }
@@ -51,8 +50,6 @@ impl<'a> Component<'a> for ReceiverIp {
     }
 
     fn view(&self) -> Element<'_, app::Message> {
-        println!("VIEW");
-
         let back_button = container(row![MyButton::new("back")
             .style(Style::Danger)
             .icon(Icon::BackUndo)
@@ -71,7 +68,6 @@ impl<'a> Component<'a> for ReceiverIp {
                 row![textinput("192.168.1.1", self.indirizzo_ip.as_str())
                     .width(300)
                     .on_input(|written_ip| {
-                        println!("ON INPUT");
                         receiver_ip::Message::ChangeInput(written_ip).into()
                     })],
                 row![MyButton::new("Connect")
