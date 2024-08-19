@@ -59,6 +59,10 @@ pub struct Palette {
     pub shadow: Color,
     pub surface_tint: Color,
     pub scrim: Color,
+    pub button_color_primary: Color,
+    pub button_color_danger: Color,
+    pub button_color_default: Color
+
 }
 
 impl Palette {
@@ -103,6 +107,10 @@ impl Palette {
             shadow: Color::from_hex("000000"),
             surface_tint: Color::from_hex("6750A4"),
             scrim: Color::from_hex("000000"),
+            //ours
+            button_color_primary: Color::from_rgb(0.87, 0.76, 0.91),
+            button_color_danger: Color::from_rgb(255.0, 0.0, 0.0),
+            button_color_default: Color::from_rgb(0.83, 0.83, 0.83),
         }
     }
 
@@ -147,6 +155,9 @@ impl Palette {
             shadow: Color::from_hex("000000"),
             surface_tint: Color::from_hex("D0BCFF"),
             scrim: Color::from_hex("000000"),
+            button_color_primary: Color::from_rgb(0.73, 0.56, 0.76),
+            button_color_danger: Color::from_rgb(255.0, 0.0, 0.0),
+            button_color_default: Color::from_rgb(0.53, 0.53, 0.53),
         }
     }
 

@@ -5,6 +5,7 @@ pub use button::MyButton;
 use crate::gui::theme::Theme;
 
 mod button;
+pub mod circle_button;
 
 #[allow(dead_code)]
 #[derive(Default)]

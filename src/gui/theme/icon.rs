@@ -2,6 +2,9 @@
 /// https://fonts.google.com/icons
 #[derive(Debug, Clone, Copy)]
 pub enum Icon {
+    StartRecord,
+    StopRecord,
+    Cancel,
     CasterHome,
     BackUndo,
     BackLeft,
@@ -20,8 +23,6 @@ pub enum Icon {
 impl From<&Icon> for char {
     fn from(icon: &Icon) -> Self {
         match icon {
-            Icon::CasterHome => '\u{F108}',
-            Icon::ReceiverHome => '\u{E800}',
             Icon::ContentCopy => '\u{e14d}',
             Icon::PlayCircle => '\u{e1c4}',
             Icon::StopCircle => '\u{ef71}',
@@ -30,9 +31,14 @@ impl From<&Icon> for char {
             Icon::Close => '\u{e5cd}',
             Icon::Done => '\u{e876}',
             Icon::PersonRemove => '\u{ef66}',
+            Icon::CasterHome => '\u{F108}',
+            Icon::ReceiverHome => '\u{E800}',
             Icon::BackUndo => '\u{E801}',
             Icon::BackLeft => '\u{E802}',
             Icon::BackOpen => '\u{E803}',
+            Icon::StartRecord => '\u{E804}',
+            Icon::StopRecord => '\u{F28E}',
+            Icon::Cancel => '\u{E805}',
         }
     }
 }
