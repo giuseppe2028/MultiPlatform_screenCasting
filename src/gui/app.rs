@@ -7,16 +7,18 @@ use crate::gui::component::receiver_ip::ReceiverIp;
 use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
-use iced::window::icon;
+use crate::gui::component::caster_settings::CasterSettings;
+use crate::gui::component::caster_settings;
+use crate::gui::component::receiver_ip;
+use crate::gui::component::receiver_streamimg::ReceiverStreaming;
 
-use super::component::receiver_ip;
-use super::component::receiver_streamimg::ReceiverStreaming;
 
 pub struct App {
     current_page: Page,
     home: Home,
     connection: Connection,
     receiver_ip: ReceiverIp,
+    caster_settings: CasterSettings,
     receiver_streamimg: ReceiverStreaming,
 }
 
@@ -26,6 +28,7 @@ pub enum Page {
     Selection,
     Connection,
     ReceiverIp,
+    CasterSettings,
     ReceiverStreaming,
 }
 
@@ -36,6 +39,7 @@ pub enum Message {
     RoleChosen(home::Message),
     ReceiverSharing(String),
     ReceiverInputIp(receiver_ip::Message),
+    SetSettingsCaster(caster_settings::Message),
     Back(Page),
 }
 
@@ -58,6 +62,7 @@ impl Application for App {
                     indirizzo_ip: "".to_string(),
                 },
                 receiver_streamimg: ReceiverStreaming {},
+                caster_settings: CasterSettings {}
             },
             Command::none(),
         )
@@ -106,12 +111,15 @@ impl Application for App {
                         self.current_page = Page::Home;
                     }
                     Page::Connection => {
-                        self.current_page = Page::Home;
+                        self.current_page = Page::CasterSettings;
                     }
                     Page::ReceiverIp => {
                         self.current_page = Page::Home;
                     }
                     Page::ReceiverStreaming => {
+                        self.current_page = Page::Home;
+                    },
+                    Page::CasterSettings =>{ 
                         self.current_page = Page::Home;
                     },
                 }
@@ -121,6 +129,9 @@ impl Application for App {
                 let _ = self.receiver_ip.update(message);
                 Command::none()
             }
+            Message::SetSettingsCaster(_) => {
+                todo!();
+            },
         }
     }
 
@@ -131,6 +142,7 @@ impl Application for App {
             Page::Connection => self.connection.view(),
             Page::ReceiverIp => self.receiver_ip.view(),
             Page::ReceiverStreaming => self.receiver_streamimg.view(),
+            Page::CasterSettings => self.caster_settings.view(),
         }
     }
 }

@@ -35,7 +35,7 @@ impl<'a> Component<'a> for ReceiverStreaming {
 
     fn view(&self) -> Element<'_, app::Message> {
         let image = Element::from(
-            image(format!("../../resources/icons/512x512@2x.png"))
+            image(format!("./resources/icons/512x512.png"))
                 .width(iced::Length::Fill)
                 .height(iced::Length::Fill),
         )
@@ -45,10 +45,10 @@ impl<'a> Component<'a> for ReceiverStreaming {
             MyButton::new("exit")
                 .style(Style::Danger)
                 .icon(crate::gui::theme::icon::Icon::BackUndo)
-                .build(),
-            MyButton::new("record").style(Style::Default).build()
-        ];
-        let screen = column_iced![row![image].spacing(20)];
-        container(column_iced![screen, buttons]).into()
+                .build().on_press(app::Message::Back(app::Page::ReceiverStreaming)),
+            MyButton::new("record").style(Style::Primary).build()
+        ].padding(8);
+        //let screen = column_iced![row![image].spacing(20)];
+        container(column_iced![image, buttons].spacing(8).align_items(iced::Alignment::Center)).into()
     }
 }

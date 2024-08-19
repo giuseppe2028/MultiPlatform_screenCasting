@@ -9,6 +9,7 @@ pub mod connection;
 pub mod home;
 pub mod receiver_ip;
 pub mod receiver_streamimg;
+pub mod caster_settings;
 
 pub trait Component<'a> {
     type Message: Into<app::Message> + Clone + Debug;
