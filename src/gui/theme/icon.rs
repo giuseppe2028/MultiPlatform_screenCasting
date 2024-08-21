@@ -43,7 +43,7 @@ impl From<&Icon> for char {
             Icon::Square => '\u{F600}',
             Icon::Arrow => '\u{F178}',
             Icon::Tools => '\u{E80B}',
-            Icon::Blanking => '\u{F12B}',
+            Icon::Blanking => '\u{F21B}',
             Icon::Phone => '\u{E80A}',
             Icon::Text => '\u{E80C}',
         }

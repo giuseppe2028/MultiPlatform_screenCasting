@@ -8,7 +8,6 @@ pub mod container;
 pub mod icon;
 pub mod text;
 pub mod textinput;
-pub mod toggle_annotation;
 pub mod widget;
 
 #[allow(dead_code)]

@@ -9,11 +9,10 @@ use iced::Length::{self, Fill};
 use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::Component;
+use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::text::bold;
-use crate::gui::theme::toggle_annotation::toggler;
-use crate::gui::theme::toggle_annotation::Style as ToggleStyle;
 use crate::gui::theme::widget::Element;
 
 pub struct CasterStreaming {
@@ -51,53 +50,87 @@ impl<'a> Component<'a> for CasterStreaming {
         )
         .explain(Color::WHITE);
 
-        let buttons = column_iced![
-            MyButton::new("exit")
-                .style(Style::Danger)
-                .icon(crate::gui::theme::icon::Icon::BackUndo)
-                .build()
+        let annotation_buttons = column_iced![
+            CircleButton::new("")
+                .style(Style::Primary)
+                .icon(crate::gui::theme::icon::Icon::Pencil)
+                .build(30)
                 .padding(8)
                 .on_press(app::Message::Back(app::Page::CasterStreaming)),
-            MyButton::new("record")
+            CircleButton::new("")
                 .style(Style::Primary)
-                .build()
+                .icon(crate::gui::theme::icon::Icon::Rubber)
+                .build(30)
                 .padding(8)
+                .on_press(app::Message::Back(app::Page::CasterStreaming)),
+            CircleButton::new("")
+                .style(Style::Primary)
+                .icon(crate::gui::theme::icon::Icon::Triangle)
+                .build(50)
+                .padding(8)
+                .on_press(app::Message::Back(app::Page::CasterStreaming)),
+            CircleButton::new("")
+                .style(Style::Primary)
+                .icon(crate::gui::theme::icon::Icon::Square)
+                .build(30)
+                .padding(8)
+                .on_press(app::Message::Back(app::Page::CasterStreaming)),
+            CircleButton::new("")
+                .style(Style::Primary)
+                .icon(crate::gui::theme::icon::Icon::Arrow)
+                .build(35)
+                .padding(8)
+                .on_press(app::Message::Back(app::Page::CasterStreaming)),
+            CircleButton::new("")
+                .style(Style::Primary)
+                .icon(crate::gui::theme::icon::Icon::Text)
+                .build(25)
+                .padding(8)
+                .on_press(app::Message::Back(app::Page::CasterStreaming)),
         ]
         .padding(8)
         .spacing(10);
-        let tools = container(
-            row![toggler(
-                "tools".to_string(),
-                self.toggler,
-                |msg| { app::Message::TogglerChanged(Message::TogglerChanged(msg)) }
-            )]
-            .spacing(8)
-            .align_items(iced::Alignment::Start)
-            .width(150),
-        ).align_x(Horizontal::Left);
-        let buttons1 = row![
-            MyButton::new("exit")
-                .style(Style::Danger)
-                .icon(crate::gui::theme::icon::Icon::BackUndo)
-                .build()
+
+        let menu = row![
+            CircleButton::new("tools")
+                .style(Style::Primary)
+                .icon(crate::gui::theme::icon::Icon::Tools)
+                .build(30)
+                .padding(8)
+                .on_press(app::Message::TogglerChanged(Message::TogglerChanged(
+                    !self.toggler
+                ))),
+            CircleButton::new("play/pause")
+                .style(Style::Primary)
+                .icon(crate::gui::theme::icon::Icon::Pause)
+                .build(30)
                 .padding(8)
                 .on_press(app::Message::Back(app::Page::CasterStreaming)),
-            MyButton::new("record")
+            CircleButton::new("blank")
                 .style(Style::Primary)
-                .build()
+                .icon(crate::gui::theme::icon::Icon::Blanking)
+                .build(35)
                 .padding(8)
-        ].align_items(iced::Alignment::Center)
+                .on_press(app::Message::Back(app::Page::CasterStreaming)),
+            CircleButton::new("exit")
+                .style(Style::Danger)
+                .icon(crate::gui::theme::icon::Icon::Phone)
+                .build(30)
+                .padding(8)
+                .on_press(app::Message::Back(app::Page::CasterStreaming)),
+        ]
+        .align_items(iced::Alignment::Center)
         .padding(8)
         .spacing(10);
 
-        let sidebar = column_iced![buttons]
+        let sidebar = column_iced![annotation_buttons]
             .spacing(8)
             .align_items(iced::Alignment::Center);
 
         let streaming = container(
-            column_iced![image, row![tools, buttons1]]
+            column_iced![image, menu]
                 .spacing(8)
-                //.align_items(iced::Alignment::Center),
+                .align_items(iced::Alignment::Center),
         );
 
         if self.toggler {
