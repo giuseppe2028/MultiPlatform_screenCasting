@@ -10,27 +10,22 @@ pub enum Icon {
     BackLeft,
     BackOpen,
     ReceiverHome,
-    ContentCopy,
-    PlayCircle,
-    StopCircle,
-    Link,
-    Group,
-    Close,
-    Done,
-    PersonRemove,
+    Play,
+    Pause,
+    Pencil,
+    Rubber,
+    Triangle,
+    Square,
+    Arrow,
+    Tools,
+    Blanking,
+    Phone,
+
 }
 
 impl From<&Icon> for char {
     fn from(icon: &Icon) -> Self {
         match icon {
-            Icon::ContentCopy => '\u{e14d}',
-            Icon::PlayCircle => '\u{e1c4}',
-            Icon::StopCircle => '\u{ef71}',
-            Icon::Link => '\u{e157}',
-            Icon::Group => '\u{e7ef}',
-            Icon::Close => '\u{e5cd}',
-            Icon::Done => '\u{e876}',
-            Icon::PersonRemove => '\u{ef66}',
             Icon::CasterHome => '\u{F108}',
             Icon::ReceiverHome => '\u{E800}',
             Icon::BackUndo => '\u{E801}',
@@ -39,6 +34,16 @@ impl From<&Icon> for char {
             Icon::StartRecord => '\u{E804}',
             Icon::StopRecord => '\u{F28E}',
             Icon::Cancel => '\u{E805}',
+            Icon::Play => '\u{E806}',
+            Icon::Pause => '\u{E807}',
+            Icon::Pencil => '\u{E808}',
+            Icon::Rubber => '\u{F12D}',
+            Icon::Triangle => '\u{E809}',
+            Icon::Square => '\u{F600}',
+            Icon::Arrow => '\u{F178}',
+            Icon::Tools => '\u{E80B}',
+            Icon::Blanking => '\u{F12B}',
+            Icon::Phone => '\u{E80A}',
         }
     }
 }

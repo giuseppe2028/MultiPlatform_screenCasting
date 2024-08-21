@@ -6,8 +6,8 @@ use iced::Length::Fill;
 use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::receiver_ip;
-use crate::gui::component::receiver_streaming::ReceiverStreaming;
 use crate::gui::component::Component;
+use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
@@ -50,15 +50,12 @@ impl<'a> Component<'a> for ReceiverIp {
     }
 
     fn view(&self) -> Element<'_, app::Message> {
-        let back_button = container(row![MyButton::new("back")
+        let back_button = container(row![CircleButton::new("")
             .style(Style::Danger)
-            .icon(Icon::BackUndo)
-            .build()
-            .on_press(app::Message::Back(app::Page::ReceiverIp))
-            .padding(20)])
+            .icon(Icon::BackLeft)
+            .build(20)
+            .on_press(app::Message::Back(app::Page::ReceiverIp))])
         .padding([6, 0, 0, 6])
-        .width(iced::Length::Shrink)
-        .height(iced::Length::Shrink)
         .align_x(Horizontal::Left)
         .align_y(Vertical::Top);
 
@@ -67,6 +64,7 @@ impl<'a> Component<'a> for ReceiverIp {
                 row![bold("Insert IP address").size(60)],
                 row![textinput("192.168.1.1", self.indirizzo_ip.as_str())
                     .width(300)
+                    .size(27)
                     .on_input(|written_ip| {
                         receiver_ip::Message::ChangeInput(written_ip).into()
                     })],

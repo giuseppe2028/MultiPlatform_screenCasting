@@ -7,7 +7,7 @@ use crate::gui::component::Component;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
 use crate::gui::theme::text::{bold, text};
-use crate::gui::theme::textinput::textinput;
+use crate::gui::theme::button::circle_button::CircleButton;
 
 use crate::gui::app;
 use crate::gui::theme::button::MyButton;
@@ -37,15 +37,12 @@ impl<'a> Component<'a> for Connection {
     }
 
     fn view(&self) -> crate::gui::theme::widget::Element<'_, app::Message> {
-        let back_button = container(row![MyButton::new("back")
+        let back_button = container(row![CircleButton::new("")
             .style(Style::Danger)
-            .icon(Icon::BackUndo)
-            .build()
-            .on_press(app::Message::Back(app::Page::ReceiverIp))
-            .padding(20)])
+            .icon(Icon::BackLeft)
+            .build(20)
+            .on_press(app::Message::Back(app::Page::ReceiverIp))])
         .padding([6, 0, 0, 6])
-        .width(iced::Length::Shrink)
-        .height(iced::Length::Shrink)
         .align_x(Horizontal::Left)
         .align_y(Vertical::Top);
 

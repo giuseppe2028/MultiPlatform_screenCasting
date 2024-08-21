@@ -4,6 +4,8 @@ use iced::Command;
 
 use crate::gui::component::Component;
 use crate::gui::app;
+use crate::gui::theme::button::circle_button::CircleButton;
+
 
 
 pub struct CasterSettings {
