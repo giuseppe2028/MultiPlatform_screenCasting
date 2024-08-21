@@ -8,6 +8,7 @@ pub mod container;
 pub mod icon;
 pub mod text;
 pub mod textinput;
+pub mod toggle_annotation;
 pub mod widget;
 
 #[allow(dead_code)]
@@ -61,8 +62,7 @@ pub struct Palette {
     pub scrim: Color,
     pub button_color_primary: Color,
     pub button_color_danger: Color,
-    pub button_color_default: Color
-
+    pub button_color_default: Color,
 }
 
 impl Palette {

@@ -1,3 +1,6 @@
+use std::default;
+
+use iced::theme::palette::Primary;
 use iced::widget::{container, image, row};
 use iced::Color;
 use iced::Length::{self, Fill};
@@ -8,20 +11,22 @@ use crate::gui::component::Component;
 use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::text::bold;
+use crate::gui::theme::toggle_annotation::toggler;
+use crate::gui::theme::toggle_annotation::Style as ToggleStyle;
 use crate::gui::theme::widget::Element;
 
 pub struct CasterStreaming {
-    // todo!()
+    pub toggler: bool,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    // todo!()
+    TogglerChanged(bool),
 }
 
 impl From<Message> for app::Message {
     fn from(message: Message) -> Self {
-        todo!()
+        app::Message::TogglerChanged(message)
     }
 }
 
@@ -29,7 +34,11 @@ impl<'a> Component<'a> for CasterStreaming {
     type Message = Message;
 
     fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
-        todo!();
+        match message {
+            Message::TogglerChanged(new_status) => {
+                self.toggler = new_status;
+            }
+        }
         iced::Command::none()
     }
 
@@ -53,8 +62,19 @@ impl<'a> Component<'a> for CasterStreaming {
                 .build()
                 .padding(8)
         ]
-        .padding(8).spacing(10);
+        .padding(8)
+        .spacing(10);
         let buttons1 = row![
+            container(
+                row![toggler(
+                    "annotation tools".to_string(),
+                    self.toggler,
+                    |msg| { app::Message::TogglerChanged(Message::TogglerChanged(msg)) }
+                )]
+                .spacing(8)
+                .align_items(iced::Alignment::Start)
+                .width(150)
+            ),
             MyButton::new("exit")
                 .style(Style::Danger)
                 .icon(crate::gui::theme::icon::Icon::BackUndo)
@@ -79,11 +99,20 @@ impl<'a> Component<'a> for CasterStreaming {
                 .align_items(iced::Alignment::Center),
         );
 
-        container(
-            column_iced![row![sidebar, streaming]]
-                .spacing(8)
-                .align_items(iced::Alignment::Center),
-        )
-        .into()
+        if self.toggler {
+            container(
+                column_iced![row![sidebar, streaming]]
+                    .spacing(8)
+                    .align_items(iced::Alignment::Center),
+            )
+            .into()
+        } else {
+            container(
+                column_iced![row![streaming]]
+                    .spacing(8)
+                    .align_items(iced::Alignment::Center),
+            )
+            .into()
+        }
     }
 }

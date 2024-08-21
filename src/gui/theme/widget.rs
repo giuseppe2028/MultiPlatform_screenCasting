@@ -16,5 +16,6 @@ pub type Scrollable<'a, Message> = iced::widget::Scrollable<'a, Message, Rendere
 pub type Svg = iced::widget::Svg<Renderer>;
 
 pub type TextInput<'a> = iced::widget::text_input::TextInput<'a, Message, Renderer>;
+pub type Toggler<'a> = iced::widget::toggler::Toggler<'a, Message, Renderer>;
 
 pub type Tabs<'a, Message> = iced_aw::native::Tabs<'a, Message, Renderer>;

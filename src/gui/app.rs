@@ -14,6 +14,8 @@ use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
 
+use super::component::caster_streaming;
+
 pub struct App {
     current_page: Page,
     home: Home,
@@ -45,6 +47,7 @@ pub enum Message {
     SetSettingsCaster(caster_settings::Message),
     Back(Page),
     StartRecording(receiver_streaming::Message),
+    TogglerChanged(caster_streaming::Message),
 }
 
 impl Application for App {
@@ -67,7 +70,7 @@ impl Application for App {
                 },
                 receiver_streamimg: ReceiverStreaming { recording: false },
                 caster_settings: CasterSettings {},
-                caster_streaming: CasterStreaming {},
+                caster_streaming: CasterStreaming { toggler: false },
             },
             Command::none(),
         )
@@ -145,6 +148,10 @@ impl Application for App {
                 let _ = self.receiver_streamimg.update(message);
                 Command::none()
             }
+            Message::TogglerChanged(message) => {
+                let _ = self.caster_streaming.update(message);
+                Command::none()
+            },
         }
     }
 

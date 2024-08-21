@@ -3,7 +3,7 @@ use iced::{Background, Color};
 
 use crate::gui::resource;
 use crate::gui::theme::widget::TextInput;
-use crate::gui::theme::{PaletteColor, Theme};
+use crate::gui::theme::Theme;
 
 #[allow(dead_code)]
 #[derive(Default)]
