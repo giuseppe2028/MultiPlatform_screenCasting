@@ -1,10 +1,10 @@
 use iced::widget::toggler::{Appearance, StyleSheet};
 use crate::gui::theme::widget::Toggler;
-use iced::{Background, Color};
+use iced::Color;
 
 use crate::gui::app::Message;
 use crate::gui::resource;
-use crate::gui::theme::{PaletteColor, Theme};
+use crate::gui::theme::Theme;
 
 #[allow(dead_code)]
 #[derive(Default)]

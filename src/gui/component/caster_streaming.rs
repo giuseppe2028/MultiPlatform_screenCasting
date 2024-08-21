@@ -1,7 +1,8 @@
 use std::default;
 
+use iced::alignment::Horizontal;
 use iced::theme::palette::Primary;
-use iced::widget::{container, image, row};
+use iced::widget::{container, image, row, tooltip};
 use iced::Color;
 use iced::Length::{self, Fill};
 
@@ -64,17 +65,17 @@ impl<'a> Component<'a> for CasterStreaming {
         ]
         .padding(8)
         .spacing(10);
+        let tools = container(
+            row![toggler(
+                "tools".to_string(),
+                self.toggler,
+                |msg| { app::Message::TogglerChanged(Message::TogglerChanged(msg)) }
+            )]
+            .spacing(8)
+            .align_items(iced::Alignment::Start)
+            .width(150),
+        ).align_x(Horizontal::Left);
         let buttons1 = row![
-            container(
-                row![toggler(
-                    "annotation tools".to_string(),
-                    self.toggler,
-                    |msg| { app::Message::TogglerChanged(Message::TogglerChanged(msg)) }
-                )]
-                .spacing(8)
-                .align_items(iced::Alignment::Start)
-                .width(150)
-            ),
             MyButton::new("exit")
                 .style(Style::Danger)
                 .icon(crate::gui::theme::icon::Icon::BackUndo)
@@ -85,7 +86,7 @@ impl<'a> Component<'a> for CasterStreaming {
                 .style(Style::Primary)
                 .build()
                 .padding(8)
-        ]
+        ].align_items(iced::Alignment::Center)
         .padding(8)
         .spacing(10);
 
@@ -94,9 +95,9 @@ impl<'a> Component<'a> for CasterStreaming {
             .align_items(iced::Alignment::Center);
 
         let streaming = container(
-            column_iced![image, buttons1]
+            column_iced![image, row![tools, buttons1]]
                 .spacing(8)
-                .align_items(iced::Alignment::Center),
+                //.align_items(iced::Alignment::Center),
         );
 
         if self.toggler {
