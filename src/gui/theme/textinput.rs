@@ -17,7 +17,7 @@ pub enum Style {
 impl StyleSheet for Theme {
     type Style = Style;
 
-    fn active(&self, style: &Self::Style) -> Appearance {
+    fn active(&self, _style: &Self::Style) -> Appearance {
         Appearance {
             background: Background::Color(Color::WHITE),
             border_radius: 5.0,
@@ -27,7 +27,7 @@ impl StyleSheet for Theme {
         }
     }
 
-    fn focused(&self, style: &Self::Style) -> Appearance {
+    fn focused(&self, _style: &Self::Style) -> Appearance {
         Appearance {
             background: Background::Color(Color::WHITE),
             border_radius: 5.0,
@@ -37,23 +37,23 @@ impl StyleSheet for Theme {
         }
     }
 
-    fn placeholder_color(&self, style: &Self::Style) -> iced::Color {
+    fn placeholder_color(&self, _style: &Self::Style) -> iced::Color {
         Color::from_rgb(0.5, 0.5, 0.5)
     }
 
-    fn value_color(&self, style: &Self::Style) -> iced::Color {
+    fn value_color(&self, _style: &Self::Style) -> iced::Color {
         Color::BLACK
     }
 
-    fn disabled_color(&self, style: &Self::Style) -> iced::Color {
+    fn disabled_color(&self, _style: &Self::Style) -> iced::Color {
         Color::from_rgb(0.7, 0.7, 0.7)
     }
 
-    fn selection_color(&self, style: &Self::Style) -> iced::Color {
+    fn selection_color(&self, _style: &Self::Style) -> iced::Color {
         Color::from_rgb(0.2, 0.6, 0.8)
     }
 
-    fn disabled(&self, style: &Self::Style) -> Appearance {
+    fn disabled(&self, _style: &Self::Style) -> Appearance {
         Appearance {
             background: Background::Color(Color::from_rgb(0.9, 0.9, 0.9)),
             border_radius: 5.0,

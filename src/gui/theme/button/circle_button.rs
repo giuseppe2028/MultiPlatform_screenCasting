@@ -1,10 +1,8 @@
+use iced::widget::button;
 use iced::widget::button::{Appearance, StyleSheet};
-use iced::widget::{button, horizontal_space, row};
 use iced::{Background, Color};
 use std::default::Default;
-use std::fmt::Alignment;
 
-use crate::gui::theme::button::Style::*;
 use crate::gui::theme::button::{Style, Themed};
 use crate::gui::theme::color::ColorExt;
 use crate::gui::theme::icon::Icon;
@@ -45,16 +43,16 @@ impl CircleButton {
         } else {
             // Se non c'è icona, usa il testo (anche se per un cerchio ci si aspetta solo un'icona)
             bold(self.text.clone()).size(size)
-        }.horizontal_alignment(iced::alignment::Horizontal::Center)
+        }
+        .horizontal_alignment(iced::alignment::Horizontal::Center)
         .vertical_alignment(iced::alignment::Vertical::Center);
-    
+
         button(content)
             .style(Box::new(self) as _)
-            .padding(0)  // Rimuove padding aggiuntivo per centrare meglio l'icona
+            .padding(0) // Rimuove padding aggiuntivo per centrare meglio l'icona
             .width(60)
             .height(60)
     }
-    
 }
 
 impl Themed for CircleButton {}
@@ -92,11 +90,12 @@ impl StyleSheet for CircleButton {
         let hover_text_color = active.text_color.mix(Color::WHITE.with_alpha(0.2));
 
         Appearance {
-            background: Some(Background::Color(hover_color.mix(Color::WHITE.with_alpha(0.1)))),
+            background: Some(Background::Color(
+                hover_color.mix(Color::WHITE.with_alpha(0.1)),
+            )),
             border_radius: active.border_radius,
             text_color: hover_text_color,
             ..active
         }
     }
 }
-

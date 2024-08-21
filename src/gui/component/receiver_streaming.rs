@@ -1,15 +1,12 @@
 use iced::widget::{container, image, row};
 use iced::{Color, Command};
-use iced::Length::{self, Fill};
 
 use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
-use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
-use crate::gui::theme::text::bold;
 use crate::gui::theme::widget::Element;
 
 pub struct ReceiverStreaming {
