@@ -93,7 +93,7 @@ impl Application for App {
             Message::RoleChosen(role) => match role {
                 home::Message::ChosenRole(role) => match role {
                     Role::Caster => {
-                        self.current_page = Page::Connection;
+                        self.current_page = Page::CasterSettings;
                         Command::none()
                     }
                     Role::Receiver => {
@@ -141,7 +141,9 @@ impl Application for App {
                 Command::none()
             }
             Message::SetSettingsCaster(_) => {
-                todo!();
+                //prendere tutte le informazioni e passarle al backend per come deve avvenire lo streaming
+                self.current_page = Page::Connection;
+                Command::none()
             }
             Message::StartRecording(message) => {
                 //funzioni backend

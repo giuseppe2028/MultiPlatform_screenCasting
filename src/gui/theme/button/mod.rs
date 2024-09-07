@@ -1,11 +1,13 @@
 use iced::widget::button::{Appearance, StyleSheet};
 
 pub use button::MyButton;
+pub use rectangle_button::RectangleButton;
 
 use crate::gui::theme::Theme;
 
 mod button;
 pub mod circle_button;
+mod rectangle_button;
 
 #[allow(dead_code)]
 #[derive(Default)]

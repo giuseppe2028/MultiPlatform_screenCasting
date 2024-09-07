@@ -41,7 +41,7 @@ impl<'a> Component<'a> for Connection {
             .style(Style::Danger)
             .icon(Icon::BackLeft)
             .build(20)
-            .on_press(app::Message::Back(app::Page::ReceiverIp))])
+            .on_press(app::Message::Back(app::Page::Connection))])
         .padding([6, 0, 0, 6])
         .align_x(Horizontal::Left)
         .align_y(Vertical::Top);
