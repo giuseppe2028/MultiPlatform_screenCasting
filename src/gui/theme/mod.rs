@@ -9,6 +9,9 @@ pub mod icon;
 pub mod text;
 pub mod textinput;
 pub mod widget;
+pub mod picklist;
+pub mod menu;
+pub mod scrollable;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Default, Copy)]

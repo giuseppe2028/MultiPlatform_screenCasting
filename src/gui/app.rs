@@ -48,6 +48,7 @@ pub enum Message {
     Back(Page),
     StartRecording(receiver_streaming::Message),
     TogglerChanged(caster_streaming::Message),
+    SelectDisplay(caster_settings::Message)
 }
 
 impl Application for App {
@@ -69,7 +70,7 @@ impl Application for App {
                     indirizzo_ip: "".to_string(),
                 },
                 receiver_streamimg: ReceiverStreaming { recording: false },
-                caster_settings: CasterSettings {},
+                caster_settings: CasterSettings { available_displays: vec!["Screen 1".to_string()], selected_display: None }, //implementare un metodo backend da chiamare per trovare gli screen
                 caster_streaming: CasterStreaming { toggler: false },
             },
             Command::none(),
@@ -141,7 +142,7 @@ impl Application for App {
                 Command::none()
             }
             Message::SetSettingsCaster(_) => {
-                //prendere tutte le informazioni e passarle al backend per come deve avvenire lo streaming
+                //prendere tutte le informazioni riguardanti la finestra (o porzione di finestra) da condividere e passarle al backend per come deve avvenire lo streaming
                 self.current_page = Page::Connection;
                 Command::none()
             }
@@ -152,6 +153,10 @@ impl Application for App {
             }
             Message::TogglerChanged(message) => {
                 let _ = self.caster_streaming.update(message);
+                Command::none()
+            },
+            Message::SelectDisplay(message) => { //azione di quando sceglie quale schermo condividere
+                let _ = self.caster_settings.update(message);
                 Command::none()
             },
         }
