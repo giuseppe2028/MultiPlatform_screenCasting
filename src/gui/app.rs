@@ -64,7 +64,7 @@ impl Application for App {
                 current_page: Page::Home,
                 home: Home {},
                 connection: Connection {
-                    ip_address: "127.0.0.1".to_string(),
+                    ip_address: "".to_string(),
                 },
                 receiver_ip: ReceiverIp {
                     indirizzo_ip: "".to_string(),
@@ -142,8 +142,8 @@ impl Application for App {
                 Command::none()
             }
             Message::SetSettingsCaster(_) => {
-                //prendere tutte le informazioni riguardanti la finestra (o porzione di finestra) da condividere e passarle al backend per come deve avvenire lo streaming
                 self.current_page = Page::Connection;
+                self.connection.ip_address = //richiamare la funzione che si mette ad aspettare almeno una connessione e restituisce l'indirizzo ip del caster 
                 Command::none()
             }
             Message::StartRecording(message) => {

@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 iced = { version = "0.9.0", features = ["tokio", "image", "svg"] }
 iced_aw = { version = "0.5.2", features = ["tabs"] }
+tokio =  {version = "1.15", features = ["full"] }
+scrap = "0.10"
