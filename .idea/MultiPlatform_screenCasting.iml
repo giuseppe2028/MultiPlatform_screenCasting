@@ -7,6 +7,9 @@
       <sourceFolder url="file://$MODULE_DIR$/screen_share/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/screenshare/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/ffmpeg/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/prova1/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/screensharing/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
