@@ -1,4 +1,4 @@
-workspace = { members = [ "ffmpeg","network", "screenshare"] }
+workspace = { members = [ "controller", "ffmpeg", "model","network", "screenshare"] }
 [package]
 name = "MultiPlatform_screenCasting"
 version = "0.1.0"

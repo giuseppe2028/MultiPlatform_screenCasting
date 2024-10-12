@@ -9,6 +9,8 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/ffmpeg/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/prova1/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/controller/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/model/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/screensharing/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
