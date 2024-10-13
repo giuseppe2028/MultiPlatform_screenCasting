@@ -141,9 +141,10 @@ impl Application for App {
                 let _ = self.receiver_ip.update(message);
                 Command::none()
             }
+            //TODO adjust self.connection.ip_address = "".parse().unwrap();
             Message::SetSettingsCaster(_) => {
                 self.current_page = Page::Connection;
-                self.connection.ip_address = //richiamare la funzione che si mette ad aspettare almeno una connessione e restituisce l'indirizzo ip del caster 
+                self.connection.ip_address = "127.0.0.1".parse().unwrap(); //richiamare la funzione che si mette ad aspettare almeno una connessione e restituisce l'indirizzo ip del caster
                 Command::none()
             }
             Message::StartRecording(message) => {
