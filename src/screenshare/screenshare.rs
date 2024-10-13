@@ -1,7 +1,8 @@
 use std::io::Write;
 use std::process::{ChildStdin, Command, Stdio};
-use scap::capturer::{Capturer, Options};
+use scap::capturer::{Area, Capturer, Options};
 use scap::frame::Frame;
+
     pub fn visualize_screen_sharing(){
         //start ffplay
         let mut child = Command::new("ffplay")
@@ -117,4 +118,6 @@ use scap::frame::Frame;
     pub fn create_capture(options: Options)->Capturer{
         Capturer::new(options)
     }
+
+
 

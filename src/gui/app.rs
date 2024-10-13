@@ -1,5 +1,6 @@
+use std::fmt::Display;
 use iced::{executor, Application, Command};
-
+use scap::Target;
 use crate::gui::component::caster_settings;
 use crate::gui::component::caster_settings::CasterSettings;
 use crate::gui::component::caster_streaming::CasterStreaming;
@@ -142,9 +143,22 @@ impl Application for App {
                 Command::none()
             }
             //TODO adjust self.connection.ip_address = "".parse().unwrap();
-            Message::SetSettingsCaster(_) => {
+            Message::SetSettingsCaster(message) => {
                 self.current_page = Page::Connection;
                 self.connection.ip_address = "127.0.0.1".parse().unwrap(); //richiamare la funzione che si mette ad aspettare almeno una connessione e restituisce l'indirizzo ip del caster
+                let disp:Vec<dyn Display> = scap::get_all_targets() // Chiama la funzione esistente per ottenere i target
+                    .into_iter() // Crea un iteratore su tutti i target
+                    .filter_map(|target| {
+                        // Applica il filtro, accettando solo i target di tipo Display
+                        if let Target::Display(display) = target {
+                            Some(display) // Ritorna il Display se trovato
+                        } else {
+                            None // Ignora tutti gli altri tipi
+                        }
+                    })
+                    .collect(); // Raccogli i risultati filtrati in un Vec<Display>
+                println!("{:?}", disp);
+
                 Command::none()
             }
             Message::StartRecording(message) => {

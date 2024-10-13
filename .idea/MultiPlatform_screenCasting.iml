@@ -12,6 +12,8 @@
       <sourceFolder url="file://$MODULE_DIR$/controller/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/model/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/screensharing/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/network/target" />
+      <excludeFolder url="file://$MODULE_DIR$/screenshare/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
