@@ -1,6 +1,6 @@
-use std::fmt::Display;
-use iced::{executor, Application, Command};
-use scap::Target;
+use std::process::Stdio;
+
+use crate::controller::AppController::AppController;
 use crate::gui::component::caster_settings;
 use crate::gui::component::caster_settings::CasterSettings;
 use crate::gui::component::caster_streaming::CasterStreaming;
@@ -14,6 +14,8 @@ use crate::gui::component::receiver_streaming::ReceiverStreaming;
 use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
+use iced::{executor, Application, Command};
+use scap::capturer::Options;
 
 use super::component::caster_streaming;
 
@@ -25,6 +27,7 @@ pub struct App {
     caster_settings: CasterSettings,
     receiver_streamimg: ReceiverStreaming,
     caster_streaming: CasterStreaming,
+    controller: AppController,
 }
 
 #[derive(Debug, Clone)]
@@ -45,11 +48,11 @@ pub enum Message {
     RoleChosen(home::Message),
     ReceiverSharing(String),
     ReceiverInputIp(receiver_ip::Message),
-    SetSettingsCaster(caster_settings::Message),
+    SetSettingsCaster(caster_settings::Window),
     Back(Page),
     StartRecording(receiver_streaming::Message),
     TogglerChanged(caster_streaming::Message),
-    SelectDisplay(caster_settings::Message)
+    SelectDisplay(scap::targets::Display),
 }
 
 impl Application for App {
@@ -60,6 +63,37 @@ impl Application for App {
     type Flags = ();
 
     fn new(_flags: Self::Flags) -> (Self, iced::Command<Self::Message>) {
+
+        let default_opt = Options {
+            fps: 120,
+            show_cursor: true,
+            show_highlight: true,
+            excluded_targets: None,
+            target: None,
+            output_type: scap::frame::FrameType::RGB,
+            output_resolution: scap::capturer::Resolution::_1080p,  //USARE LIBREARIA CHE TROVA LA RISOLUZIONE DELLO SCHERMO
+
+            ..Default::default()
+        };
+
+        let mut child = std::process::Command::new("ffplay")
+        .args(&[
+            "-f", "rawvideo",         // Formato non compresso
+            "-pixel_format", "rgb24",  // Formato dei pixel: BGR con 0 per il canale alfa
+            "-video_size", "1440x900", // Risoluzione del video (modifica secondo necessità)
+            "-framerate", "120",       // Framerate (modifica secondo necessità)
+            "-"                       // Leggi dallo stdin
+        ])
+        .stdin(Stdio::piped())
+        .spawn()
+        .expect("Errore nell'avviare ffplay. Assicurati che ffplay sia installato e nel PATH.");
+
+        let out = child.stdin;
+
+
+        let mut controller = AppController::new(default_opt, out);
+        controller.set_display(controller.get_available_displays().get(0).unwrap().clone());
+
         (
             Self {
                 current_page: Page::Home,
@@ -71,8 +105,12 @@ impl Application for App {
                     indirizzo_ip: "".to_string(),
                 },
                 receiver_streamimg: ReceiverStreaming { recording: false },
-                caster_settings: CasterSettings { available_displays: vec!["Screen 1".to_string()], selected_display: None }, //implementare un metodo backend da chiamare per trovare gli screen
+                caster_settings: CasterSettings {
+                    available_displays: controller.get_available_displays(),
+                    selected_display: controller.get_available_displays().get(0).unwrap().clone(),
+                }, //implementare un metodo backend da chiamare per trovare gli screen
                 caster_streaming: CasterStreaming { toggler: false },
+                controller: controller,
             },
             Command::none(),
         )
@@ -106,7 +144,7 @@ impl Application for App {
             },
             Message::StartSharing => {
                 self.current_page = Page::CasterStreaming;
-                //aggiungere funzione backend
+                self.controller.start_sharing();
                 Command::none()
             }
             Message::ReceiverSharing(_) => {
@@ -144,20 +182,17 @@ impl Application for App {
             }
             //TODO adjust self.connection.ip_address = "".parse().unwrap();
             Message::SetSettingsCaster(message) => {
-                self.current_page = Page::Connection;
                 self.connection.ip_address = "127.0.0.1".parse().unwrap(); //richiamare la funzione che si mette ad aspettare almeno una connessione e restituisce l'indirizzo ip del caster
-                let disp:Vec<dyn Display> = scap::get_all_targets() // Chiama la funzione esistente per ottenere i target
-                    .into_iter() // Crea un iteratore su tutti i target
-                    .filter_map(|target| {
-                        // Applica il filtro, accettando solo i target di tipo Display
-                        if let Target::Display(display) = target {
-                            Some(display) // Ritorna il Display se trovato
-                        } else {
-                            None // Ignora tutti gli altri tipi
-                        }
-                    })
-                    .collect(); // Raccogli i risultati filtrati in un Vec<Display>
-                println!("{:?}", disp);
+
+                match message {
+                    caster_settings::Window::FullScreen => {
+                        self.current_page = Page::Connection;
+                        //settare la risoluzione
+                    },
+                    caster_settings::Window::Area { x, y } => {
+                        todo!()
+                    },
+                }
 
                 Command::none()
             }
@@ -169,11 +204,13 @@ impl Application for App {
             Message::TogglerChanged(message) => {
                 let _ = self.caster_streaming.update(message);
                 Command::none()
-            },
-            Message::SelectDisplay(message) => { //azione di quando sceglie quale schermo condividere
-                let _ = self.caster_settings.update(message);
+            }
+            Message::SelectDisplay(display) => {
+                //azione di quando sceglie quale schermo condividere
+                self.controller.set_display(display.clone());
+                let _ = self.caster_settings.update( caster_settings::Message::SelectDisplay(display));
                 Command::none()
-            },
+            }
         }
     }
 

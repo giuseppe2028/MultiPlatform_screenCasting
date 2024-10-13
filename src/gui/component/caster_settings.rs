@@ -12,20 +12,36 @@ use crate::gui::theme::widget::Element;
 use crate::gui::{app, resource};
 
 pub struct CasterSettings {
-    pub available_displays: Vec<String>,
-    pub selected_display: Option<String>,
+    pub available_displays: Vec<scap::targets::Display>,
+    pub selected_display: scap::targets::Display,
 }
 
 #[derive(Debug, Clone)]
+pub enum Window {
+    FullScreen,
+    Area {
+        x: u64,
+        y: u64
+    }
+}
+
+
+#[derive(Debug, Clone)]
 pub enum Message {
-    SelectDisplay(String), // Cambiare tipo nel display corrispondente
-    SelectWindow,          // Probabilmente avrà bisogno di parametri
-    GoToConnect,
+    SelectDisplay(scap::targets::Display), // Cambiare tipo nel display corrispondente
+    SelectWindow(Window),          // Probabilmente avrà bisogno di parametri
 }
 
 impl From<Message> for app::Message {
     fn from(message: Message) -> Self {
-        app::Message::SetSettingsCaster(message)
+        match message {
+            Message::SelectDisplay(display) => {
+                return app::Message::SelectDisplay(display);
+            },
+            Message::SelectWindow(window) => {
+                return app::Message::SetSettingsCaster(window);
+            },
+        }
     }
 }
 
@@ -35,15 +51,11 @@ impl<'a> Component<'a> for CasterSettings {
     fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
             Message::SelectDisplay(display) => {
-                self.selected_display = Some(display);
+                self.selected_display = display;
                 Command::none()
             }
-            Message::GoToConnect => {
-                //quando conferma tutto ciò che ha scelto (se non sceglie nulla di defualt full screen schermo principale)
-                // Funzioni di backend
-                Command::none()
-            }
-            Message::SelectWindow => todo!(),
+            Message::SelectWindow(window) => todo!(),
+          
         }
     }
 
@@ -61,22 +73,20 @@ impl<'a> Component<'a> for CasterSettings {
             .icon(Icon::CasterHome) // Sostituisci con la tua icona
             .style(Style::Primary)
             .build()
-            .on_press(app::Message::from(Message::SelectDisplay(
-                "Schermo intero".to_string(),
-            )));
+            .on_press(app::Message::from(Message::SelectWindow(Window::FullScreen)));
 
         let window_part_button = RectangleButton::new("Porzione di finestra")
             .icon(Icon::CasterHome) // Sostituisci con la tua icona
             .style(Style::Primary)
             .build()
-            .on_press(app::Message::from(Message::SelectWindow));
+            .on_press(app::Message::from(Message::SelectWindow(Window::Area { x: 10, y: 10 })));  //TODO TOIMPLEMENT
+
 
         let choose_screen_button = pick_list(
             self.available_displays.clone(),
-            self.selected_display.clone(),
-            move |message| app::Message::SelectDisplay(Message::SelectDisplay(message)),
+            Some(self.selected_display.clone()),
+            move |message| app::Message::SelectDisplay(message),
         )
-        .placeholder("Select the screen")
         .font(resource::font::BARLOW)
         .width(416);
 
@@ -97,7 +107,7 @@ impl<'a> Component<'a> for CasterSettings {
             .height(Fill)
             .align_x(Horizontal::Center)
             .align_y(Vertical::Center)
-        ])
+        ])           
         .into()
     }
 }

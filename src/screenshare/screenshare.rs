@@ -21,7 +21,7 @@ use scap::frame::Frame;
         //TODO complete
     }
 
-    pub fn start_screen_sharing(mut cap:Capturer, mut out: &mut ChildStdin){
+    pub fn start_screen_sharing( cap: &mut Capturer, out: &mut ChildStdin){
         cap.start_capture();
         let mut start_time: u64 = 0;
         loop{
@@ -88,7 +88,7 @@ use scap::frame::Frame;
         }
     }
 
-    pub fn stop_screen_sharing(mut recorder:Capturer){
+    pub fn stop_screen_sharing( recorder: &mut Capturer){
         // Stop Capture
         recorder.stop_capture();
     }

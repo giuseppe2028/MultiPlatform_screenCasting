@@ -1,1 +1,1 @@
-mod AppController;
+pub mod AppController;
