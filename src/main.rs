@@ -1,6 +1,9 @@
-mod ui;
-mod receiver;
+use crate::gui::app::App;
+use iced::{Application, Settings};
 
-fn main() {
-    println!("Hello, world!");
+mod gui;
+mod capture;
+
+pub fn main() -> iced::Result {
+    App::run(Settings::default())
 }
