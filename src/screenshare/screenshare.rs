@@ -1,5 +1,6 @@
 use std::io::Write;
 use std::process::{ChildStdin, Command, Stdio};
+use std::sync::{Arc, Mutex};
 use scap::capturer::{Area, Capturer, Options};
 use scap::frame::Frame;
 
@@ -21,74 +22,88 @@ use scap::frame::Frame;
         //TODO complete
     }
 
-    pub fn start_screen_sharing( cap: &mut Capturer, out: &mut ChildStdin){
+// Funzione migliorata per gestire lo screen sharing
+pub fn start_screen_sharing(capturer: Arc<Mutex<Capturer>>, out: Arc<Mutex<ChildStdin>>) {
+    let mut start_time: u64 = 0;
+
+    // Acquisisce il lock per l'intero processo di cattura e inizia la cattura
+    {
+        let mut cap = capturer.lock().unwrap();
         cap.start_capture();
-        let mut start_time: u64 = 0;
-        loop{
-            let frame = cap.get_next_frame().expect("Error");
+    }
 
-            match frame {
-                Frame::YUVFrame(frame) => {
-                    out.write_all(&frame.luminance_bytes).expect("Failed to write luminance data");
-                    out.write_all(&frame.chrominance_bytes).expect("Failed to write chrominance data");
-                    println!(
-                        "Received BGR0 frame of width {} and height {}",
-                        frame.width, frame.height
-                    );
-                }
-                Frame::BGR0(frame) => {
-                    println!(
-                        "Received BGR0 frame of width {} and height {}",
-                        frame.width, frame.height
-                    );
-                    out.write_all(&*frame.data).unwrap()
-                }
-                Frame::RGB(frame) => {
-                    if start_time == 0 {
-                        start_time = frame.display_time;
-                    }
-                    println!(
-                        "Received BGR0 frame of width {} and height {}",
-                        frame.width, frame.height
-                    );
-                    out.write_all(&*frame.data).unwrap()
-                }
-                Frame::RGBx(frame) => {
-                    println!(
-                        "Recieved RGBx frame of width {} and height {}",
-                        frame.width, frame.height
-                    );
-                    out.write_all(&*frame.data).unwrap()
-                }
-                Frame::XBGR(frame) => {
-                    println!(
-                        "Recieved xRGB frame of width {} and height {}",
-                        frame.width, frame.height
-                    );
-                    out.write_all(&*frame.data).unwrap()
-                }
-                Frame::BGRx(frame) => {
-                    println!(
-                        "Recieved BGRx frame of width {} and height {}",
-                        frame.width, frame.height
-                    );
-                    out.write_all(&*frame.data).unwrap()
-                }
-                Frame::BGRA(frame) => {
-                    if start_time == 0 {
-                        start_time = frame.display_time;
-                    }println!(
-                        "Received BGR0 frame of width {} and height {}",
-                        frame.width, frame.height
-                    );
+    loop {
+        // Recupera il frame all'inizio del loop con un solo lock
+        let frame = {
+            let mut cap = capturer.lock().unwrap();
+            cap.get_next_frame().expect("Error")
+        };
 
-                    out.write_all(&*frame.data).unwrap()
+        // Blocca l'output una sola volta per frame e processa i dati
+        let mut out = out.lock().unwrap();
+
+        match frame {
+            Frame::YUVFrame(frame) => {
+                //out.write_all(&frame.luminance_bytes).expect("Failed to write luminance data");
+                println!(
+                    "Received YUV frame of width {} and height {}",
+                    frame.width, frame.height
+                );
+            }
+            Frame::BGR0(frame) => {
+                println!(
+                    "Received BGR0 frame of width {} and height {}",
+                    frame.width, frame.height
+                );
+                out.write_all(&frame.data).unwrap();
+            }
+            Frame::RGB(frame) => {
+                if start_time == 0 {
+                    start_time = frame.display_time;
                 }
+                println!(
+                    "Received RGB frame of width {} and height {}",
+                    frame.width, frame.height
+                );
+                out.write_all(&frame.data).unwrap();
+            }
+            Frame::RGBx(frame) => {
+                println!(
+                    "Received RGBx frame of width {} and height {}",
+                    frame.width, frame.height
+                );
+                out.write_all(&frame.data).unwrap();
+            }
+            Frame::XBGR(frame) => {
+                println!(
+                    "Received XBGR frame of width {} and height {}",
+                    frame.width, frame.height
+                );
+                out.write_all(&frame.data).unwrap();
+            }
+            Frame::BGRx(frame) => {
+                println!(
+                    "Received BGRx frame of width {} and height {}",
+                    frame.width, frame.height
+                );
+                out.write_all(&frame.data).unwrap();
+            }
+            Frame::BGRA(frame) => {
+                if start_time == 0 {
+                    start_time = frame.display_time;
+                }
+                println!(
+                    "Received BGRA frame of width {} and height {}",
+                    frame.width, frame.height
+                );
+                out.write_all(&frame.data).unwrap();
             }
         }
     }
+}
 
-    pub fn stop_screen_sharing( recorder: &mut Capturer){
+
+pub fn stop_screen_sharing( recorder: &mut Capturer){
         // Stop Capture
         recorder.stop_capture();
     }
