@@ -13,6 +13,7 @@ use scap::frame::Frame;
                 "-"                       // Leggi dallo stdin
             ])
             .stdin(Stdio::piped())
+            .stdout(Stdio::null())
             .spawn()
             .expect("Errore nell'avviare ffplay. Assicurati che ffplay sia installato e nel PATH.");
 

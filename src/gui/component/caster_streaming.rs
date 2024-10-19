@@ -110,7 +110,7 @@ impl<'a> Component<'a> for CasterStreaming {
                 .icon(crate::gui::theme::icon::Icon::Phone)
                 .build(30)
                 .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
+                .on_press(app::Message::Close),
         ]
         .align_items(iced::Alignment::Center)
         .padding(8)

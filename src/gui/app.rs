@@ -16,7 +16,6 @@ use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
 use iced::{executor, Application, Command};
 use scap::capturer::Options;
-
 use super::component::caster_streaming;
 
 pub struct App {
@@ -53,6 +52,7 @@ pub enum Message {
     StartRecording(receiver_streaming::Message),
     TogglerChanged(caster_streaming::Message),
     SelectDisplay(scap::targets::Display),
+    Close
 }
 
 impl Application for App {
@@ -76,22 +76,12 @@ impl Application for App {
             ..Default::default()
         };
 
-        let mut child = std::process::Command::new("ffplay")
-        .args(&[
-            "-f", "rawvideo",         // Formato non compresso
-            "-pixel_format", "rgb24",  // Formato dei pixel: BGR con 0 per il canale alfa
-            "-video_size", "1440x900", // Risoluzione del video (modifica secondo necessità)
-            "-framerate", "120",       // Framerate (modifica secondo necessità)
-            "-"                       // Leggi dallo stdin
-        ])
-        .stdin(Stdio::piped())
-        .spawn()
-        .expect("Errore nell'avviare ffplay. Assicurati che ffplay sia installato e nel PATH.");
-
-        let out = child.stdin;
 
 
-        let mut controller = AppController::new(default_opt, out);
+        //kill(Pid::from_raw(child.id() as i32), Signal::SIGKILL).expect("Errore nell'invio del segnale");
+        //let childStdin = child.stdin.as_mut().unwrap();
+
+        let mut controller = AppController::new(default_opt);
         controller.set_display(controller.get_available_displays().get(0).unwrap().clone());
 
         (
@@ -111,6 +101,7 @@ impl Application for App {
                 }, //implementare un metodo backend da chiamare per trovare gli screen
                 caster_streaming: CasterStreaming { toggler: false },
                 controller: controller,
+
             },
             Command::none(),
         )
@@ -143,6 +134,7 @@ impl Application for App {
                 },
             },
             Message::StartSharing => {
+                print!("Bottone Premuto");
                 self.current_page = Page::CasterStreaming;
                 self.controller.start_sharing();
                 Command::none()
@@ -209,6 +201,13 @@ impl Application for App {
                 //azione di quando sceglie quale schermo condividere
                 self.controller.set_display(display.clone());
                 let _ = self.caster_settings.update( caster_settings::Message::SelectDisplay(display));
+                Command::none()
+            }
+            Message::Close=>{
+                println!("ciao");
+                self.controller.stop_recording();
+                self.current_page = Page::Home;
+                    //TODO fare in modo di tornare alla schermata precedente
                 Command::none()
             }
         }
