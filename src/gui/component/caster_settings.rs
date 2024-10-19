@@ -7,6 +7,7 @@ use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::RectangleButton;
 use crate::gui::theme::button::Style;
+use crate::gui::theme::container::Style::OutlinedCard;
 use crate::gui::theme::icon::Icon;
 use crate::gui::theme::widget::Element;
 use crate::gui::{app, resource};
@@ -19,17 +20,13 @@ pub struct CasterSettings {
 #[derive(Debug, Clone)]
 pub enum Window {
     FullScreen,
-    Area {
-        x: u64,
-        y: u64
-    }
+    Area { x: u64, y: u64 },
 }
-
 
 #[derive(Debug, Clone)]
 pub enum Message {
     SelectDisplay(scap::targets::Display), // Cambiare tipo nel display corrispondente
-    SelectWindow(Window),          // Probabilmente avrà bisogno di parametri
+    SelectWindow(Window),                  // Probabilmente avrà bisogno di parametri
 }
 
 impl From<Message> for app::Message {
@@ -37,10 +34,10 @@ impl From<Message> for app::Message {
         match message {
             Message::SelectDisplay(display) => {
                 return app::Message::SelectDisplay(display);
-            },
+            }
             Message::SelectWindow(window) => {
                 return app::Message::SetSettingsCaster(window);
-            },
+            }
         }
     }
 }
@@ -55,7 +52,6 @@ impl<'a> Component<'a> for CasterSettings {
                 Command::none()
             }
             Message::SelectWindow(window) => todo!(),
-          
         }
     }
 
@@ -73,14 +69,18 @@ impl<'a> Component<'a> for CasterSettings {
             .icon(Icon::CasterHome) // Sostituisci con la tua icona
             .style(Style::Primary)
             .build()
-            .on_press(app::Message::from(Message::SelectWindow(Window::FullScreen)));
+            .on_press(app::Message::from(Message::SelectWindow(
+                Window::FullScreen,
+            )));
 
         let window_part_button = RectangleButton::new("Porzione di finestra")
             .icon(Icon::CasterHome) // Sostituisci con la tua icona
             .style(Style::Primary)
             .build()
-            .on_press(app::Message::from(Message::SelectWindow(Window::Area { x: 10, y: 10 })));  //TODO TOIMPLEMENT
-
+            .on_press(app::Message::from(Message::SelectWindow(Window::Area {
+                x: 10,
+                y: 10,
+            }))); //TODO TOIMPLEMENT
 
         let choose_screen_button = pick_list(
             self.available_displays.clone(),
@@ -94,20 +94,24 @@ impl<'a> Component<'a> for CasterSettings {
         container(column_iced![
             back_button,
             container(
-                column_iced![
-                    row![full_screen_button, window_part_button]
-                        .spacing(16) // Spaziatura tra i pulsanti
-                        .align_items(iced::Alignment::Center),
-                    row![],
-                        row![choose_screen_button].align_items(iced::Alignment::Center)
-                ]
-                .spacing(15)
+                container(
+                    column_iced![
+                        row![full_screen_button, window_part_button]
+                            .spacing(16) // Spaziatura tra i pulsanti
+                            .align_items(iced::Alignment::Center),
+                        row![choose_screen_button]
+                            .align_items(iced::Alignment::Center)
+                            .spacing(50)
+                    ]
+                    .spacing(15)
+                )
+                .height(400)
             )
             .width(Fill)
             .height(Fill)
             .align_x(Horizontal::Center)
             .align_y(Vertical::Center)
-        ])           
+        ])
         .into()
     }
 }

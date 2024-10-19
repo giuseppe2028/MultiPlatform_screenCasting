@@ -65,12 +65,12 @@ impl Application for App {
     fn new(_flags: Self::Flags) -> (Self, iced::Command<Self::Message>) {
 
         let default_opt = Options {
-            fps: 120,
+            fps: 30,
             show_cursor: true,
             show_highlight: true,
             excluded_targets: None,
             target: None,
-            output_type: scap::frame::FrameType::RGB,
+            output_type: scap::frame::FrameType::BGR0,
             output_resolution: scap::capturer::Resolution::_1080p,  //USARE LIBREARIA CHE TROVA LA RISOLUZIONE DELLO SCHERMO
 
             ..Default::default()
@@ -79,9 +79,9 @@ impl Application for App {
         let mut child = std::process::Command::new("ffplay")
         .args(&[
             "-f", "rawvideo",         // Formato non compresso
-            "-pixel_format", "rgb24",  // Formato dei pixel: BGR con 0 per il canale alfa
-            "-video_size", "1440x900", // Risoluzione del video (modifica secondo necessità)
-            "-framerate", "120",       // Framerate (modifica secondo necessità)
+            "-pixel_format", "bgr0",  // Formato dei pixel: BGR con 0 per il canale alfa
+            "-video_size", "1920x1080", // Risoluzione del video (modifica secondo necessità)
+            "-framerate", "30",       // Framerate (modifica secondo necessità)
             "-"                       // Leggi dallo stdin
         ])
         .stdin(Stdio::piped())
