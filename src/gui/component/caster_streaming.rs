@@ -1,6 +1,12 @@
-use iced::widget::{container, image, row};
+use std::alloc::System;
+use std::sync::{Arc, Mutex};
+use std::sync::mpsc::{Receiver, Sender};
+use std::thread;
+use std::time::Duration;
+use iced::widget::{container, image, Image, row};
 use iced::Color;
-
+use iced::futures::FutureExt;
+use scap::frame::Frame;
 use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::Component;
@@ -10,39 +16,75 @@ use crate::gui::theme::widget::Element;
 
 pub struct CasterStreaming {
     pub toggler: bool,
+    pub receiver: Arc<Mutex<Receiver<Vec<u8>>>>,
+    pub message_receiver:Arc<Mutex<Receiver<MessageUpdate>>>,
+    pub message_sender:Arc<Mutex<Sender<MessageUpdate>>>,
+    pub frame_to_update: Arc<Mutex<Option<Vec<u8>>>>
 }
 
 #[derive(Debug, Clone)]
-pub enum Message {
+pub enum MessageUpdate {
     TogglerChanged(bool),
+    NewFrame(Vec<u8>)
 }
 
-impl From<Message> for app::Message {
-    fn from(message: Message) -> Self {
+impl From<MessageUpdate> for app::Message {
+    fn from(message: MessageUpdate) -> Self {
         app::Message::TogglerChanged(message)
     }
 }
 
 impl<'a> Component<'a> for CasterStreaming {
-    type Message = Message;
+    type Message = MessageUpdate;
 
     fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
+        println!("STA ANDO TUTTO uodate");
         match message {
-            Message::TogglerChanged(new_status) => {
+            MessageUpdate::TogglerChanged(new_status) => {
                 self.toggler = new_status;
+            }
+            MessageUpdate::NewFrame(frame) => {
+                let mut new_frame = self.frame_to_update.lock().unwrap();
+                *new_frame = Some(frame);
             }
         }
         iced::Command::none()
     }
 
     fn view(&self) -> Element<'_, app::Message> {
-        let image = Element::from(
-            image(format!("./resources/icons/512x512.png"))
-                .width(iced::Length::Fill)
-                .height(iced::Length::Fill),
-        )
-        .explain(Color::WHITE);
+        println!("STA ANDO TUTTO MALEE");
+        // Clona i riferimenti a frame_to_update e receiver
+        let frame_to_update = Arc::clone(&self.frame_to_update);
+        let receiver = Arc::clone(&self.receiver);
+        let sender = self.message_sender.lock().unwrap();
+        // Crea un thread per ricevere i dati del frame
+        thread::spawn(move || {
+            let frame = Some(receiver.lock().unwrap().recv().unwrap());
 
+            // Invia il nuovo frame utilizzando il sender
+            sender.send(Arc::new(Mutex::new(MessageUpdate::NewFrame(frame.unwrap())))).expect("TODO: panic message");
+        });
+        let rec = self.receiver.lock().unwrap();
+        let message = rec.recv().expect("TODO: panic message");
+        println!("{:?}", message);
+        // Ottieni il frame e crea l'immagine
+        let image = {
+            let frame = self.frame_to_update.lock().unwrap();
+            match *frame {
+                None => {
+                    image(format!("./resources/icons/512x512.png"))
+                        .width(iced::Length::Fill)
+                        .height(iced::Length::Fill)
+                }
+                Some(ref frame_data) => {
+                    // Assicurati che il frame sia in un formato valido
+                    Image::new(image::Handle::from_pixels(1440, 900, frame_data.clone())).width(iced::Length::Fill)
+                        .height(iced::Length::Fill)
+                }
+            }
+        };
+
+        let stream = Element::from(image).explain(Color::WHITE);
         let annotation_buttons = column_iced![
             CircleButton::new("")
                 .style(Style::Primary)
@@ -81,8 +123,8 @@ impl<'a> Component<'a> for CasterStreaming {
                 .padding(8)
                 .on_press(app::Message::Back(app::Page::CasterStreaming)),
         ]
-        .padding(8)
-        .spacing(10);
+            .padding(8)
+            .spacing(10);
 
         let menu = row![
             CircleButton::new("tools")
@@ -90,7 +132,7 @@ impl<'a> Component<'a> for CasterStreaming {
                 .icon(crate::gui::theme::icon::Icon::Tools)
                 .build(30)
                 .padding(8)
-                .on_press(app::Message::TogglerChanged(Message::TogglerChanged(
+                .on_press(app::Message::TogglerChanged(MessageUpdate::TogglerChanged(
                     !self.toggler
                 ))),
             CircleButton::new("play/pause")
@@ -112,16 +154,16 @@ impl<'a> Component<'a> for CasterStreaming {
                 .padding(8)
                 .on_press(app::Message::Close),
         ]
-        .align_items(iced::Alignment::Center)
-        .padding(8)
-        .spacing(10);
+            .align_items(iced::Alignment::Center)
+            .padding(8)
+            .spacing(10);
 
         let sidebar = column_iced![annotation_buttons]
             .spacing(8)
             .align_items(iced::Alignment::Center);
 
         let streaming = container(
-            column_iced![image, menu]
+            column_iced![stream, menu]
                 .spacing(8)
                 .align_items(iced::Alignment::Center),
         );
@@ -132,14 +174,14 @@ impl<'a> Component<'a> for CasterStreaming {
                     .spacing(8)
                     .align_items(iced::Alignment::Center),
             )
-            .into()
+                .into()
         } else {
             container(
                 column_iced![row![streaming]]
                     .spacing(8)
                     .align_items(iced::Alignment::Center),
             )
-            .into()
+                .into()
         }
     }
 }

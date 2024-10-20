@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::thread::{JoinHandle, Thread, ThreadId};
 use iced::keyboard::KeyCode::M;
-use tokio::io::Join;
+use scap::frame::Frame;
 use crate::screenshare::screenshare::start_screen_sharing;
 use crate::screenshare::screenshare::stop_screen_sharing;
 
@@ -19,6 +19,7 @@ pub struct AppController {
     pub streaming_handle:Option<JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>,
     pub childPadre: Option<Arc<Mutex<Child>>>,
+    sender: Arc<Sender<Vec<u8>>>
 }
 
 impl AppController {
@@ -39,7 +40,6 @@ impl AppController {
     // Funzione che avvia la condivisione dello schermo
     pub fn start_sharing(&mut self) {
         self.stop_flag.store(false,Ordering::Relaxed);
-        print!("SUCA ");
         let mut child = std::process::Command::new("ffplay")
             .args(&[
                 "-f", "rawvideo",         // Formato non compresso
@@ -56,10 +56,11 @@ impl AppController {
         let stop_flag = Arc::clone(&self.stop_flag);
         self.childPadre = Some(Arc::new(Mutex::new(child)));
         let ch1 = self.childPadre.clone();
+        let send = self.sender.clone();
         // Crea un nuovo thread per lo screen sharing
         let handle = Some(thread::spawn(move || {
             // Passiamo stdin e altri dati al thread
-            start_screen_sharing(capturer,ch1.unwrap(), stop_flag);
+            start_screen_sharing(capturer,ch1.unwrap(), stop_flag, send);
         }));
         self.set_handle(handle.unwrap());
     }

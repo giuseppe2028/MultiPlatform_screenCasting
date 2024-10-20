@@ -1,9 +1,10 @@
 use std::process::Stdio;
-
+use std::sync::{Arc, Mutex};
+use std::sync::mpsc::channel;
 use crate::controller::AppController::AppController;
 use crate::gui::component::caster_settings;
 use crate::gui::component::caster_settings::CasterSettings;
-use crate::gui::component::caster_streaming::CasterStreaming;
+use crate::gui::component::caster_streaming::{CasterStreaming, MessageUpdate};
 use crate::gui::component::connection::Connection;
 use crate::gui::component::home::Home;
 use crate::gui::component::home::Role;
@@ -16,6 +17,7 @@ use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
 use iced::{executor, Application, Command};
 use scap::capturer::Options;
+use scap::frame::Frame;
 use super::component::caster_streaming;
 
 pub struct App {
@@ -50,7 +52,7 @@ pub enum Message {
     SetSettingsCaster(caster_settings::Window),
     Back(Page),
     StartRecording(receiver_streaming::Message),
-    TogglerChanged(caster_streaming::Message),
+    TogglerChanged(caster_streaming::MessageUpdate),
     SelectDisplay(scap::targets::Display),
     Close
 }
@@ -71,17 +73,17 @@ impl Application for App {
             excluded_targets: None,
             target: None,
             output_type: scap::frame::FrameType::RGB,
-            output_resolution: scap::capturer::Resolution::_1080p,  //USARE LIBREARIA CHE TROVA LA RISOLUZIONE DELLO SCHERMO
+            output_resolution: scap::capturer::Resolution::_1441p,  //USARE LIBREARIA CHE TROVA LA RISOLUZIONE DELLO SCHERMO
 
             ..Default::default()
         };
 
-
-
+        let (sender,receiver) = channel::<Vec<u8>>();
+        let (message_sender,message_receiver) = channel::<i32>();
         //kill(Pid::from_raw(child.id() as i32), Signal::SIGKILL).expect("Errore nell'invio del segnale");
         //let childStdin = child.stdin.as_mut().unwrap();
 
-        let mut controller = AppController::new(default_opt);
+        let mut controller = AppController::new(default_opt, sender);
         controller.set_display(controller.get_available_displays().get(0).unwrap().clone());
 
         (
@@ -96,10 +98,11 @@ impl Application for App {
                 },
                 receiver_streamimg: ReceiverStreaming { recording: false },
                 caster_settings: CasterSettings {
+
                     available_displays: controller.get_available_displays(),
                     selected_display: controller.get_available_displays().get(0).unwrap().clone(),
                 }, //implementare un metodo backend da chiamare per trovare gli screen
-                caster_streaming: CasterStreaming { toggler: false },
+                caster_streaming: CasterStreaming { toggler: false, receiver: Arc::new(Mutex::new(receiver)), message_receiver: Arc::new(Mutex::new(message_receiver)), message_sender: Arc::new(Mutex::new(message_sender)), frame_to_update: Arc::new(Mutex::new(None)), },
                 controller: controller,
 
             },

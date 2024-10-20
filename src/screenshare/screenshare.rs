@@ -2,6 +2,7 @@ use std::io::Write;
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::Sender;
 use scap::capturer::{Area, Capturer, Options};
 use scap::frame::Frame;
 
@@ -26,7 +27,7 @@ use scap::frame::Frame;
 
 
 // Funzione migliorata per gestire lo screen sharing
-pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, out: Arc<Mutex<Child>>, stop_flag: Arc<AtomicBool>) {
+pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, out: Arc<Mutex<Child>>, stop_flag: Arc<AtomicBool>,sender:Arc<Sender<Vec<u8>>>) {
     let mut start_time: u64 = 0;
     // Acquisisce il lock per l'intero processo di cattura e inizia la cattura
     {
@@ -61,22 +62,22 @@ pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, out: Arc<Mutex<Child
                 out.write_all(&frame.data).unwrap();
             }
             Frame::RGBx(frame) => {
-
+                sender.send(frame.data.clone()).expect("TODO: panic message");
                 out.write_all(&frame.data).unwrap();
             }
             Frame::XBGR(frame) => {
-
+                sender.send(frame.data.clone()).expect("TODO: panic message");
                 out.write_all(&frame.data).unwrap();
             }
             Frame::BGRx(frame) => {
-
+                sender.send(frame.data.clone()).expect("TODO: panic message");
                 out.write_all(&frame.data).unwrap();
             }
             Frame::BGRA(frame) => {
                 if start_time == 0 {
                     start_time = frame.display_time;
                 }
-
+                sender.send(frame.data.clone()).expect("TODO: panic message");
                 out.write_all(&frame.data).unwrap();
             }
         }
