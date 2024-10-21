@@ -79,7 +79,6 @@ impl Application for App {
         };
 
         let (sender,receiver) = channel::<Vec<u8>>();
-        let (message_sender,message_receiver) = channel::<i32>();
         //kill(Pid::from_raw(child.id() as i32), Signal::SIGKILL).expect("Errore nell'invio del segnale");
         //let childStdin = child.stdin.as_mut().unwrap();
 
@@ -102,7 +101,7 @@ impl Application for App {
                     available_displays: controller.get_available_displays(),
                     selected_display: controller.get_available_displays().get(0).unwrap().clone(),
                 }, //implementare un metodo backend da chiamare per trovare gli screen
-                caster_streaming: CasterStreaming { toggler: false, receiver: Arc::new(Mutex::new(receiver)), message_receiver: Arc::new(Mutex::new(message_receiver)), message_sender: Arc::new(Mutex::new(message_sender)), frame_to_update: Arc::new(Mutex::new(None)), },
+                caster_streaming: CasterStreaming { toggler: false, receiver: Arc::new(Mutex::new(receiver)), frame_to_update: Arc::new(Mutex::new(None)), },
                 controller: controller,
 
             },

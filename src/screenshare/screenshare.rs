@@ -14,7 +14,7 @@ use scap::frame::Frame;
                 "-pixel_format", "rgb24",  // Formato dei pixel: BGR con 0 per il canale alfa
                 "-video_size", "1440x900", // Risoluzione del video (modifica secondo necessità)
                 "-framerate", "120",       // Framerate (modifica secondo necessità)
-                "-"                       // Leggi dallo stdin
+                "-"
             ])
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
@@ -35,6 +35,8 @@ pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, out: Arc<Mutex<Child
         cap.start_capture();
     }
 
+    let mut out = out.lock().unwrap();
+
     while !stop_flag.load(Ordering::Relaxed) {
         // Recupera il frame all'inizio del loop con un solo lock
         let frame = {
@@ -43,22 +45,22 @@ pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, out: Arc<Mutex<Child
         };
 
         // Blocca l'output una sola volta per frame e processa i dati
-        let mut out = out.lock().unwrap();
-
+        let out = out.stdin.as_mut().unwrap();
         match frame {
             Frame::YUVFrame(frame) => {
                 //out.write_all(&frame.luminance_bytes).expect("Failed to write luminance data");
 
             }
             Frame::BGR0(frame) => {
-
+                sender.send(frame.data.clone()).expect("TODO: panic message");
                 out.write_all(&frame.data).unwrap();
+
             }
             Frame::RGB(frame) => {
                 if start_time == 0 {
                     start_time = frame.display_time;
                 }
-
+                sender.send(frame.data.clone()).expect("TODO: panic message");
                 out.write_all(&frame.data).unwrap();
             }
             Frame::RGBx(frame) => {

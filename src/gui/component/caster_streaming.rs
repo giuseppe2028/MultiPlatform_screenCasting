@@ -1,10 +1,11 @@
 use std::alloc::System;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 use iced::widget::{container, image, Image, row};
-use iced::Color;
+use iced::{Color, ContentFit, Length};
 use iced::futures::FutureExt;
 use scap::frame::Frame;
 use crate::column_iced;
@@ -12,13 +13,11 @@ use crate::gui::app;
 use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::Style;
-use crate::gui::theme::widget::Element;
+use crate::gui::theme::widget::{Container, Element};
 
 pub struct CasterStreaming {
     pub toggler: bool,
     pub receiver: Arc<Mutex<Receiver<Vec<u8>>>>,
-    pub message_receiver:Arc<Mutex<Receiver<MessageUpdate>>>,
-    pub message_sender:Arc<Mutex<Sender<MessageUpdate>>>,
     pub frame_to_update: Arc<Mutex<Option<Vec<u8>>>>
 }
 
@@ -56,17 +55,16 @@ impl<'a> Component<'a> for CasterStreaming {
         // Clona i riferimenti a frame_to_update e receiver
         let frame_to_update = Arc::clone(&self.frame_to_update);
         let receiver = Arc::clone(&self.receiver);
-        let sender = self.message_sender.lock().unwrap();
         // Crea un thread per ricevere i dati del frame
         thread::spawn(move || {
             let frame = Some(receiver.lock().unwrap().recv().unwrap());
-
             // Invia il nuovo frame utilizzando il sender
-            sender.send(Arc::new(Mutex::new(MessageUpdate::NewFrame(frame.unwrap())))).expect("TODO: panic message");
         });
         let rec = self.receiver.lock().unwrap();
         let message = rec.recv().expect("TODO: panic message");
-        println!("{:?}", message);
+        // let receiver = self.message_receiver.lock().unwrap();
+        //let rece =receiver.recv().unwrap().clone();
+        println!("messaggio ricevutooo");
         // Ottieni il frame e crea l'immagine
         let image = {
             let frame = self.frame_to_update.lock().unwrap();
@@ -82,10 +80,11 @@ impl<'a> Component<'a> for CasterStreaming {
                         .height(iced::Length::Fill)
                 }
             }
+
         };
 
-        let stream = Element::from(image).explain(Color::WHITE);
-        let annotation_buttons = column_iced![
+            let stream = Element::from(image).explain(Color::WHITE);
+            let annotation_buttons = column_iced![
             CircleButton::new("")
                 .style(Style::Primary)
                 .icon(crate::gui::theme::icon::Icon::Pencil)
@@ -123,10 +122,9 @@ impl<'a> Component<'a> for CasterStreaming {
                 .padding(8)
                 .on_press(app::Message::Back(app::Page::CasterStreaming)),
         ]
-            .padding(8)
-            .spacing(10);
-
-        let menu = row![
+                .padding(8)
+                .spacing(10);
+            let menu = row![
             CircleButton::new("tools")
                 .style(Style::Primary)
                 .icon(crate::gui::theme::icon::Icon::Tools)
@@ -154,34 +152,35 @@ impl<'a> Component<'a> for CasterStreaming {
                 .padding(8)
                 .on_press(app::Message::Close),
         ]
-            .align_items(iced::Alignment::Center)
-            .padding(8)
-            .spacing(10);
+                .align_items(iced::Alignment::Center)
+                .padding(8)
+                .spacing(10);
 
-        let sidebar = column_iced![annotation_buttons]
-            .spacing(8)
-            .align_items(iced::Alignment::Center);
-
-        let streaming = container(
-            column_iced![stream, menu]
+            let sidebar = column_iced![annotation_buttons]
                 .spacing(8)
-                .align_items(iced::Alignment::Center),
-        );
+                .align_items(iced::Alignment::Center);
 
-        if self.toggler {
-            container(
-                column_iced![row![sidebar, streaming]]
+            let streaming = container(
+                column_iced![stream, menu]
                     .spacing(8)
                     .align_items(iced::Alignment::Center),
-            )
-                .into()
-        } else {
-            container(
-                column_iced![row![streaming]]
-                    .spacing(8)
-                    .align_items(iced::Alignment::Center),
-            )
-                .into()
+            );
+
+            if self.toggler {
+                container(
+                    column_iced![row![sidebar, streaming]]
+                        .spacing(8)
+                        .align_items(iced::Alignment::Center),
+                )
+                    .into()
+            } else {
+                container(
+                    column_iced![row![streaming]]
+                        .spacing(8)
+                        .align_items(iced::Alignment::Center),
+                )
+                    .into()
+            }
         }
     }
-}
+

@@ -6,6 +6,7 @@ use nix::unistd::Pid;
 use std::process::{Child, ChildStdin, Stdio};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::thread::{JoinHandle, Thread, ThreadId};
 use iced::keyboard::KeyCode::M;
@@ -18,20 +19,21 @@ pub struct AppController {
     pub option: Options,
     pub streaming_handle:Option<JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>,
-    pub childPadre: Option<Arc<Mutex<Child>>>,
+    pub child: Option<Arc<Mutex<Child>>>,
     sender: Arc<Sender<Vec<u8>>>
 }
 
 impl AppController {
     // Costruttore per AppController
-    pub fn new(option: Options) -> Self {
+    pub fn new(option: Options, sender: Sender<Vec<u8>>) -> Self {
         let capturer = Capturer::new(option.clone());
         AppController {
-            capturer:Arc::new(Mutex::new(capturer)),
-            child: Some(Arc::new(Mutex::new(child_stdin.unwrap()))),
+            capturer: Arc::new(Mutex::new(capturer)),
+            child:None,
             option,
             streaming_handle:None,
             stop_flag:Arc::new(AtomicBool::new(false)),
+            sender: Arc::new(sender)
         }
     }
 
@@ -42,11 +44,11 @@ impl AppController {
         self.stop_flag.store(false,Ordering::Relaxed);
         let mut child = std::process::Command::new("ffplay")
             .args(&[
-                "-f", "rawvideo",         // Formato non compresso
-                "-pixel_format", "rgb24",  // Formato dei pixel: BGR con 0 per il canale alfa
-                "-video_size", "1440x900", // Risoluzione del video (modifica secondo necessità)
-                "-framerate", "120",       // Framerate (modifica secondo necessità)
-                "-"   ,                    // Leggi dallo stdin
+                "-f", "rawvideo",         // Input format
+                "-pixel_format", "rgb24", // Pixel format (you may change this based on your frame data)
+                "-video_size", "1440x900", // Resolution (adjust as necessary)
+                "-framerate", "120",      // Frame rate (adjust as necessary)
+                "-"
             ])
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
@@ -54,8 +56,8 @@ impl AppController {
             .expect("Errore nell'avviare ffplay. Assicurati che ffplay sia installato e nel PATH.");
         let capturer = Arc::clone(&self.capturer);
         let stop_flag = Arc::clone(&self.stop_flag);
-        self.childPadre = Some(Arc::new(Mutex::new(child)));
-        let ch1 = self.childPadre.clone();
+        self.child = Some(Arc::new(Mutex::new(child)));
+        let ch1 = self.child.clone();
         let send = self.sender.clone();
         // Crea un nuovo thread per lo screen sharing
         let handle = Some(thread::spawn(move || {
@@ -104,7 +106,7 @@ impl AppController {
             handle.join().expect("Errore nella terminazione del thread di streaming");
         }println!("Ciao! Il thread di streaso.");
         stop_screen_sharing(self.capturer.clone());
-        self.childPadre.clone().unwrap().lock().unwrap().kill().expect("Err");
+        self.child.clone().unwrap().lock().unwrap().kill().expect("Err");
         //kill(Pid::from_raw(self.id as i32), Signal::SIGKILL).expect("Errore nell'invio del segnale");
         println!("Ciao! Il thread di streaming è stato chiuso.");
     }

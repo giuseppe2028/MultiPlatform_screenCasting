@@ -15,6 +15,8 @@ pub type PickList<'a, Message> = iced::widget::PickList<'a, Message, Renderer>;
 pub type Scrollable<'a, Message> = iced::widget::Scrollable<'a, Message, Renderer>;
 pub type Svg = iced::widget::Svg<Renderer>;
 
+pub type Image = iced::widget::Image;
+
 pub type TextInput<'a> = iced::widget::text_input::TextInput<'a, Message, Renderer>;
 pub type Toggler<'a> = iced::widget::toggler::Toggler<'a, Message, Renderer>;
 
