@@ -27,7 +27,7 @@ use scap::frame::Frame;
 
 
 // Funzione migliorata per gestire lo screen sharing
-pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, out: Arc<Mutex<Child>>, stop_flag: Arc<AtomicBool>,sender:Arc<Sender<Vec<u8>>>) {
+pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, stop_flag: Arc<AtomicBool>,sender:Arc<Sender<Vec<u8>>>) {
     let mut start_time: u64 = 0;
     // Acquisisce il lock per l'intero processo di cattura e inizia la cattura
     {
@@ -35,7 +35,6 @@ pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, out: Arc<Mutex<Child
         cap.start_capture();
     }
 
-    let mut out = out.lock().unwrap();
 
     while !stop_flag.load(Ordering::Relaxed) {
         // Recupera il frame all'inizio del loop con un solo lock
@@ -45,15 +44,12 @@ pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, out: Arc<Mutex<Child
         };
 
         // Blocca l'output una sola volta per frame e processa i dati
-        let out = out.stdin.as_mut().unwrap();
         match frame {
             Frame::YUVFrame(frame) => {
-                //out.write_all(&frame.luminance_bytes).expect("Failed to write luminance data");
 
             }
             Frame::BGR0(frame) => {
                 sender.send(frame.data.clone()).expect("TODO: panic message");
-                //out.write_all(&frame.data).unwrap();
 
             }
             Frame::RGB(frame) => {
@@ -61,26 +57,21 @@ pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, out: Arc<Mutex<Child
                     start_time = frame.display_time;
                 }
                 sender.send(frame.data.clone()).expect("TODO: panic message");
-                //out.write_all(&frame.data).unwrap();
             }
             Frame::RGBx(frame) => {
                 sender.send(frame.data.clone()).expect("TODO: panic message");
-                //out.write_all(&frame.data).unwrap();
             }
             Frame::XBGR(frame) => {
                 sender.send(frame.data.clone()).expect("TODO: panic message");
-                //out.write_all(&frame.data).unwrap();
             }
             Frame::BGRx(frame) => {
                 sender.send(frame.data.clone()).expect("TODO: panic message");
-                //out.write_all(&frame.data).unwrap();
             }
             Frame::BGRA(frame) => {
                 if start_time == 0 {
                     start_time = frame.display_time;
                 }
                 sender.send(frame.data.clone()).expect("TODO: panic message");
-                //out.write_all(&frame.data).unwrap();
             }
         }
     }
@@ -110,7 +101,7 @@ pub fn stop_screen_sharing(mut capturer: Arc<Mutex<Capturer>>){
             show_highlight: true,
             excluded_targets: None,
             output_type: scap::frame::FrameType::RGB,
-            output_resolution: scap::capturer::Resolution::_1441p,
+            output_resolution: scap::capturer::Resolution::_1440p,
 
             ..Default::default()
         };

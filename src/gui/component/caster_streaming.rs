@@ -42,7 +42,6 @@ impl<'a> Component<'a> for CasterStreaming {
     type Message = MessageUpdate;
 
     fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
-        println!("STA ANDO TUTTO uodate");
         match message {
             MessageUpdate::TogglerChanged(new_status) => {
                 self.toggler = new_status;
@@ -52,7 +51,6 @@ impl<'a> Component<'a> for CasterStreaming {
                 *new_frame = Some(frame);
             }
             MessageUpdate::Update =>{
-                println!("Ciao semplicemente ciao");
                 self.seconds += 1;
 
             }
@@ -61,8 +59,7 @@ impl<'a> Component<'a> for CasterStreaming {
     }
 
     fn view(&self) -> Element<'_, app::Message> {
-        println!("STA ANDO TUTTO MALEE");
-        println!("messaggio ricevutooo");
+
         // Ottieni il frame e crea l'immagine
         let image = {
             let frame = self.frame_to_update.lock().unwrap();
@@ -74,7 +71,6 @@ impl<'a> Component<'a> for CasterStreaming {
                 }
                 Some(ref frame_data) => {
                     // Assicurati che il frame sia in un formato valido
-                    println!("Ho ricevuto il frame Oh si oh si e lo mostro");
                     Image::new(image::Handle::from_pixels(1440, 900,rgb_to_rgba(frame_data.clone()))).width(iced::Length::Fill)
                         .height(iced::Length::Fill)
                 }

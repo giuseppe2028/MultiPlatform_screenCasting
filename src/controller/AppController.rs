@@ -19,7 +19,6 @@ pub struct AppController {
     pub option: Options,
     pub streaming_handle:Option<JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>,
-    pub child: Option<Arc<Mutex<Child>>>,
     sender: Arc<Sender<Vec<u8>>>
 }
 
@@ -29,7 +28,6 @@ impl AppController {
         let capturer = Capturer::new(option.clone());
         AppController {
             capturer: Arc::new(Mutex::new(capturer)),
-            child:None,
             option,
             streaming_handle:None,
             stop_flag:Arc::new(AtomicBool::new(false)),
@@ -42,27 +40,16 @@ impl AppController {
     // Funzione che avvia la condivisione dello schermo
     pub fn start_sharing(&mut self) {
         self.stop_flag.store(false,Ordering::Relaxed);
-        let mut child = std::process::Command::new("ffplay")
-            .args(&[
-                "-f", "rawvideo",         // Input format
-                "-pixel_format", "rgb24", // Pixel format (you may change this based on your frame data)
-                "-video_size", "1440x900", // Resolution (adjust as necessary)
-                "-framerate", "120",      // Frame rate (adjust as necessary)
-                "-"
-            ])
-            .stdin(Stdio::piped())
-            .stdout(Stdio::null())
-            .spawn()
-            .expect("Errore nell'avviare ffplay. Assicurati che ffplay sia installato e nel PATH.");
+        println!("Lo schermo selezionato: {:?}",self.option.target);
+        self.capturer = Arc::new(Mutex::new(Capturer::new(self.option.clone())));
         let capturer = Arc::clone(&self.capturer);
         let stop_flag = Arc::clone(&self.stop_flag);
-        self.child = Some(Arc::new(Mutex::new(child)));
-        let ch1 = self.child.clone();
         let send = self.sender.clone();
         // Crea un nuovo thread per lo screen sharing
+        println!("options {:?}",self.option);
         let handle = Some(thread::spawn(move || {
             // Passiamo stdin e altri dati al thread
-            start_screen_sharing(capturer,ch1.unwrap(), stop_flag, send);
+            start_screen_sharing(capturer, stop_flag, send);
         }));
         self.set_handle(handle.unwrap());
     }
@@ -76,7 +63,8 @@ impl AppController {
     }
 
     pub fn set_display(&mut self, display: Display) {
-        self.option.target = Some(Target::Display(display));
+        self.option.target = Some(Target::Display(display.clone()));
+        self.option.output_resolution = scap::capturer::Resolution::get_resolution(display.get_width());
     }
 
 
@@ -106,8 +94,6 @@ impl AppController {
             handle.join().expect("Errore nella terminazione del thread di streaming");
         }println!("Ciao! Il thread di streaso.");
         stop_screen_sharing(self.capturer.clone());
-        self.child.clone().unwrap().lock().unwrap().kill().expect("Err");
-        //kill(Pid::from_raw(self.id as i32), Signal::SIGKILL).expect("Errore nell'invio del segnale");
         println!("Ciao! Il thread di streaming è stato chiuso.");
     }
 
