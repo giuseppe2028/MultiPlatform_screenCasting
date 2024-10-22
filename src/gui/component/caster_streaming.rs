@@ -13,6 +13,7 @@ use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::widget::{Container, Element};
 use iced::time::{self, Duration, Instant};
+use rand::Rng;
 
 pub struct CasterStreaming {
     pub toggler: bool,
@@ -47,8 +48,8 @@ impl<'a> Component<'a> for CasterStreaming {
                 self.toggler = new_status;
             }
             MessageUpdate::NewFrame(frame) => {
-                //let mut new_frame = self.frame_to_update.lock().unwrap();
-                //*new_frame = Some(frame);
+                let mut new_frame = self.frame_to_update.lock().unwrap();
+                *new_frame = Some(frame);
             }
             MessageUpdate::Update =>{
                 println!("Ciao semplicemente ciao");
@@ -61,19 +62,7 @@ impl<'a> Component<'a> for CasterStreaming {
 
     fn view(&self) -> Element<'_, app::Message> {
         println!("STA ANDO TUTTO MALEE");
-        // Clona i riferimenti a frame_to_update e receiver
-        let frame_to_update = Arc::clone(&self.frame_to_update);
-        let frame_to_update = frame_to_update.lock().unwrap();
-        let receiver = Arc::clone(&self.receiver);
-        // Crea un thread per ricevere i dati del frame
-        /*thread::spawn(move || {
-            let frame = Some(receiver.lock().unwrap().recv().unwrap());
-            // Invia il nuovo frame utilizzando il sender
-            *frame_to_update = frame;
-            println!("Sono dentro123");
-        });*/
         println!("messaggio ricevutooo");
-        /*let frame_to_update = self.frame_to_update.lock();
         // Ottieni il frame e crea l'immagine
         let image = {
             let frame = self.frame_to_update.lock().unwrap();
@@ -85,16 +74,17 @@ impl<'a> Component<'a> for CasterStreaming {
                 }
                 Some(ref frame_data) => {
                     // Assicurati che il frame sia in un formato valido
-                    Image::new(image::Handle::from_pixels(1440, 900, frame_data.clone())).width(iced::Length::Fill)
+                    println!("Ho ricevuto il frame Oh si oh si e lo mostro");
+                    Image::new(image::Handle::from_pixels(1440, 900,rgb_to_rgba(frame_data.clone()))).width(iced::Length::Fill)
                         .height(iced::Length::Fill)
                 }
             }
 
-        };*/
+        };
 
-            //let stream = Element::from(image).explain(Color::WHITE);
-            let seconds =  text(self.seconds);
-            let seconds =  Element::from(seconds).explain(Color::WHITE);
+            let stream = Element::from(image).explain(Color::WHITE);
+           // let seconds =  text(self.seconds);
+            //let seconds =  Element::from(seconds).explain(Color::WHITE);
             let annotation_buttons = column_iced![
             CircleButton::new("")
                 .style(Style::Primary)
@@ -172,7 +162,7 @@ impl<'a> Component<'a> for CasterStreaming {
                 .align_items(iced::Alignment::Center);
 
             let streaming = container(
-                column_iced![seconds, menu]
+                column_iced![stream, menu]
                     .spacing(8)
                     .align_items(iced::Alignment::Center),
             );
@@ -197,6 +187,20 @@ impl<'a> Component<'a> for CasterStreaming {
     fn subscription(&self) -> Subscription<Self::Message> {
         todo!()
     }
+}
+fn rgb_to_rgba(rgb_buffer: Vec<u8>) -> Vec<u8> {
+    let rgb_len = rgb_buffer.len();
+    let mut rgba_buffer = Vec::with_capacity((rgb_len / 3) * 4); // Ogni pixel RGB diventa RGBA
+
+    // Itera i pixel RGB e aggiungi il canale Alpha
+    for rgb_chunk in rgb_buffer.chunks_exact(3) {
+        rgba_buffer.push(rgb_chunk[0]); // Red
+        rgba_buffer.push(rgb_chunk[1]); // Green
+        rgba_buffer.push(rgb_chunk[2]); // Blue
+        rgba_buffer.push(255);          // Alpha (opaco)
+    }
+
+    rgba_buffer
 }
 
 

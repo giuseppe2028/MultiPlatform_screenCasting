@@ -1,6 +1,8 @@
 use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::channel;
+use std::thread::Thread;
+use futures::Stream;
 use crate::controller::AppController::AppController;
 use crate::gui::component::caster_settings;
 use crate::gui::component::caster_settings::CasterSettings;
@@ -15,7 +17,7 @@ use crate::gui::component::receiver_streaming::ReceiverStreaming;
 use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
-use iced::{executor, Application, Command, Subscription, subscription};
+use iced::{executor, Application, Command, Subscription, subscription, Event};
 use scap::capturer::Options;
 use scap::frame::Frame;
 use iced::{ time::{self, Duration}, };
@@ -55,7 +57,9 @@ pub enum Message {
     StartRecording(receiver_streaming::Message),
     TogglerChanged(caster_streaming::MessageUpdate),
     SelectDisplay(scap::targets::Display),
-    Close
+    Close,
+    UpdateScreen
+
 }
 
 impl Application for App {
@@ -213,6 +217,24 @@ impl Application for App {
                     //TODO fare in modo di tornare alla schermata precedente
                 Command::none()
             }
+            Message::UpdateScreen => {
+                // Scope the lock to limit the immutable borrow of `self.caster_streaming.receiver`
+                let frame = {
+                    if let Ok(receiver) = self.caster_streaming.receiver.lock() {
+                        receiver.try_recv().ok()
+                    } else {
+                        None
+                    }
+                };
+
+                // Now that the lock is dropped, we can mutate `self.caster_streaming`
+                if let Some(frame) = frame {
+                    self.caster_streaming.update(MessageUpdate::NewFrame(frame));
+                }
+
+                Command::none()
+            }
+
         }
     }
 
@@ -228,10 +250,10 @@ impl Application for App {
         }
     }
     fn subscription(&self) -> Subscription<Self::Message> {
-        //let receiver = self.caster_streaming.receiver.lock().unwrap().recv().unwrap();
-        println!("Sono dentro");
-        time::every(Duration::from_secs(1)).map(|_| {
-            Message::from(MessageUpdate::Update)
+        time::every(Duration::from_millis(10)).map(|_|{
+            Message::UpdateScreen
         })
     }
+
+
 }

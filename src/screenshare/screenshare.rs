@@ -53,7 +53,7 @@ pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, out: Arc<Mutex<Child
             }
             Frame::BGR0(frame) => {
                 sender.send(frame.data.clone()).expect("TODO: panic message");
-                out.write_all(&frame.data).unwrap();
+                //out.write_all(&frame.data).unwrap();
 
             }
             Frame::RGB(frame) => {
@@ -61,26 +61,26 @@ pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, out: Arc<Mutex<Child
                     start_time = frame.display_time;
                 }
                 sender.send(frame.data.clone()).expect("TODO: panic message");
-                out.write_all(&frame.data).unwrap();
+                //out.write_all(&frame.data).unwrap();
             }
             Frame::RGBx(frame) => {
                 sender.send(frame.data.clone()).expect("TODO: panic message");
-                out.write_all(&frame.data).unwrap();
+                //out.write_all(&frame.data).unwrap();
             }
             Frame::XBGR(frame) => {
                 sender.send(frame.data.clone()).expect("TODO: panic message");
-                out.write_all(&frame.data).unwrap();
+                //out.write_all(&frame.data).unwrap();
             }
             Frame::BGRx(frame) => {
                 sender.send(frame.data.clone()).expect("TODO: panic message");
-                out.write_all(&frame.data).unwrap();
+                //out.write_all(&frame.data).unwrap();
             }
             Frame::BGRA(frame) => {
                 if start_time == 0 {
                     start_time = frame.display_time;
                 }
                 sender.send(frame.data.clone()).expect("TODO: panic message");
-                out.write_all(&frame.data).unwrap();
+                //out.write_all(&frame.data).unwrap();
             }
         }
     }
