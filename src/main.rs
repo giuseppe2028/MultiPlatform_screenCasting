@@ -5,6 +5,7 @@ mod gui;
 mod capture;
 mod screenshare;
 mod controller;
+mod socket;
 
 pub fn main() -> iced::Result {
     App::run(Settings::default())
