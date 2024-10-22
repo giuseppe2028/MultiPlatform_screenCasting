@@ -15,9 +15,10 @@ use crate::gui::component::receiver_streaming::ReceiverStreaming;
 use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
-use iced::{executor, Application, Command};
+use iced::{executor, Application, Command, Subscription, subscription};
 use scap::capturer::Options;
 use scap::frame::Frame;
+use iced::{ time::{self, Duration}, };
 use super::component::caster_streaming;
 
 pub struct App {
@@ -101,7 +102,7 @@ impl Application for App {
                     available_displays: controller.get_available_displays(),
                     selected_display: controller.get_available_displays().get(0).unwrap().clone(),
                 }, //implementare un metodo backend da chiamare per trovare gli screen
-                caster_streaming: CasterStreaming { toggler: false, receiver: Arc::new(Mutex::new(receiver)), frame_to_update: Arc::new(Mutex::new(None)), },
+                caster_streaming: CasterStreaming { toggler: false, receiver: Arc::new(Mutex::new(receiver)), frame_to_update: Arc::new(Mutex::new(None)), seconds: 0 },
                 controller: controller,
 
             },
@@ -225,5 +226,12 @@ impl Application for App {
             Page::CasterSettings => self.caster_settings.view(),
             Page::CasterStreaming => self.caster_streaming.view(),
         }
+    }
+    fn subscription(&self) -> Subscription<Self::Message> {
+        //let receiver = self.caster_streaming.receiver.lock().unwrap().recv().unwrap();
+        println!("Sono dentro");
+        time::every(Duration::from_secs(1)).map(|_| {
+            Message::from(MessageUpdate::Update)
+        })
     }
 }

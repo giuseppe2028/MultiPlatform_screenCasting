@@ -1,8 +1,9 @@
 use std::fmt::Debug;
-
-use iced::Command;
+use std::time::Duration;
+use iced::{Command, time};
 
 use crate::gui::app;
+use crate::gui::component::caster_streaming::MessageUpdate;
 use crate::gui::theme::widget::Element;
 
 pub mod connection;
@@ -19,4 +20,5 @@ pub trait Component<'a> {
 
     fn update(&mut self, message: Self::Message) -> Command<app::Message>;
     fn view(&self /*, props: Self::ViewProps*/) -> Element<'_, app::Message>;
+    fn subscription(&self) -> iced::Subscription<Self::Message>;
 }

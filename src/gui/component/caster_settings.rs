@@ -1,6 +1,6 @@
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{column, container, horizontal_space, pick_list, row, vertical_space};
-use iced::{Command, Length::Fill};
+use iced::{Command, Length::Fill, Subscription};
 
 use crate::column_iced;
 use crate::gui::component::Component;
@@ -109,5 +109,9 @@ impl<'a> Component<'a> for CasterSettings {
             .align_y(Vertical::Center)
         ])           
         .into()
+    }
+
+    fn subscription(&self) -> Subscription<Self::Message> {
+        todo!()
     }
 }

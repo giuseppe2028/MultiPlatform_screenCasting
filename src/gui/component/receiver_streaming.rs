@@ -1,5 +1,5 @@
 use iced::widget::{container, image, row};
-use iced::{Color, Command};
+use iced::{Color, Command, Subscription};
 
 use crate::column_iced;
 use crate::gui::app;
@@ -82,5 +82,9 @@ impl<'a> Component<'a> for ReceiverStreaming {
                 .align_items(iced::Alignment::Center),
         )
         .into()
+    }
+
+    fn subscription(&self) -> Subscription<Self::Message> {
+        todo!()
     }
 }

@@ -1,7 +1,7 @@
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{container, row};
 use iced::Length::Fill;
-
+use iced::Subscription;
 use crate::column_iced;
 use crate::gui::component::Component;
 use crate::gui::theme::button::Style;
@@ -73,5 +73,9 @@ impl<'a> Component<'a> for Connection {
         .align_x(Horizontal::Center)
         .align_y(Vertical::Center)
         .into()
+    }
+
+    fn subscription(&self) -> Subscription<Self::Message> {
+        todo!()
     }
 }

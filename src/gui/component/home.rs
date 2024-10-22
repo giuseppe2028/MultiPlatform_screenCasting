@@ -1,6 +1,6 @@
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{container, row};
-use iced::Command;
+use iced::{Command, Subscription};
 use iced::Length::Fill;
 
 use crate::column_iced;
@@ -76,5 +76,9 @@ impl<'a> Component<'a> for Home {
         .align_x(Horizontal::Center)
         .align_y(Vertical::Center)
         .into()
+    }
+
+    fn subscription(&self) -> Subscription<Self::Message> {
+        todo!()
     }
 }
