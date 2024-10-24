@@ -70,7 +70,7 @@ impl<'a> Component<'a> for CasterStreaming {
                 }
                 Some(ref frame_data) => {
                     // Assicurati che il frame sia in un formato valido
-                    Image::new(image::Handle::from_pixels(1440, 900,rgb_to_rgba(frame_data.clone()))).width(iced::Length::Fill)
+                    Image::new(image::Handle::from_pixels(1440, 900,frame_data.clone())).width(iced::Length::Fill)
                         .height(iced::Length::Fill)
                 }
             }

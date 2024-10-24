@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use scap::capturer::{Area, Capturer, Options};
 use scap::frame::Frame;
+use crate::utils::utils::{bgr0_to_rgba, bgra_to_rgba, bgrx_to_rgba, rgb_to_rgba, rgbx_to_rgba, xbgr_to_rgba};
 
     pub fn visualize_screen_sharing(){
         //start ffplay
@@ -49,29 +50,29 @@ pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, stop_flag: Arc<Atomi
 
             }
             Frame::BGR0(frame) => {
-                sender.send(frame.data.clone()).expect("TODO: panic message");
+                sender.send(bgr0_to_rgba(frame.data.clone())).expect("TODO: panic message");
 
             }
             Frame::RGB(frame) => {
                 if start_time == 0 {
                     start_time = frame.display_time;
                 }
-                sender.send(frame.data.clone()).expect("TODO: panic message");
+                sender.send(rgb_to_rgba(frame.data.clone())).expect("TODO: panic message");
             }
             Frame::RGBx(frame) => {
-                sender.send(frame.data.clone()).expect("TODO: panic message");
+                sender.send(rgbx_to_rgba(frame.data.clone())).expect("TODO: panic message");
             }
             Frame::XBGR(frame) => {
-                sender.send(frame.data.clone()).expect("TODO: panic message");
+                sender.send(xbgr_to_rgba(frame.data.clone())).expect("TODO: panic message");
             }
             Frame::BGRx(frame) => {
-                sender.send(frame.data.clone()).expect("TODO: panic message");
+                sender.send(bgrx_to_rgba(frame.data.clone())).expect("TODO: panic message");
             }
             Frame::BGRA(frame) => {
                 if start_time == 0 {
                     start_time = frame.display_time;
                 }
-                sender.send(frame.data.clone()).expect("TODO: panic message");
+                sender.send(bgra_to_rgba(frame.data.clone())).expect("TODO: panic message");
             }
         }
     }
