@@ -19,10 +19,7 @@ pub struct CasterSettings {
 #[derive(Debug, Clone)]
 pub enum Window {
     FullScreen,
-    Area {
-        x: u64,
-        y: u64
-    }
+    Area
 }
 
 
@@ -79,7 +76,7 @@ impl<'a> Component<'a> for CasterSettings {
             .icon(Icon::CasterHome) // Sostituisci con la tua icona
             .style(Style::Primary)
             .build()
-            .on_press(app::Message::from(Message::SelectWindow(Window::Area { x: 10, y: 10 })));  //TODO TOIMPLEMENT
+            .on_press(app::Message::from(Message::SelectWindow(Window::Area)));  //TODO TOIMPLEMENT
 
 
         let choose_screen_button = pick_list(

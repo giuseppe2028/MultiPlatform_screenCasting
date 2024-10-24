@@ -4,7 +4,7 @@ use scap::{
     Target,
 };
 
-use crate::screenshare::screenshare::start_screen_sharing;
+use crate::screenshare::screenshare::{start_screen_sharing, take_screenshot};
 use crate::screenshare::screenshare::stop_screen_sharing;
 use iced::keyboard::KeyCode::M;
 use scap::frame::Frame;
@@ -95,5 +95,10 @@ impl AppController {
         println!("Ciao! Il thread di streaso.");
         stop_screen_sharing(self.capturer.clone());
         println!("Ciao! Il thread di streaming è stato chiuso.");
+    }
+    pub fn take_screenshot(&mut self)->Vec<u8>{
+
+        take_screenshot(self.capturer.clone())
+
     }
 }

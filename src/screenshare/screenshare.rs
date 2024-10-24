@@ -6,7 +6,7 @@ use std::sync::mpsc::Sender;
 use scap::capturer::{Area, Capturer, Options};
 use scap::frame::Frame;
 
-    pub fn visualize_screen_sharing(){
+pub fn visualize_screen_sharing(){
         //start ffplay
         let mut child = Command::new("ffplay")
             .args(&[
@@ -111,5 +111,40 @@ pub fn stop_screen_sharing(mut capturer: Arc<Mutex<Capturer>>){
         Capturer::new(options)
     }
 
+    pub fn take_screenshot(captures: Arc<Mutex<Capturer>>)->Vec<u8>{
+        {
+            let mut cap = captures.lock().unwrap();
+            cap.start_capture();
+        }
+        let frame = {
+            let mut cap = captures.lock().unwrap();
+            cap.get_next_frame().expect("Error")
+        };
+
+        match frame {
+            Frame::YUVFrame(frame) => {
+               Vec::<u8>::new()
+            }
+            Frame::BGR0(frame) => {
+                frame.data
+            }
+            Frame::RGB(frame) => {
+                frame.data
+            }
+            Frame::RGBx(frame) => {
+                frame.data
+            }
+            Frame::XBGR(frame) => {
+                frame.data
+            }
+            Frame::BGRx(frame) => {
+                frame.data
+            }
+            Frame::BGRA(frame) => {
+                frame.data
+            }
+        }
+
+    }
 
 

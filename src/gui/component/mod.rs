@@ -12,6 +12,7 @@ pub mod receiver_ip;
 pub mod receiver_streaming;
 pub mod caster_settings;
 pub mod caster_streaming;
+pub mod window_part_screen;
 
 pub trait Component<'a> {
     type Message: Into<app::Message> + Clone + Debug;

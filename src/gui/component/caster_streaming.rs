@@ -183,20 +183,7 @@ impl<'a> Component<'a> for CasterStreaming {
         todo!()
     }
 }
-fn rgb_to_rgba(rgb_buffer: Vec<u8>) -> Vec<u8> {
-    let rgb_len = rgb_buffer.len();
-    let mut rgba_buffer = Vec::with_capacity((rgb_len / 3) * 4); // Ogni pixel RGB diventa RGBA
 
-    // Itera i pixel RGB e aggiungi il canale Alpha
-    for rgb_chunk in rgb_buffer.chunks_exact(3) {
-        rgba_buffer.push(rgb_chunk[0]); // Red
-        rgba_buffer.push(rgb_chunk[1]); // Green
-        rgba_buffer.push(rgb_chunk[2]); // Blue
-        rgba_buffer.push(255);          // Alpha (opaco)
-    }
-
-    rgba_buffer
-}
 
 
 

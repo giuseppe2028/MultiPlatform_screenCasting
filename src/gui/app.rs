@@ -21,6 +21,7 @@ use iced::{executor, Application, Command, Subscription, subscription, Event};
 use scap::capturer::Options;
 use scap::frame::Frame;
 use iced::{ time::{self, Duration}, };
+use crate::gui::component::window_part_screen::WindowPartScreen;
 use super::component::caster_streaming;
 
 pub struct App {
@@ -32,6 +33,7 @@ pub struct App {
     receiver_streamimg: ReceiverStreaming,
     caster_streaming: CasterStreaming,
     controller: AppController,
+    windows_part_screen: WindowPartScreen
 }
 
 #[derive(Debug, Clone)]
@@ -43,6 +45,7 @@ pub enum Page {
     CasterSettings,
     ReceiverStreaming,
     CasterStreaming,
+    WindowPartScreen
 }
 
 #[derive(Debug, Clone)]
@@ -105,8 +108,8 @@ impl Application for App {
                     selected_display: controller.get_available_displays().get(0).unwrap().clone(),
                 }, //implementare un metodo backend da chiamare per trovare gli screen
                 caster_streaming: CasterStreaming { toggler: false, receiver: Arc::new(Mutex::new(receiver)), frame_to_update: Arc::new(Mutex::new(None)), seconds: 0 },
-                controller: controller,
-
+                windows_part_screen: WindowPartScreen {screenshot:controller.take_screenshot(),coordinate:[(0,0);2]},
+                controller,
             },
             Command::none(),
         )
@@ -170,6 +173,9 @@ impl Application for App {
                     Page::CasterStreaming => {
                         self.current_page = Page::Home;
                     }
+                    Page::WindowPartScreen=>{
+                        self.current_page = Page::Home;
+                    }
                 }
                 Command::none()
             }
@@ -186,8 +192,8 @@ impl Application for App {
                         self.current_page = Page::Connection;
                         //settare la risoluzione
                     },
-                    caster_settings::Window::Area { x, y } => {
-                        todo!()
+                    caster_settings::Window::Area => {
+                        self.current_page = Page::WindowPartScreen
                     },
                 }
 
@@ -244,6 +250,7 @@ impl Application for App {
             Page::ReceiverStreaming => self.receiver_streamimg.view(),
             Page::CasterSettings => self.caster_settings.view(),
             Page::CasterStreaming => self.caster_streaming.view(),
+            Page::WindowPartScreen => self.windows_part_screen.view()
         }
     }
     fn subscription(&self) -> Subscription<Self::Message> {
