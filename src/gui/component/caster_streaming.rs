@@ -4,7 +4,6 @@ use std::thread;
 use iced::widget::{container, image, Image, row, text};
 use iced::{Color, ContentFit, Length, Subscription};
 use iced::futures::FutureExt;
-use nix::libc::time;
 use scap::frame::Frame;
 use crate::column_iced;
 use crate::gui::app;

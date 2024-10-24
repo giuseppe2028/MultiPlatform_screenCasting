@@ -1,25 +1,26 @@
 use scap::{
-    capturer::{Capturer, Options}, targets::Display, Target
+    capturer::{Capturer, Options},
+    targets::Display,
+    Target,
 };
-use nix::sys::signal::{kill, Signal};
-use nix::unistd::Pid;
-use std::process::{Child, ChildStdin, Stdio};
-use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{channel, Sender};
-use std::thread;
-use std::thread::{JoinHandle, Thread, ThreadId};
-use iced::keyboard::KeyCode::M;
-use scap::frame::Frame;
+
 use crate::screenshare::screenshare::start_screen_sharing;
 use crate::screenshare::screenshare::stop_screen_sharing;
+use iced::keyboard::KeyCode::M;
+use scap::frame::Frame;
+use std::process::{Child, ChildStdin, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{channel, Sender};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::thread::{JoinHandle, Thread, ThreadId};
 
 pub struct AppController {
     pub capturer: Arc<Mutex<Capturer>>,
     pub option: Options,
-    pub streaming_handle:Option<JoinHandle<()>>,
+    pub streaming_handle: Option<JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>,
-    sender: Arc<Sender<Vec<u8>>>
+    sender: Arc<Sender<Vec<u8>>>,
 }
 
 impl AppController {
@@ -29,24 +30,22 @@ impl AppController {
         AppController {
             capturer: Arc::new(Mutex::new(capturer)),
             option,
-            streaming_handle:None,
-            stop_flag:Arc::new(AtomicBool::new(false)),
-            sender: Arc::new(sender)
+            streaming_handle: None,
+            stop_flag: Arc::new(AtomicBool::new(false)),
+            sender: Arc::new(sender),
         }
     }
 
-
-
     // Funzione che avvia la condivisione dello schermo
     pub fn start_sharing(&mut self) {
-        self.stop_flag.store(false,Ordering::Relaxed);
-        println!("Lo schermo selezionato: {:?}",self.option.target);
+        self.stop_flag.store(false, Ordering::Relaxed);
+        println!("Lo schermo selezionato: {:?}", self.option.target);
         self.capturer = Arc::new(Mutex::new(Capturer::new(self.option.clone())));
         let capturer = Arc::clone(&self.capturer);
         let stop_flag = Arc::clone(&self.stop_flag);
         let send = self.sender.clone();
         // Crea un nuovo thread per lo screen sharing
-        println!("options {:?}",self.option);
+        println!("options {:?}", self.option);
         let handle = Some(thread::spawn(move || {
             // Passiamo stdin e altri dati al thread
             start_screen_sharing(capturer, stop_flag, send);
@@ -58,15 +57,15 @@ impl AppController {
         self.option = options;
     }
 
-    pub fn set_handle(&mut self, handle:JoinHandle<()>) {
+    pub fn set_handle(&mut self, handle: JoinHandle<()>) {
         self.streaming_handle = Some(handle);
     }
 
     pub fn set_display(&mut self, display: Display) {
         self.option.target = Some(Target::Display(display.clone()));
-        self.option.output_resolution = scap::capturer::Resolution::get_resolution(display.get_width());
+        self.option.output_resolution =
+            scap::capturer::Resolution::get_resolution(display.get_width());
     }
-
 
     pub fn get_available_displays(&self) -> Vec<scap::targets::Display> {
         let displays: Vec<scap::targets::Display> = scap::get_all_targets()
@@ -80,21 +79,21 @@ impl AppController {
             })
             .collect();
 
-            return displays;
+        return displays;
     }
 
-
     pub fn stop_recording(&mut self) {
-
         // Imposta il flag per fermare il thread
         self.stop_flag.store(true, Ordering::Relaxed);
 
         // Aspetta che il thread di streaming termini (se esiste)
         if let Some(handle) = self.streaming_handle.take() {
-            handle.join().expect("Errore nella terminazione del thread di streaming");
-        }println!("Ciao! Il thread di streaso.");
+            handle
+                .join()
+                .expect("Errore nella terminazione del thread di streaming");
+        }
+        println!("Ciao! Il thread di streaso.");
         stop_screen_sharing(self.capturer.clone());
         println!("Ciao! Il thread di streaming è stato chiuso.");
     }
-
 }
