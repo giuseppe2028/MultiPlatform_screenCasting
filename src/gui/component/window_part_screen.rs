@@ -1,9 +1,10 @@
 use enigo::{Enigo, Mouse, Settings};
 use iced::alignment::{Horizontal, Vertical};
-use iced::widget::{container, Image, image, row, text,mouse_area};
-use iced::{Command, Event, Subscription};
+use iced::widget::{container, Image, image, mouse_area, row, text};
+use iced::{Application, Command, Event, Subscription};
 use iced::Length::Fill;
 use iced::mouse::Event::CursorMoved;
+use iced::widget::mouse_area::MouseArea;
 use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::Component;
@@ -27,13 +28,20 @@ pub enum Role {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    FirstPress,
-    SecondPress,
+    FirstPress(i32, i32),
+    SecondPress(i32, i32),
 }
 
 impl From<Message> for app::Message {
     fn from(message: Message) -> Self {
-        app::Message::Close
+        match message {
+            Message::FirstPress(x, y) => {
+                app::Message::AreaSelectedFirst(x,y)
+            }
+            Message::SecondPress(x, y) => {
+                app::Message::AreaSelectedSecond(x,y)
+            }
+        }
     }
 }
 
@@ -41,23 +49,23 @@ impl<'a> Component<'a> for WindowPartScreen {
     type Message = Message;
 
     fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
-        let mut enigo = Enigo::new(&Settings::default()).unwrap();
 
         match message {
-            Message::FirstPress => {
-                self.coordinate[0] =enigo.location().unwrap()
+            Message::FirstPress(x, y) => {
+                println!("ciao");
+                self.coordinate[0] =(x, y)
             }
-            Message::SecondPress => {
-                self.coordinate[1] =enigo.location().unwrap()
+            Message::SecondPress(x, y) => {
+                self.coordinate[1] =(x, y)
             }
         }
         Command::none()
     }
 
     fn view(&self) -> Element<'_, app::Message> {
+        let mut enigo = Enigo::new(&Settings::default()).unwrap();
 
-
-        let mouse = mouse_area(
+        mouse_area(
             column_iced![
                 row![
                     Image::new(image::Handle::from_pixels(1440, 900,rgb_to_rgba(self.screenshot.clone()))).width(iced::Length::Fill)
@@ -72,17 +80,16 @@ impl<'a> Component<'a> for WindowPartScreen {
                 ]
             ]
         )
-            .on_press(Message::FirstPress)
-            .on_release(Message::SecondPress);
-      let element = Element::from(
-          mouse
-      );
-        container(
-            column_iced![element]
-                .spacing(8)
-                .align_items(iced::Alignment::Center),
-        )
-            .into()
+            .on_press({
+                let points = enigo.location().unwrap();
+                 Message::FirstPress(points.0, points.1).into()
+            })
+
+            .on_release({
+                let points = enigo.location().unwrap();
+                 Message::SecondPress(points.0, points.1).into()
+            })
+             .into()
 
 
 

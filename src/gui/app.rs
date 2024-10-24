@@ -61,7 +61,9 @@ pub enum Message {
     TogglerChanged(caster_streaming::MessageUpdate),
     SelectDisplay(scap::targets::Display),
     Close,
-    UpdateScreen
+    UpdateScreen,
+    AreaSelectedFirst(i32, i32),
+    AreaSelectedSecond(i32, i32)
 
 }
 
@@ -235,6 +237,14 @@ impl Application for App {
                     self.caster_streaming.update(MessageUpdate::NewFrame(frame));
                 }
 
+                Command::none()
+            }
+            Message::AreaSelectedFirst(x, y) => {
+                self.windows_part_screen.update(crate::gui::component::window_part_screen::Message::FirstPress(x,y));
+                Command::none()
+            }
+            Message::AreaSelectedSecond(x, y) => {
+                self.windows_part_screen.update(crate::gui::component::window_part_screen::Message::SecondPress(x,y));
                 Command::none()
             }
 
