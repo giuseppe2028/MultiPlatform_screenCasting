@@ -49,25 +49,31 @@ pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, stop_flag: Arc<Atomi
 
             }
             Frame::BGR0(frame) => {
+                println!("bgr0");
                 sender.send(frame.data.clone()).expect("TODO: panic message");
 
             }
             Frame::RGB(frame) => {
+                println!("rgb");
                 if start_time == 0 {
                     start_time = frame.display_time;
                 }
                 sender.send(frame.data.clone()).expect("TODO: panic message");
             }
             Frame::RGBx(frame) => {
+                println!("rgbx");
                 sender.send(frame.data.clone()).expect("TODO: panic message");
             }
             Frame::XBGR(frame) => {
+                println!("xbgr");
                 sender.send(frame.data.clone()).expect("TODO: panic message");
             }
             Frame::BGRx(frame) => {
+                println!("bgrx");
                 sender.send(frame.data.clone()).expect("TODO: panic message");
             }
             Frame::BGRA(frame) => {
+                println!("bgra");
                 if start_time == 0 {
                     start_time = frame.display_time;
                 }

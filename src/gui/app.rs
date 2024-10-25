@@ -72,7 +72,7 @@ impl Application for App {
     fn new(_flags: Self::Flags) -> (Self, iced::Command<Self::Message>) {
 
         let default_opt = Options {
-            fps: 120,
+            fps: 30,
             show_cursor: true,
             show_highlight: true,
             excluded_targets: None,
@@ -104,7 +104,7 @@ impl Application for App {
                     available_displays: controller.get_available_displays(),
                     selected_display: controller.get_available_displays().get(0).unwrap().clone(),
                 }, //implementare un metodo backend da chiamare per trovare gli screen
-                caster_streaming: CasterStreaming { toggler: false, receiver: Arc::new(Mutex::new(receiver)), frame_to_update: Arc::new(Mutex::new(None)), seconds: 0 },
+                caster_streaming: CasterStreaming { toggler: false, receiver: Arc::new(Mutex::new(receiver)), frame_to_update: Arc::new(Mutex::new(None)), measures: controller.get_measures()},
                 controller: controller,
 
             },
@@ -139,9 +139,9 @@ impl Application for App {
                 },
             },
             Message::StartSharing => {
-                print!("Bottone Premuto");
                 self.current_page = Page::CasterStreaming;
                 self.controller.start_sharing();
+                self.caster_streaming.measures = self.controller.get_measures();                
                 Command::none()
             }
             Message::ReceiverSharing(_) => {
@@ -247,7 +247,7 @@ impl Application for App {
         }
     }
     fn subscription(&self) -> Subscription<Self::Message> {
-        time::every(Duration::from_micros(1)).map(|_|{
+        time::every(Duration::from_micros(100)).map(|_|{
             Message::UpdateScreen
         })
     }

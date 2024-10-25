@@ -5,7 +5,7 @@ use iced::widget::{container, image, Image, row, text};
 use iced::{Color, ContentFit, Length, Subscription};
 use iced::futures::FutureExt;
 use scap::frame::Frame;
-use crate::column_iced;
+use crate::{capture, column_iced, controller};
 use crate::gui::app;
 use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
@@ -18,14 +18,13 @@ pub struct CasterStreaming {
     pub toggler: bool,
     pub receiver: Arc<Mutex<Receiver<Vec<u8>>>>,
     pub frame_to_update: Arc<Mutex<Option<Vec<u8>>>>,
-    pub seconds:u32
+    pub measures: (u32, u32) //width, height
 }
 
 #[derive(Debug, Clone)]
 pub enum MessageUpdate {
     TogglerChanged(bool),
     NewFrame(Vec<u8>),
-    Update
 }
 
 
@@ -49,15 +48,13 @@ impl<'a> Component<'a> for CasterStreaming {
                 let mut new_frame = self.frame_to_update.lock().unwrap();
                 *new_frame = Some(frame);
             }
-            MessageUpdate::Update =>{
-                self.seconds += 1;
-
-            }
         }
         iced::Command::none()
     }
 
     fn view(&self) -> Element<'_, app::Message> {
+
+        println!("{}, {}", self.measures.0, self.measures.1);
 
         // Ottieni il frame e crea l'immagine
         let image = {
@@ -70,7 +67,7 @@ impl<'a> Component<'a> for CasterStreaming {
                 }
                 Some(ref frame_data) => {
                     // Assicurati che il frame sia in un formato valido
-                    Image::new(image::Handle::from_pixels(1440, 900,rgb_to_rgba(frame_data.clone()))).width(iced::Length::Fill)
+                    Image::new(image::Handle::from_pixels(self.measures.0, self.measures.1,bgra_to_rgba(frame_data.clone()))).width(iced::Length::Fill)
                         .height(iced::Length::Fill)
                 }
             }
@@ -183,20 +180,23 @@ impl<'a> Component<'a> for CasterStreaming {
         todo!()
     }
 }
-fn rgb_to_rgba(rgb_buffer: Vec<u8>) -> Vec<u8> {
-    let rgb_len = rgb_buffer.len();
-    let mut rgba_buffer = Vec::with_capacity((rgb_len / 3) * 4); // Ogni pixel RGB diventa RGBA
+fn bgra_to_rgba(bgra_data: Vec<u8>) -> Vec<u8> {
+    // Assicuriamoci che la lunghezza del vettore BGRA sia divisibile per 4
+    assert!(bgra_data.len() % 4 == 0, "Il numero di valori BGRA non è valido!");
 
-    // Itera i pixel RGB e aggiungi il canale Alpha
-    for rgb_chunk in rgb_buffer.chunks_exact(3) {
-        rgba_buffer.push(rgb_chunk[0]); // Red
-        rgba_buffer.push(rgb_chunk[1]); // Green
-        rgba_buffer.push(rgb_chunk[2]); // Blue
-        rgba_buffer.push(255);          // Alpha (opaco)
+    let mut rgba_data: Vec<u8> = Vec::with_capacity(bgra_data.len());
+
+    // Iteriamo attraverso i valori BGRA in gruppi di 4 (B, G, R, A)
+    for chunk in bgra_data.chunks(4) {
+        rgba_data.push(chunk[2]); // R (scambiato con B)
+        rgba_data.push(chunk[1]); // G
+        rgba_data.push(chunk[0]); // B (scambiato con R)
+        rgba_data.push(chunk[3]); // A (rimane invariato)
     }
 
-    rgba_buffer
+    rgba_data
 }
+
 
 
 

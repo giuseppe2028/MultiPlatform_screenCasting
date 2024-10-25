@@ -67,6 +67,20 @@ impl AppController {
             scap::capturer::Resolution::get_resolution(display.get_width());
     }
 
+    pub fn get_measures(&self) -> (u32, u32) {
+        match self.option.output_resolution {
+            scap::capturer::Resolution::_480p => (640, 480),       // 480p: 640x480
+            scap::capturer::Resolution::_720p => (1280, 720),      // 720p: 1280x720
+            scap::capturer::Resolution::_1080p => (1920, 1080),    // 1080p: 1920x1080
+            scap::capturer::Resolution::_1440p => (2560, 1440),    // 1440p: 2560x1440
+            scap::capturer::Resolution::_2160p => (3840, 2160),    // 2160p: 3840x2160
+            scap::capturer::Resolution::_4320p => (7680, 4320),    // 4320p: 7680x4320
+            scap::capturer::Resolution::Captured => {
+                (1920, 1080) 
+            },
+        }
+    }
+
     pub fn get_available_displays(&self) -> Vec<scap::targets::Display> {
         let displays: Vec<scap::targets::Display> = scap::get_all_targets()
             .into_iter()
