@@ -14,6 +14,9 @@ use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::{JoinHandle, Thread, ThreadId};
+use scap::capturer::{Area, Point, Size};
+use scap::targets::get_target_dimensions;
+use url::quirks::origin;
 
 pub struct AppController {
     pub capturer: Arc<Mutex<Capturer>>,
@@ -66,6 +69,17 @@ impl AppController {
         self.option.output_resolution =
             scap::capturer::Resolution::get_resolution(display.get_width());
     }
+
+    pub fn set_coordinates(&mut self, x: f64, y: f64,start_x:f64,start_y:f64) {
+
+        self.option.crop_area = Some(
+            Area {
+                origin: Point { x: start_x, y: start_y },
+                size: Size { width:x, height:y},
+            }
+        );
+    }
+
 
     pub fn get_available_displays(&self) -> Vec<scap::targets::Display> {
         let displays: Vec<scap::targets::Display> = scap::get_all_targets()

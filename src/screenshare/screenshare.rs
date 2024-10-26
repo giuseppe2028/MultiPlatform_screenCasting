@@ -54,6 +54,7 @@ pub fn start_screen_sharing(captures: Arc<Mutex<Capturer>>, stop_flag: Arc<Atomi
 
             }
             Frame::RGB(frame) => {
+                println!("DIMENSIONE FRAME {:?} {} {}",frame.data.len(),frame.width,frame.height);
                 if start_time == 0 {
                     start_time = frame.display_time;
                 }

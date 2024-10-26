@@ -21,7 +21,9 @@ use iced::{executor, Application, Command, Subscription, subscription, Event};
 use scap::capturer::Options;
 use scap::frame::Frame;
 use iced::{ time::{self, Duration}, };
-use crate::gui::component::window_part_screen::WindowPartScreen;
+use scap::targets::get_target_dimensions;
+use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
+use crate::utils::utils::get_screen_scaled;
 use super::component::caster_streaming;
 
 pub struct App {
@@ -62,8 +64,10 @@ pub enum Message {
     SelectDisplay(scap::targets::Display),
     Close,
     UpdateScreen,
-    AreaSelectedFirst(i32, i32),
-    AreaSelectedSecond(i32, i32)
+    StartPartialSharing(f32,f32,f64,f64),
+    AreaSelectedFirst,
+    AreaSelectedSecond,
+    CursorMoved(f32,f32)
 
 }
 
@@ -110,7 +114,7 @@ impl Application for App {
                     selected_display: controller.get_available_displays().get(0).unwrap().clone(),
                 }, //implementare un metodo backend da chiamare per trovare gli screen
                 caster_streaming: CasterStreaming { toggler: false, receiver: Arc::new(Mutex::new(receiver)), frame_to_update: Arc::new(Mutex::new(None)), seconds: 0 },
-                windows_part_screen: WindowPartScreen {screenshot:controller.take_screenshot(),coordinate:[(0,0);2]},
+                windows_part_screen: WindowPartScreen {screenshot:controller.take_screenshot(),coordinate:[(0.0,0.0);2], cursor_position: (0.0, 0.0), screen_dimension: (0.0, 0.0) },
                 controller,
             },
             Command::none(),
@@ -144,7 +148,7 @@ impl Application for App {
                 },
             },
             Message::StartSharing => {
-                print!("Bottone Premuto");
+                print!("Bottone Premuto, {:?}",self.controller.option);
                 self.current_page = Page::CasterStreaming;
                 self.controller.start_sharing();
                 Command::none()
@@ -213,6 +217,7 @@ impl Application for App {
             Message::SelectDisplay(display) => {
                 //azione di quando sceglie quale schermo condividere
                 self.controller.set_display(display.clone());
+
                 let _ = self.caster_settings.update( caster_settings::Message::SelectDisplay(display));
                 Command::none()
             }
@@ -239,15 +244,30 @@ impl Application for App {
 
                 Command::none()
             }
-            Message::AreaSelectedFirst(x, y) => {
-                self.windows_part_screen.update(crate::gui::component::window_part_screen::Message::FirstPress(x,y));
-                Command::none()
-            }
-            Message::AreaSelectedSecond(x, y) => {
-                self.windows_part_screen.update(crate::gui::component::window_part_screen::Message::SecondPress(x,y));
-                Command::none()
-            }
+            Message::StartPartialSharing(x,y,start_x,start_y)=>{
+                println!("stampo x : {} e stampo y:{}",x,y);
+                let target = self.controller.option.target.clone();
+                //calcolo la x rapportata ai valori dello schermo:
 
+                let (x,y) = get_screen_scaled(x,get_target_dimensions(&target.unwrap()));
+                self.controller.set_coordinates(x as f64, y as f64,start_x,start_y);
+                self.current_page = Page::CasterStreaming;
+                self.controller.start_sharing();
+                Command::none()
+            }
+            Message::AreaSelectedFirst=>{
+                self.windows_part_screen.update(MessagePress::FirstPress);
+                Command::none()
+            }
+            Message::AreaSelectedSecond=>{
+                println!("baciami ancoraa\n\n\n\n\n\n");
+                self.windows_part_screen.update(MessagePress::SecondPress);
+                Command::none()
+            }
+            Message::CursorMoved(x,y)=>{
+                self.windows_part_screen.update(MessagePress::CursorMoved(x, y));
+                Command::none()
+            }
         }
     }
 
@@ -264,9 +284,15 @@ impl Application for App {
         }
     }
     fn subscription(&self) -> Subscription<Self::Message> {
-        time::every(Duration::from_micros(1)).map(|_|{
-            Message::UpdateScreen
-        })
+        Subscription::batch(vec![
+            // Subscription to refresh the screen
+            time::every(Duration::from_millis(16)).map(|_| Message::UpdateScreen),
+
+            // Subscribe to cursor movement and convert to app::Message
+            self.windows_part_screen
+                .subscription()
+                .map(MessagePress::into), // Convert MessagePress to Message
+        ])
     }
 
 

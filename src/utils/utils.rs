@@ -87,3 +87,59 @@ pub fn bgra_to_rgba(bgra_buffer: Vec<u8>) -> Vec<u8> {
 
     rgba_buffer
 }
+
+pub fn calculate_distance(x1: i32, y1: i32, x2: i32, y2: i32) -> (i32, i32) {
+    let dx = (x2 - x1).abs(); // Differenza in x
+    let dy = (y2 - y1).abs(); // Differenza in y
+    println!("dx: {} dy: {}",dx,dy);
+    (dx.abs(), dy.abs())  // Restituisce la distanza sugli assi x e y
+}
+
+pub fn calculate_screen_percentage(A:(f32,f32), B:(f32,f32), screen_dim:(f32,f32))->(f32,f32){
+
+    let (x_0,y_0) = A;
+    let (x_1,y_1) = B;
+    let (width,length) = screen_dim;
+
+    let percentage_of_width = (x_1-x_0)/width;
+    let percentage_of_length = (y_1-y_0)/length;
+
+    (percentage_of_width,percentage_of_length)
+
+}
+
+pub fn get_dimension_scaled(scaled:(f32,f32),screen_dim:(f32,f32))->(f32,f32){
+    let (scale_1,scale_2) = scaled;
+    let (width,length) = screen_dim;
+    (scale_1*width,scale_2*length)
+}
+
+pub fn get_scale_factor(width:i32,length:i32) -> i32{
+    return width/length;
+}
+
+pub fn get_screen_dimension(A:(f32,f32), B:(f32,f32))->(f32,f32){
+
+    let (x_0,y_0) = A;
+    let (x_1,y_1) = B;
+    let delta_width = x_1 - x_0;
+    let delta_length = y_1-y_0;
+    if delta_width > delta_length {
+        return (delta_width,delta_length);
+    }else {
+        return (delta_length,delta_width);
+    }
+}
+
+pub fn get_screen_scaled(relative_dimension_x:f32,screen_dimension:(u64,u64))->(f32,f32){
+    println!("I valori sono: {} , screen: {}x{}",relative_dimension_x,screen_dimension.0,screen_dimension.1);
+    let new_x = (screen_dimension.0 as f32 * relative_dimension_x)/1000.0;
+    let new_x= new_x.round();
+    println!("new_x: {}",new_x);
+    let new_y = get_y_scaled(new_x, screen_dimension.0 as f32, screen_dimension.1 as f32);
+    return (new_x,new_y);
+}
+
+pub fn get_y_scaled(new_x:f32,real_screen_x:f32,real_screen_y:f32)->f32{
+    return (new_x*real_screen_y)/real_screen_x;
+}

@@ -7,6 +7,7 @@ mod screenshare;
 mod controller;
 mod socket;
 mod utils;
+mod model;
 
 pub fn main() -> iced::Result {
     App::run(Settings::default())
