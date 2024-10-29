@@ -155,22 +155,27 @@ pub fn take_screenshot(captures: Arc<Mutex<Option<Capturer>>>) -> Vec<u8> {
             return Vec::new(); // Return an empty Vec if no capturer is available
         }
     }
-
+    
     // Retrieve the next frame
     let frame_result = {
         let cap_lock = captures.lock().unwrap();
         cap_lock.as_ref().and_then(|cap| cap.get_next_frame().ok())
     };
 
+    let mut capturer_lock = captures.lock().unwrap();
+    if let Some(ref mut cap) = *capturer_lock {
+        cap.stop_capture();
+    }
+
     // Handle the frame and return the corresponding data as Vec<u8>
     match frame_result {
         Some(Frame::YUVFrame(_)) => Vec::<u8>::new(), // Handle YUVFrame if needed
-        Some(Frame::BGR0(frame)) => frame.data,
-        Some(Frame::RGB(frame)) => frame.data,
-        Some(Frame::RGBx(frame)) => frame.data,
-        Some(Frame::XBGR(frame)) => frame.data,
-        Some(Frame::BGRx(frame)) => frame.data,
-        Some(Frame::BGRA(frame)) => frame.data,
+        Some(Frame::BGR0(frame)) => bgr0_to_rgba(frame.data),
+        Some(Frame::RGB(frame)) => rgb_to_rgba(frame.data),
+        Some(Frame::RGBx(frame)) => rgbx_to_rgba(frame.data),
+        Some(Frame::XBGR(frame)) => xbgr_to_rgba(frame.data),
+        Some(Frame::BGRx(frame)) => bgrx_to_rgba(frame.data),
+        Some(Frame::BGRA(frame)) => bgra_to_rgba(frame.data),
         None => Vec::new(), // Return an empty Vec if no frame was captured
     }
 }

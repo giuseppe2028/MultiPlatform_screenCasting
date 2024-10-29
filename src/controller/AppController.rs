@@ -44,7 +44,15 @@ impl AppController {
     pub fn start_sharing(&mut self) {
         self.stop_flag.store(false, Ordering::Relaxed);
         println!("Lo schermo selezionato: {:?}", self.option.target);
+
+        /*let mut capturer_guard = self.capturer.lock().unwrap();
+        if capturer_guard.is_none() {
+            self.capturer = Arc::new(Mutex::new(Some(Capturer::new(self.option.clone()))));
+        }
+        */
         self.capturer = Arc::new(Mutex::new(Some(Capturer::new(self.option.clone()))));
+
+
         let capturer = Arc::clone(&self.capturer);
         let stop_flag = Arc::clone(&self.stop_flag);
         let send = self.sender.clone();
@@ -113,6 +121,7 @@ impl AppController {
     }
     pub fn take_screenshot(&mut self)->Vec<u8>{
 
+        self.capturer = Arc::new(Mutex::new(Some(Capturer::new(self.option.clone()))));
         take_screenshot(self.capturer.clone())
 
     }
