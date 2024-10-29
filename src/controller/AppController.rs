@@ -30,7 +30,6 @@ pub struct AppController {
 impl AppController {
     // Costruttore per AppController
     pub fn new(option: Options, sender: Sender<Vec<u8>>) -> Self {
-        //let capturer = Capturer::new(option.clone());
         AppController {
             capturer: Arc::new(Mutex::new(None)),
             option,

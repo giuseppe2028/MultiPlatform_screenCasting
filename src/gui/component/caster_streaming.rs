@@ -5,7 +5,7 @@ use iced::widget::{container, image, Image, row, text};
 use iced::{Color, ContentFit, Length, Subscription};
 use iced::futures::FutureExt;
 use scap::frame::Frame;
-use crate::column_iced;
+use crate::{capture, column_iced, controller};
 use crate::gui::app;
 use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
@@ -23,7 +23,7 @@ pub struct CasterStreaming {
     pub toggler: bool,
     pub receiver: Arc<Mutex<Receiver<Vec<u8>>>>,
     pub frame_to_update: Arc<Mutex<Option<Vec<u8>>>>,
-    pub seconds:u32
+    pub measures: (u32, u32) //width, height
 }
 
 #[derive(Debug, Clone)]
@@ -91,7 +91,7 @@ impl<'a> Component<'a> for CasterStreaming {
                 }
                 Some(ref frame_data) => {
                     // Assicurati che il frame sia in un formato valido
-                    Image::new(image::Handle::from_pixels(1440, 900,frame_data.clone())).width(iced::Length::Fill)
+                    Image::new(image::Handle::from_pixels(self.measures.0, self.measures.1,bgra_to_rgba(frame_data.clone()))).width(iced::Length::Fill)
                         .height(iced::Length::Fill)
                 }
             }
@@ -211,7 +211,6 @@ impl<'a> Component<'a> for CasterStreaming {
         })
     }
 }
-
 
 
 

@@ -82,7 +82,7 @@ impl Application for App {
     fn new(_flags: Self::Flags) -> (Self, iced::Command<Self::Message>) {
 
         let default_opt = Options {
-            fps: 120,
+            fps: 30,
             show_cursor: true,
             show_highlight: true,
             excluded_targets: None,
@@ -152,6 +152,7 @@ impl Application for App {
                 print!("Bottone Premuto, {:?}",self.controller.option);
                 self.current_page = Page::CasterStreaming;
                 self.controller.start_sharing();
+                self.caster_streaming.measures = self.controller.get_measures();
                 Command::none()
             }
             Message::ReceiverSharing(_) => {
@@ -218,7 +219,6 @@ impl Application for App {
             Message::SelectDisplay(display) => {
                 //azione di quando sceglie quale schermo condividere
                 self.controller.set_display(display.clone());
-
                 let _ = self.caster_settings.update( caster_settings::Message::SelectDisplay(display));
                 Command::none()
             }
@@ -312,7 +312,6 @@ impl Application for App {
 
         Subscription::batch(subscriptions)
     }
-
 
 
 }
