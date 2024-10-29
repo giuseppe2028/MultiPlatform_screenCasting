@@ -1,9 +1,7 @@
 use std::fmt::Debug;
-use std::time::Duration;
-use iced::{Command, time};
+use iced::Command;
 
 use crate::gui::app;
-use crate::gui::component::caster_streaming::MessageUpdate;
 use crate::gui::theme::widget::Element;
 
 pub mod connection;

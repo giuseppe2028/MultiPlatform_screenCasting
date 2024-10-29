@@ -22,7 +22,7 @@ pub enum Message {
 }
 
 impl From<Message> for app::Message {
-    fn from(message: Message) -> Self {
+    fn from(_message: Message) -> Self {
         app::Message::StartSharing
     }
 }

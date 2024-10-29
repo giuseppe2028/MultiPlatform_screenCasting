@@ -6,17 +6,12 @@ use scap::{
 
 use crate::screenshare::screenshare::stop_screen_sharing;
 use crate::screenshare::screenshare::{start_screen_sharing, take_screenshot};
-use iced::keyboard::KeyCode::M;
 use scap::capturer::{Area, Point, Size};
-use scap::frame::Frame;
-use scap::targets::get_target_dimensions;
-use std::process::{Child, ChildStdin, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{channel, Sender};
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::thread::{JoinHandle, Thread, ThreadId};
-use url::quirks::origin;
+use std::thread::JoinHandle;
 
 pub struct AppController {
     pub capturer: Arc<Mutex<Option<Capturer>>>,
@@ -64,12 +59,7 @@ impl AppController {
         self.set_handle(handle.unwrap());
     }
 
-    pub fn set_options(&mut self, options: Options) {
-        self.option = options;
-    }
-
     pub fn clean_options(&mut self) {
-        self.option.output_resolution = scap::capturer::Resolution::Captured; // o una risoluzione predefinita
         self.option.crop_area = None;
     }
 

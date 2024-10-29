@@ -1,12 +1,5 @@
-use enigo::{Enigo, Mouse, Settings};
-use iced::alignment::{Horizontal, Vertical};
-use iced::widget::{container, Image, image, mouse_area, row, text};
-use iced::{Application, Command, Event, event, Subscription};
-use iced::keyboard::Event::KeyPressed;
-use iced::Length::{Fill, Shrink};
-use iced::mouse::Event::CursorMoved;
-use iced::widget::mouse_area::MouseArea;
-use iced_aw::Icon::{Cursor};
+use iced::widget::{Image, image, mouse_area, row};
+use iced::{Command, Event, Subscription};
 
 use iced::mouse;
 use crate::column_iced;
@@ -15,11 +8,8 @@ use crate::gui::app::Message;
 use crate::gui::component::Component;
 use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;
-use crate::gui::theme::icon::Icon;
-use crate::gui::theme::text::bold;
-use crate::gui::theme::widget::{Container, Element};
-use crate::utils::utils::{calculate_distance, calculate_screen_percentage, get_scale_factor, get_screen_dimension};
-// use crate::gui::theme::widget::TextInput;
+use crate::gui::theme::widget::Element;
+use crate::utils::utils:: get_screen_dimension;
 
 pub struct WindowPartScreen {
     pub screenshot: Option<Vec<u8>>,
@@ -71,7 +61,6 @@ impl<'a> Component<'a> for WindowPartScreen {
     }
 
     fn view(&self) -> Element<'_, app::Message> {
-        println!("{}x{}", self.measures.0, self.measures.1);
         let mouse_area1 = mouse_area(
             Image::new(image::Handle::from_pixels(self.measures.0, self.measures.1, self.screenshot.clone().unwrap()))
                 .width(iced::Length::from(1000))
@@ -104,19 +93,4 @@ impl<'a> Component<'a> for WindowPartScreen {
         })
     }
 
-}
-
-fn rgb_to_rgba(rgb_buffer: Vec<u8>) -> Vec<u8> {
-    let rgb_len = rgb_buffer.len();
-    let mut rgba_buffer = Vec::with_capacity((rgb_len / 3) * 4); // Ogni pixel RGB diventa RGBA
-
-    // Itera i pixel RGB e aggiungi il canale Alpha
-    for rgb_chunk in rgb_buffer.chunks_exact(3) {
-        rgba_buffer.push(rgb_chunk[0]); // Red
-        rgba_buffer.push(rgb_chunk[1]); // Green
-        rgba_buffer.push(rgb_chunk[2]); // Blue
-        rgba_buffer.push(255);          // Alpha (opaco)
-    }
-
-    rgba_buffer
 }

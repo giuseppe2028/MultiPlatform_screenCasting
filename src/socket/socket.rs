@@ -1,4 +1,4 @@
-use std::net::{IpAddr, SocketAddr, UdpSocket};
+use std::net::UdpSocket;
 use std::sync::{Arc, Mutex};
 
 struct CasterSocket{
@@ -18,7 +18,7 @@ impl CasterSocket{
     fn send_to_receivers(&self,data:&[u8]){
         let socket = self.socket.lock().unwrap();
         for address in &self.receiver_sockets{
-            socket.send_to(data,address);
+            let _ = socket.send_to(data,address);
         }
     }
 }

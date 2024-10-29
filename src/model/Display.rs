@@ -1,4 +1,4 @@
-struct Display{
+/*struct Display{
     width:u32,
     length:u32
 }
@@ -14,4 +14,4 @@ impl Display {
     pub fn get_dimensions(&self)->(u32,u32){
         (self.width,self.length)
     }
-}
+}*/

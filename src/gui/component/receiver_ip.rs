@@ -45,7 +45,7 @@ impl<'a> Component<'a> for ReceiverIp {
                 self.indirizzo_ip = new_value;
                 Command::none()
             }
-            Message::Pressed(ip) => Command::none(),
+            Message::Pressed(_ip) => Command::none(),
         }
     }
 

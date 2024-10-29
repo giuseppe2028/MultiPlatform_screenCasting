@@ -1,9 +1,6 @@
-use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::channel;
-use std::thread::Thread;
-use futures::Stream;
-use crate::controller::AppController::AppController;
+use crate::controller::app_controller::AppController;
 use crate::gui::component::caster_settings;
 use crate::gui::component::caster_settings::CasterSettings;
 use crate::gui::component::caster_streaming::{CasterStreaming, MessageUpdate};
@@ -17,10 +14,9 @@ use crate::gui::component::receiver_streaming::ReceiverStreaming;
 use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
-use iced::{executor, Application, Command, Subscription, subscription, Event};
+use iced::{executor, Application, Command, Subscription};
 use scap::capturer::Options;
-use scap::frame::Frame;
-use iced::{ time::{self, Duration}, };
+use iced::time::{self, Duration};
 use scap::targets::get_target_dimensions;
 use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
 use crate::utils::utils::get_screen_scaled;
@@ -52,7 +48,6 @@ pub enum Page {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    Router(Page),
     StartSharing, /*(connection::Message)*/
     RoleChosen(home::Message),
     ReceiverSharing(String),
@@ -132,10 +127,6 @@ impl Application for App {
 
     fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
         match message {
-            Message::Router(route) => {
-                self.current_page = route;
-                Command::none()
-            }
             Message::RoleChosen(role) => match role {
                 home::Message::ChosenRole(role) => match role {
                     Role::Caster => {
@@ -155,7 +146,7 @@ impl Application for App {
                 self.caster_streaming.measures = self.controller.get_measures();
                 Command::none()
             }
-            Message::ReceiverSharing(_) => {
+            Message::ReceiverSharing(_x) => {
                 self.current_page = Page::ReceiverStreaming;
                 //aggiungere funzione backend
                 Command::none()
@@ -244,7 +235,7 @@ impl Application for App {
 
                 // Now that the lock is dropped, we can mutate `self.caster_streaming`
                 if let Some(frame) = frame {
-                    self.caster_streaming.update(MessageUpdate::NewFrame(frame));
+                    let _ = self.caster_streaming.update(MessageUpdate::NewFrame(frame));
                 }
 
                 Command::none()
@@ -261,16 +252,15 @@ impl Application for App {
                 Command::none()
             }
             Message::AreaSelectedFirst=>{
-                self.windows_part_screen.update(MessagePress::FirstPress);
+                let _ = self.windows_part_screen.update(MessagePress::FirstPress);
                 Command::none()
             }
             Message::AreaSelectedSecond=>{
-                println!("baciami ancoraa\n\n\n\n\n\n");
-                self.windows_part_screen.update(MessagePress::SecondPress);
+                let _ = self.windows_part_screen.update(MessagePress::SecondPress);
                 Command::none()
             }
             Message::CursorMoved(x,y)=>{
-                self.windows_part_screen.update(MessagePress::CursorMoved(x, y));
+                let _ = self.windows_part_screen.update(MessagePress::CursorMoved(x, y));
                 Command::none()
             }
             Message::StopStreaming=>{

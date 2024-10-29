@@ -5,7 +5,7 @@ use crate::gui::theme::icon::Icon;
 use crate::gui::theme::widget::Text;
 use crate::gui::theme::{PaletteColor, Theme};
 
-pub trait Themed: StyleSheet<Style = Theme> {}
+//pub trait Themed: StyleSheet<Style = Theme> {}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub enum Style {

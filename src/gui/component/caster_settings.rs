@@ -1,5 +1,5 @@
 use iced::alignment::{Horizontal, Vertical};
-use iced::widget::{column, container, horizontal_space, pick_list, row, vertical_space};
+use iced::widget::{container, pick_list, row};
 use iced::{Command, Length::Fill, Subscription};
 
 use crate::column_iced;
@@ -19,14 +19,13 @@ pub struct CasterSettings {
 #[derive(Debug, Clone)]
 pub enum Window {
     FullScreen,
-    Area
+    Area,
 }
-
 
 #[derive(Debug, Clone)]
 pub enum Message {
     SelectDisplay(scap::targets::Display), // Cambiare tipo nel display corrispondente
-    SelectWindow(Window),          // Probabilmente avrà bisogno di parametri
+    SelectWindow(Window),                  // Probabilmente avrà bisogno di parametri
 }
 
 impl From<Message> for app::Message {
@@ -34,10 +33,10 @@ impl From<Message> for app::Message {
         match message {
             Message::SelectDisplay(display) => {
                 return app::Message::SelectDisplay(display);
-            },
+            }
             Message::SelectWindow(window) => {
                 return app::Message::SetSettingsCaster(window);
-            },
+            }
         }
     }
 }
@@ -51,8 +50,7 @@ impl<'a> Component<'a> for CasterSettings {
                 self.selected_display = display;
                 Command::none()
             }
-            Message::SelectWindow(window) => todo!(),
-          
+            Message::SelectWindow(_window) => todo!(),
         }
     }
 
@@ -70,14 +68,15 @@ impl<'a> Component<'a> for CasterSettings {
             .icon(Icon::CasterHome) // Sostituisci con la tua icona
             .style(Style::Primary)
             .build()
-            .on_press(app::Message::from(Message::SelectWindow(Window::FullScreen)));
+            .on_press(app::Message::from(Message::SelectWindow(
+                Window::FullScreen,
+            )));
 
         let window_part_button = RectangleButton::new("Porzione di finestra")
             .icon(Icon::CasterHome) // Sostituisci con la tua icona
             .style(Style::Primary)
             .build()
-            .on_press(app::Message::from(Message::SelectWindow(Window::Area)));  //TODO TOIMPLEMENT
-
+            .on_press(app::Message::from(Message::SelectWindow(Window::Area))); //TODO TOIMPLEMENT
 
         let choose_screen_button = pick_list(
             self.available_displays.clone(),
@@ -96,7 +95,7 @@ impl<'a> Component<'a> for CasterSettings {
                         .spacing(16) // Spaziatura tra i pulsanti
                         .align_items(iced::Alignment::Center),
                     row![],
-                        row![choose_screen_button].align_items(iced::Alignment::Center)
+                    row![choose_screen_button].align_items(iced::Alignment::Center)
                 ]
                 .spacing(15)
             )
@@ -104,7 +103,7 @@ impl<'a> Component<'a> for CasterSettings {
             .height(Fill)
             .align_x(Horizontal::Center)
             .align_y(Vertical::Center)
-        ])           
+        ])
         .into()
     }
 

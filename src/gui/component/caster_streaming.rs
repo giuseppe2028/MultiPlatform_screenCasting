@@ -1,25 +1,18 @@
 use std::sync::{Arc, Mutex};
-use std::sync::mpsc::{Receiver, Sender};
-use std::thread;
-use iced::widget::{container, image, Image, row, text};
-use iced::{Color, ContentFit, Length, Subscription};
-use iced::futures::FutureExt;
-use scap::frame::Frame;
-use crate::{capture, column_iced, controller};
+use std::sync::mpsc::Receiver;
+use iced::widget::{container, image, Image, row};
+use iced::{Color, Subscription};
+use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::Style;
-use crate::gui::theme::widget::{Container, Element};
-use iced::time::{self, Duration, Instant};
-use rand::Rng;
+use crate::gui::theme::widget::Element;
 use iced::{
-    event::{self, Status},
-    executor,
+    event::{self},
     keyboard::{KeyCode, Event::KeyPressed},
-    Application, Event, Settings,
+    Event
 };
-use crate::utils::utils::bgra_to_rgba;
 
 pub struct CasterStreaming {
     pub toggler: bool,
@@ -32,7 +25,6 @@ pub struct CasterStreaming {
 pub enum MessageUpdate {
     TogglerChanged(bool),
     NewFrame(Vec<u8>),
-    Update,
     StopStreaming
 }
 
@@ -44,9 +36,6 @@ impl From<MessageUpdate> for app::Message {
         match message {
             MessageUpdate::TogglerChanged(_) => {app::Message::TogglerChanged(message)}
             MessageUpdate::NewFrame(_) => {
-                app::Message::None
-            }
-            MessageUpdate::Update => {
                 app::Message::None
             }
             MessageUpdate::StopStreaming => {
@@ -68,9 +57,6 @@ impl<'a> Component<'a> for CasterStreaming {
             MessageUpdate::NewFrame(frame) => {
                 let mut new_frame = self.frame_to_update.lock().unwrap();
                 *new_frame = Some(frame);
-            }
-            MessageUpdate::Update =>{
-
             }
             MessageUpdate::StopStreaming=> {
 

@@ -1,36 +1,12 @@
 use crate::utils::utils::{
     bgr0_to_rgba, bgra_to_rgba, bgrx_to_rgba, rgb_to_rgba, rgbx_to_rgba, xbgr_to_rgba,
 };
-use scap::capturer::{Area, Capturer, Options};
+use scap::capturer::Capturer;
 use scap::frame::Frame;
-use std::io::Write;
-use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 
-pub fn visualize_screen_sharing() {
-    //start ffplay
-    let mut child = Command::new("ffplay")
-        .args(&[
-            "-f",
-            "rawvideo", // Formato non compresso
-            "-pixel_format",
-            "rgb24", // Formato dei pixel: BGR con 0 per il canale alfa
-            "-video_size",
-            "1440x900", // Risoluzione del video (modifica secondo necessità)
-            "-framerate",
-            "120", // Framerate (modifica secondo necessità)
-            "-",
-        ])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null())
-        .spawn()
-        .expect("Errore nell'avviare ffplay. Assicurati che ffplay sia installato e nel PATH.");
-
-    let mut out = child;
-    //TODO complete
-}
 
 // Funzione migliorata per gestire lo screen sharing
 pub fn start_screen_sharing(
@@ -59,7 +35,7 @@ pub fn start_screen_sharing(
         if let Some(frame) = frame_result {
             // Process frame data according to its format
             match frame {
-                Frame::YUVFrame(frame) => {
+                Frame::YUVFrame(_frame) => {
                     // Add specific processing for YUVFrame if needed
                 }
                 Frame::BGR0(frame) => {
@@ -119,6 +95,8 @@ pub fn stop_screen_sharing(capturer: Arc<Mutex<Option<Capturer>>>) {
     }
 }
 
+/*  
+    FUNZIONI UTILI?
 pub fn check_issupported() -> bool {
     scap::is_supported()
 }
@@ -144,7 +122,7 @@ pub fn set_options() -> Options {
 pub fn create_capture(options: Options) -> Capturer {
     Capturer::new(options)
 }
-
+*/
 pub fn take_screenshot(captures: Arc<Mutex<Option<Capturer>>>) -> Vec<u8> {
     // Acquire the lock and start capture within a single scope
     {

@@ -16,7 +16,7 @@ pub async fn start_udp_server() -> Result<(), Error> {
     let mut client_addr = None;
 
     // Wait for a message from the client to capture its address
-    let (n, addr) = socket.recv_from(&mut buf).await?;
+    let (_n, addr) = socket.recv_from(&mut buf).await?;
     println!("Client connected from: {}", addr);
     client_addr = Some(addr);
 
