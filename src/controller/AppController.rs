@@ -24,6 +24,7 @@ pub struct AppController {
     pub streaming_handle: Option<JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>,
     sender: Arc<Sender<Vec<u8>>>,
+    pub is_just_stopped:bool
 }
 
 impl AppController {
@@ -36,6 +37,7 @@ impl AppController {
             streaming_handle: None,
             stop_flag: Arc::new(AtomicBool::new(false)),
             sender: Arc::new(sender),
+            is_just_stopped:false
         }
     }
 
@@ -114,5 +116,8 @@ impl AppController {
 
         take_screenshot(self.capturer.clone())
 
+    }
+    pub fn set_is_just_stopped(&mut self,value:bool){
+        self.is_just_stopped = value;
     }
 }

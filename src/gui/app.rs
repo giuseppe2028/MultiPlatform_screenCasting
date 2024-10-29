@@ -67,8 +67,9 @@ pub enum Message {
     StartPartialSharing(f32,f32,f64,f64),
     AreaSelectedFirst,
     AreaSelectedSecond,
-    CursorMoved(f32,f32)
-
+    CursorMoved(f32,f32),
+    StopStreaming,
+    None
 }
 
 impl Application for App {
@@ -268,6 +269,18 @@ impl Application for App {
                 self.windows_part_screen.update(MessagePress::CursorMoved(x, y));
                 Command::none()
             }
+            Message::StopStreaming=>{
+                if self.controller.is_just_stopped {
+                    self.controller.start_sharing();
+                    self.controller.set_is_just_stopped(false);
+                }
+                else{
+                    self.controller.stop_recording();
+                    self.controller.set_is_just_stopped(true);
+                }
+                Command::none()
+            }
+            Message::None=>Command::none()
         }
     }
 
@@ -284,16 +297,22 @@ impl Application for App {
         }
     }
     fn subscription(&self) -> Subscription<Self::Message> {
-        Subscription::batch(vec![
-            // Subscription to refresh the screen
+        // Always refresh the screen
+        let mut subscriptions = vec![
             time::every(Duration::from_millis(16)).map(|_| Message::UpdateScreen),
+        ];
 
-            // Subscribe to cursor movement and convert to app::Message
-            self.windows_part_screen
-                .subscription()
-                .map(MessagePress::into), // Convert MessagePress to Message
-        ])
+        // Add `WindowPartScreen`'s subscription only if on `Page::WindowPartScreen`
+        if let Page::WindowPartScreen = self.current_page {
+            subscriptions.push(self.windows_part_screen.subscription().map(MessagePress::into));
+        }
+        if let Page::CasterStreaming = self.current_page{
+            subscriptions.push(self.caster_streaming.subscription().map(MessageUpdate::into));
+        }
+
+        Subscription::batch(subscriptions)
     }
+
 
 
 }

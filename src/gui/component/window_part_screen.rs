@@ -1,11 +1,13 @@
 use enigo::{Enigo, Mouse, Settings};
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{container, Image, image, mouse_area, row, text};
-use iced::{Application, Command, Event, Subscription};
+use iced::{Application, Command, Event, event, Subscription};
+use iced::keyboard::Event::KeyPressed;
 use iced::Length::{Fill, Shrink};
 use iced::mouse::Event::CursorMoved;
 use iced::widget::mouse_area::MouseArea;
-use iced_aw::Icon::Cursor;
+use iced_aw::Icon::{Cursor};
+
 use iced::mouse;
 use crate::column_iced;
 use crate::gui::app;
@@ -89,6 +91,7 @@ impl<'a> Component<'a> for WindowPartScreen {
     }
 
 
+    // Sottoscrizione agli eventi di movimento del mouse
     // Sottoscrizione agli eventi di movimento del mouse
     fn subscription(&self) -> Subscription<MessagePress> {
         iced::subscription::events_with(|event, _status| {

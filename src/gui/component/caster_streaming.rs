@@ -13,7 +13,12 @@ use crate::gui::theme::button::Style;
 use crate::gui::theme::widget::{Container, Element};
 use iced::time::{self, Duration, Instant};
 use rand::Rng;
-
+use iced::{
+    event::{self, Status},
+    executor,
+    keyboard::{KeyCode, Event::KeyPressed},
+    Application, Event, Settings,
+};
 pub struct CasterStreaming {
     pub toggler: bool,
     pub receiver: Arc<Mutex<Receiver<Vec<u8>>>>,
@@ -25,7 +30,8 @@ pub struct CasterStreaming {
 pub enum MessageUpdate {
     TogglerChanged(bool),
     NewFrame(Vec<u8>),
-    Update
+    Update,
+    StopStreaming
 }
 
 
@@ -33,7 +39,19 @@ pub enum MessageUpdate {
 
 impl From<MessageUpdate> for app::Message {
     fn from(message: MessageUpdate) -> Self {
-        app::Message::TogglerChanged(message)
+        match message {
+            MessageUpdate::TogglerChanged(_) => {app::Message::TogglerChanged(message)}
+            MessageUpdate::NewFrame(_) => {
+                app::Message::None
+            }
+            MessageUpdate::Update => {
+                app::Message::None
+            }
+            MessageUpdate::StopStreaming => {
+                app::Message::StopStreaming
+            }
+        }
+
     }
 }
 
@@ -51,6 +69,9 @@ impl<'a> Component<'a> for CasterStreaming {
             }
             MessageUpdate::Update =>{
                 self.seconds += 1;
+
+            }
+            MessageUpdate::StopStreaming=> {
 
             }
         }
@@ -180,9 +201,17 @@ impl<'a> Component<'a> for CasterStreaming {
         }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        todo!()
+        iced::subscription::events_with(|event,status| match (event,status) {
+            (Event::Keyboard(KeyPressed {
+                                 key_code: KeyCode::Space, ..
+                             }), event::Status::Ignored) => {
+                Some(MessageUpdate::StopStreaming)
+            }
+            _ => None
+        })
     }
 }
+
 
 
 
