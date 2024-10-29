@@ -22,7 +22,7 @@ use crate::utils::utils::{calculate_distance, calculate_screen_percentage, get_s
 // use crate::gui::theme::widget::TextInput;
 
 pub struct WindowPartScreen {
-    pub screenshot: Vec<u8>,
+    pub screenshot: Option<Vec<u8>>,
     pub(crate) coordinate: [(f32, f32); 2],
     pub cursor_position: (f32, f32), // Aggiungi un campo per la posizione del mouse
     pub screen_dimension:(f32,f32),
@@ -71,9 +71,9 @@ impl<'a> Component<'a> for WindowPartScreen {
     }
 
     fn view(&self) -> Element<'_, app::Message> {
-        //println!("{}x{}", self.measures.0, self.measures.1);
+        println!("{}x{}", self.measures.0, self.measures.1);
         let mouse_area1 = mouse_area(
-            Image::new(image::Handle::from_pixels(self.measures.0, self.measures.1, self.screenshot.clone()))
+            Image::new(image::Handle::from_pixels(self.measures.0, self.measures.1, self.screenshot.clone().unwrap()))
                 .width(iced::Length::from(1000))
                 .height(iced::Length::from(625))
         )
@@ -85,7 +85,7 @@ impl<'a> Component<'a> for WindowPartScreen {
             MyButton::new("CONNECT")
                     .style(Style::Primary)
                     .build()
-                    .on_press(Message::StartPartialSharing(self.screen_dimension.0,self.screen_dimension.1,self.coordinate[0].0 as f64,self.coordinate[0].1 as f64).into())
+                    .on_press(Message::StartPartialSharing(self.screen_dimension.0,self.screen_dimension.1,self.coordinate[0].0 as f64,self.coordinate[0].1 as f64))
         ]
                 .align_items(iced::Alignment::Center)
         ].into()

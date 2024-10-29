@@ -115,7 +115,7 @@ impl Application for App {
                     selected_display: controller.get_available_displays().get(0).unwrap().clone(),
                 }, //implementare un metodo backend da chiamare per trovare gli screen
                 caster_streaming: CasterStreaming { toggler: false, receiver: Arc::new(Mutex::new(receiver)), frame_to_update: Arc::new(Mutex::new(None)), measures: (0, 0) },
-                windows_part_screen: WindowPartScreen {screenshot:controller.take_screenshot(),coordinate:[(0.0,0.0);2], cursor_position: (0.0, 0.0), screen_dimension: (0.0, 0.0), measures: (0, 0) },
+                windows_part_screen: WindowPartScreen {screenshot: None,coordinate:[(0.0,0.0);2], cursor_position: (0.0, 0.0), screen_dimension: (0.0, 0.0), measures: (0, 0) },
                 controller,
             },
             Command::none(),
@@ -167,6 +167,7 @@ impl Application for App {
                         self.current_page = Page::Home;
                     }
                     Page::Connection => {
+                        self.controller.clean_options();
                         self.current_page = Page::CasterSettings;
                     }
                     Page::ReceiverIp => {
@@ -201,7 +202,7 @@ impl Application for App {
                         //settare la risoluzione
                     },
                     caster_settings::Window::Area => {
-                        self.windows_part_screen.screenshot = self.controller.take_screenshot();
+                        self.windows_part_screen.screenshot = Some(self.controller.take_screenshot());
                         self.windows_part_screen.measures = self.controller.get_measures();
                         self.current_page = Page::WindowPartScreen
                     },
@@ -225,7 +226,8 @@ impl Application for App {
                 Command::none()
             }
             Message::Close=>{
-                self.controller.stop_recording();
+                self.controller.stop_streaming();
+                self.controller.clean_options();
                 self.current_page = Page::Home;
                     //TODO fare in modo di tornare alla schermata precedente
                 Command::none()
@@ -248,15 +250,14 @@ impl Application for App {
                 Command::none()
             }
             Message::StartPartialSharing(x,y,start_x,start_y)=>{
+                self.current_page = Page::CasterStreaming;                
                 println!("stampo x : {} e stampo y:{}",x,y);
                 let target = self.controller.option.target.clone();
                 //calcolo la x rapportata ai valori dello schermo:
-
                 let (x,y) = get_screen_scaled(x,get_target_dimensions(&target.unwrap()));
                 self.controller.set_coordinates(x as f64, y as f64,start_x,start_y);
-                self.current_page = Page::CasterStreaming;
-                
                 self.controller.start_sharing();
+                self.caster_streaming.measures = self.controller.get_measures();
                 Command::none()
             }
             Message::AreaSelectedFirst=>{
@@ -278,7 +279,7 @@ impl Application for App {
                     self.controller.set_is_just_stopped(false);
                 }
                 else{
-                    self.controller.stop_recording();
+                    self.controller.stop_streaming();
                     self.controller.set_is_just_stopped(true);
                 }
                 Command::none()

@@ -4,18 +4,18 @@ use scap::{
     Target,
 };
 
-use crate::screenshare::screenshare::{start_screen_sharing, take_screenshot};
 use crate::screenshare::screenshare::stop_screen_sharing;
+use crate::screenshare::screenshare::{start_screen_sharing, take_screenshot};
 use iced::keyboard::KeyCode::M;
+use scap::capturer::{Area, Point, Size};
 use scap::frame::Frame;
+use scap::targets::get_target_dimensions;
 use std::process::{Child, ChildStdin, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::{JoinHandle, Thread, ThreadId};
-use scap::capturer::{Area, Point, Size};
-use scap::targets::get_target_dimensions;
 use url::quirks::origin;
 
 pub struct AppController {
@@ -24,7 +24,7 @@ pub struct AppController {
     pub streaming_handle: Option<JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>,
     sender: Arc<Sender<Vec<u8>>>,
-    pub is_just_stopped:bool
+    pub is_just_stopped: bool,
 }
 
 impl AppController {
@@ -36,7 +36,7 @@ impl AppController {
             streaming_handle: None,
             stop_flag: Arc::new(AtomicBool::new(false)),
             sender: Arc::new(sender),
-            is_just_stopped:false
+            is_just_stopped: false,
         }
     }
 
@@ -51,7 +51,6 @@ impl AppController {
         }
         */
         self.capturer = Arc::new(Mutex::new(Some(Capturer::new(self.option.clone()))));
-
 
         let capturer = Arc::clone(&self.capturer);
         let stop_flag = Arc::clone(&self.stop_flag);
@@ -69,6 +68,11 @@ impl AppController {
         self.option = options;
     }
 
+    pub fn clean_options(&mut self) {
+        self.option.output_resolution = scap::capturer::Resolution::Captured; // o una risoluzione predefinita
+        self.option.crop_area = None;
+    }
+
     pub fn set_handle(&mut self, handle: JoinHandle<()>) {
         self.streaming_handle = Some(handle);
     }
@@ -79,16 +83,18 @@ impl AppController {
             scap::capturer::Resolution::get_resolution(display.get_width());
     }
 
-    pub fn set_coordinates(&mut self, x: f64, y: f64,start_x:f64,start_y:f64) {
-
-        self.option.crop_area = Some(
-            Area {
-                origin: Point { x: start_x, y: start_y },
-                size: Size { width:x, height:y},
-            }
-        );
+    pub fn set_coordinates(&mut self, x: f64, y: f64, start_x: f64, start_y: f64) {
+        self.option.crop_area = Some(Area {
+            origin: Point {
+                x: start_x,
+                y: start_y,
+            },
+            size: Size {
+                width: x,
+                height: y,
+            },
+        });
     }
-
 
     pub fn get_available_displays(&self) -> Vec<scap::targets::Display> {
         let displays: Vec<scap::targets::Display> = scap::get_all_targets()
@@ -105,7 +111,7 @@ impl AppController {
         return displays;
     }
 
-    pub fn stop_recording(&mut self) {
+    pub fn stop_streaming(&mut self) {
         // Imposta il flag per fermare il thread
         self.stop_flag.store(true, Ordering::Relaxed);
 
@@ -119,26 +125,22 @@ impl AppController {
         stop_screen_sharing(self.capturer.clone());
         println!("Ciao! Il thread di streaming è stato chiuso.");
     }
-    pub fn take_screenshot(&mut self)->Vec<u8>{
-
+    pub fn take_screenshot(&mut self) -> Vec<u8> {
         self.capturer = Arc::new(Mutex::new(Some(Capturer::new(self.option.clone()))));
         take_screenshot(self.capturer.clone())
-
     }
-    pub fn set_is_just_stopped(&mut self,value:bool){
+    pub fn set_is_just_stopped(&mut self, value: bool) {
         self.is_just_stopped = value;
     }
     pub fn get_measures(&self) -> (u32, u32) {
         match self.option.output_resolution {
-            scap::capturer::Resolution::_480p => (640, 480),       // 480p: 640x480
-            scap::capturer::Resolution::_720p => (1280, 720),      // 720p: 1280x720
-            scap::capturer::Resolution::_1080p => (1920, 1080),    // 1080p: 1920x1080
-            scap::capturer::Resolution::_1440p => (1440 , 900),    // 1440p: 2560x1440
-            scap::capturer::Resolution::_2160p => (3840, 2160),    // 2160p: 3840x2160
-            scap::capturer::Resolution::_4320p => (7680, 4320),    // 4320p: 7680x4320
-            scap::capturer::Resolution::Captured => {
-                (1920, 1080)
-            },
+            scap::capturer::Resolution::_480p => (640, 480), // 480p: 640x480
+            scap::capturer::Resolution::_720p => (1280, 720), // 720p: 1280x720
+            scap::capturer::Resolution::_1080p => (1920, 1080), // 1080p: 1920x1080
+            scap::capturer::Resolution::_1440p => (1440, 900), // 1440p: 2560x1440
+            scap::capturer::Resolution::_2160p => (3840, 2160), // 2160p: 3840x2160
+            scap::capturer::Resolution::_4320p => (7680, 4320), // 4320p: 7680x4320
+            scap::capturer::Resolution::Captured => (1920, 1080),
         }
     }
 }
