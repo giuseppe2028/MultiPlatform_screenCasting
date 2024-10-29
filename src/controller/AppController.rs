@@ -19,7 +19,7 @@ use scap::targets::get_target_dimensions;
 use url::quirks::origin;
 
 pub struct AppController {
-    pub capturer: Arc<Mutex<Capturer>>,
+    pub capturer: Arc<Mutex<Option<Capturer>>>,
     pub option: Options,
     pub streaming_handle: Option<JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>,
@@ -30,9 +30,9 @@ pub struct AppController {
 impl AppController {
     // Costruttore per AppController
     pub fn new(option: Options, sender: Sender<Vec<u8>>) -> Self {
-        let capturer = Capturer::new(option.clone());
+        //let capturer = Capturer::new(option.clone());
         AppController {
-            capturer: Arc::new(Mutex::new(capturer)),
+            capturer: Arc::new(Mutex::new(None)),
             option,
             streaming_handle: None,
             stop_flag: Arc::new(AtomicBool::new(false)),
@@ -45,7 +45,7 @@ impl AppController {
     pub fn start_sharing(&mut self) {
         self.stop_flag.store(false, Ordering::Relaxed);
         println!("Lo schermo selezionato: {:?}", self.option.target);
-        self.capturer = Arc::new(Mutex::new(Capturer::new(self.option.clone())));
+        self.capturer = Arc::new(Mutex::new(Some(Capturer::new(self.option.clone()))));
         let capturer = Arc::clone(&self.capturer);
         let stop_flag = Arc::clone(&self.stop_flag);
         let send = self.sender.clone();
