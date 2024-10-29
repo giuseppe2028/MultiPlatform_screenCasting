@@ -19,6 +19,8 @@ use iced::{
     keyboard::{KeyCode, Event::KeyPressed},
     Application, Event, Settings,
 };
+use crate::utils::utils::bgra_to_rgba;
+
 pub struct CasterStreaming {
     pub toggler: bool,
     pub receiver: Arc<Mutex<Receiver<Vec<u8>>>>,
@@ -68,7 +70,6 @@ impl<'a> Component<'a> for CasterStreaming {
                 *new_frame = Some(frame);
             }
             MessageUpdate::Update =>{
-                self.seconds += 1;
 
             }
             MessageUpdate::StopStreaming=> {
@@ -91,7 +92,7 @@ impl<'a> Component<'a> for CasterStreaming {
                 }
                 Some(ref frame_data) => {
                     // Assicurati che il frame sia in un formato valido
-                    Image::new(image::Handle::from_pixels(self.measures.0, self.measures.1,bgra_to_rgba(frame_data.clone()))).width(iced::Length::Fill)
+                    Image::new(image::Handle::from_pixels(self.measures.0, self.measures.1,frame_data.clone())).width(iced::Length::Fill)
                         .height(iced::Length::Fill)
                 }
             }
