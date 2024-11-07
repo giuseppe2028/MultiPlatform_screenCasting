@@ -140,7 +140,6 @@ impl Application for App {
                 },
             },
             Message::StartSharing => {
-                print!("Bottone Premuto, {:?}",self.controller.option);
                 self.current_page = Page::CasterStreaming;
                 self.controller.start_sharing();
                 self.caster_streaming.measures = self.controller.get_measures();
