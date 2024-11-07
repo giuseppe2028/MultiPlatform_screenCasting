@@ -44,12 +44,6 @@ pub fn start_screen_sharing(
                         .expect("Failed to send BGR0 frame data");
                 }
                 Frame::RGB(frame) => {
-                    println!(
-                        "DIMENSIONE FRAME {:?} {} {}",
-                        frame.data.len(),
-                        frame.width,
-                        frame.height
-                    );
                     if start_time == 0 {
                         start_time = frame.display_time;
                     }
@@ -84,7 +78,6 @@ pub fn start_screen_sharing(
         }
     }
 
-    println!("Screen sharing stopped.");
 }
 
 pub fn stop_screen_sharing(capturer: Arc<Mutex<Option<Capturer>>>) {

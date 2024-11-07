@@ -6,8 +6,7 @@ pub async fn start_udp_server() -> Result<(), Error> {
     let local_address = "0.0.0.0:8080"; // Bind to this address for broadcasting
     let socket = UdpSocket::bind(local_address).await?;
     
-    println!("UDP Server ready, waiting for clients...");
-    
+
     let display = Display::primary()?;
     let mut capturer = Capturer::new(display)?;
 
@@ -17,7 +16,6 @@ pub async fn start_udp_server() -> Result<(), Error> {
 
     // Wait for a message from the client to capture its address
     let (_n, addr) = socket.recv_from(&mut buf).await?;
-    println!("Client connected from: {}", addr);
     client_addr = Some(addr);
 
     loop {

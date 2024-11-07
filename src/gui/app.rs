@@ -242,7 +242,6 @@ impl Application for App {
             }
             Message::StartPartialSharing(x,y,start_x,start_y)=>{
                 self.current_page = Page::CasterStreaming;                
-                println!("stampo x : {} e stampo y:{}",x,y);
                 let target = self.controller.option.target.clone();
                 //calcolo la x rapportata ai valori dello schermo:
                 let (x,y) = get_screen_scaled(x,get_target_dimensions(&target.unwrap()));

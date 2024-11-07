@@ -38,7 +38,6 @@ impl AppController {
     // Funzione che avvia la condivisione dello schermo
     pub fn start_sharing(&mut self) {
         self.stop_flag.store(false, Ordering::Relaxed);
-        println!("Lo schermo selezionato: {:?}", self.option.target);
 
         /*let mut capturer_guard = self.capturer.lock().unwrap();
         if capturer_guard.is_none() {
@@ -51,7 +50,6 @@ impl AppController {
         let stop_flag = Arc::clone(&self.stop_flag);
         let send = self.sender.clone();
         // Crea un nuovo thread per lo screen sharing
-        println!("options {:?}", self.option);
         let handle = Some(thread::spawn(move || {
             // Passiamo stdin e altri dati al thread
             start_screen_sharing(capturer, stop_flag, send);
@@ -114,9 +112,7 @@ impl AppController {
                 .join()
                 .expect("Errore nella terminazione del thread di streaming");
         }
-        println!("Ciao! Il thread di streaso.");
         stop_screen_sharing(self.capturer.clone());
-        println!("Ciao! Il thread di streaming è stato chiuso.");
     }
     pub fn take_screenshot(&mut self) -> Vec<u8> {
         self.capturer = Arc::new(Mutex::new(Some(Capturer::new(self.option.clone()))));

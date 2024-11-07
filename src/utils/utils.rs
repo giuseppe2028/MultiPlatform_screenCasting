@@ -92,7 +92,6 @@ pub fn bgra_to_rgba(bgra_buffer: Vec<u8>) -> Vec<u8> {
 pub fn calculate_distance(x1: i32, y1: i32, x2: i32, y2: i32) -> (i32, i32) {
     let dx = (x2 - x1).abs(); // Differenza in x
     let dy = (y2 - y1).abs(); // Differenza in y
-    println!("dx: {} dy: {}",dx,dy);
     (dx.abs(), dy.abs())  // Restituisce la distanza sugli assi x e y
 }
 
@@ -133,10 +132,8 @@ pub fn get_screen_dimension(a:(f32,f32), b:(f32,f32))->(f32,f32){
 }
 
 pub fn get_screen_scaled(relative_dimension_x:f32,screen_dimension:(u64,u64))->(f32,f32){
-    println!("I valori sono: {} , screen: {}x{}",relative_dimension_x,screen_dimension.0,screen_dimension.1);
     let new_x = (screen_dimension.0 as f32 * relative_dimension_x)/1000.0;
     let new_x= new_x.round();
-    println!("new_x: {}",new_x);
     let new_y = get_y_scaled(new_x, screen_dimension.0 as f32, screen_dimension.1 as f32);
     return (new_x,new_y);
 }

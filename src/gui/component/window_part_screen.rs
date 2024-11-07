@@ -42,19 +42,14 @@ impl<'a> Component<'a> for WindowPartScreen {
     fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
             MessagePress::FirstPress => {
-                println!("Prima premuto");
                 self.coordinate[0] = self.cursor_position;
-                println!("Press at x,y: {:?}", self.cursor_position);
             }
             MessagePress::SecondPress=>{
                 self.coordinate[1] = self.cursor_position;
-                println!("Seconda premuto");
-                println!("Rilasciato at x,y: {:?}", self.cursor_position);
                 self.screen_dimension = get_screen_dimension(self.coordinate[0],self.coordinate[1]);
             }
             MessagePress::CursorMoved(x, y) => {
                 self.cursor_position = (x, y);
-                println!("Mouse moved to x: {} y: {}", x, y); // Stampa della posizione del mouse
             }
         }
         Command::none()
