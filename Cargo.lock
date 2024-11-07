@@ -10,6 +10,7 @@ dependencies = [
  "futures",
  "iced",
  "iced_aw",
+ "libspa-sys",
  "nix 0.29.0",
  "rand",
  "scap",

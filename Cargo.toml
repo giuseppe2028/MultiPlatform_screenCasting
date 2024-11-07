@@ -18,3 +18,5 @@ time = "0.3.36"
 futures = "0.3.31"
 rand = "0.8.5"
 enigo = "0.2.1"
+[target.'cfg(target_os = "linux")'.dependencies]
+libspa-sys = "0.8.0"
