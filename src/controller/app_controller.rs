@@ -1,4 +1,4 @@
-use scap::{
+ use scap::{
     capturer::{Capturer, Options},
     targets::Display,
     Target,
@@ -102,6 +102,9 @@ impl AppController {
     }
 
     pub fn stop_streaming(&mut self) {
+        if(self.stop_flag.load(Ordering::Relaxed)){
+            return;
+        }
         // Imposta il flag per fermare il thread
         self.stop_flag.store(true, Ordering::Relaxed);
 
