@@ -1,6 +1,7 @@
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{container, pick_list, row};
 use iced::{Command, Length::Fill, Subscription};
+use xcap::Monitor;
 
 use crate::column_iced;
 use crate::gui::component::Component;
@@ -12,8 +13,8 @@ use crate::gui::theme::widget::Element;
 use crate::gui::{app, resource};
 
 pub struct CasterSettings {
-    pub available_displays: Vec<scap::targets::Display>,
-    pub selected_display: scap::targets::Display,
+    pub available_displays: Vec<Monitor>,
+    pub selected_display: Monitor
 }
 
 #[derive(Debug, Clone)]
@@ -24,7 +25,7 @@ pub enum Window {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    SelectDisplay(scap::targets::Display), // Cambiare tipo nel display corrispondente
+    SelectDisplay(Monitor), // Cambiare tipo nel display corrispondente
     SelectWindow(Window),                  // Probabilmente avrà bisogno di parametri
 }
 

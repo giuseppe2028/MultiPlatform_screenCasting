@@ -1,5 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::channel;
+use xcap::Monitor;
+
 use crate::controller::app_controller::AppController;
 use crate::gui::component::caster_settings;
 use crate::gui::component::caster_settings::CasterSettings;
@@ -56,7 +58,7 @@ pub enum Message {
     Back(Page),
     StartRecording(receiver_streaming::Message),
     TogglerChanged(caster_streaming::MessageUpdate),
-    SelectDisplay(scap::targets::Display),
+    SelectDisplay(Monitor),
     Close,
     UpdateScreen,
     StartPartialSharing(f32,f32,f64,f64),
@@ -90,8 +92,11 @@ impl Application for App {
 
         let (sender,receiver) = channel::<Vec<u8>>();
 
-        let mut controller = AppController::new(default_opt, sender);
-        controller.set_display(controller.get_available_displays().get(0).unwrap().clone());
+        let monitors = Monitor::all().unwrap();
+        println!("{:?}", monitors);
+
+        let mut controller = AppController::new(monitors.get(0).unwrap().clone(), sender);
+        //controller.set_display(controller.get_available_displays().get(0).unwrap().clone());
 
         (
             Self {
@@ -157,7 +162,7 @@ impl Application for App {
                         self.current_page = Page::Home;
                     }
                     Page::Connection => {
-                        self.controller.clean_options();
+                        //self.controller.clean_options(); // MODIFICARE PER GIUSEPPE
                         self.current_page = Page::CasterSettings;
                     }
                     Page::ReceiverIp => {
@@ -217,7 +222,7 @@ impl Application for App {
             }
             Message::Close=>{
                 self.controller.stop_streaming();
-                self.controller.clean_options();
+                //self.controller.clean_options(); DA FARE PER PEPPINO
                 self.current_page = Page::Home;
                     //TODO fare in modo di tornare alla schermata precedente
                 Command::none()
@@ -241,10 +246,10 @@ impl Application for App {
             }
             Message::StartPartialSharing(x,y,start_x,start_y)=>{
                 self.current_page = Page::CasterStreaming;                
-                let target = self.controller.option.target.clone();
+               // let target = self.controller.option.target.clone(); PEPPINO
                 //calcolo la x rapportata ai valori dello schermo:
-                let (x,y) = get_screen_scaled(x,get_target_dimensions(&target.unwrap()));
-                self.controller.set_coordinates(x as f64, y as f64,start_x,start_y);
+                //let (x,y) = get_screen_scaled(x,get_target_dimensions(&target.unwrap())); PEPPINO
+                // self.controller.set_coordinates(x as f64, y as f64,start_x,start_y); SEMPRE PEPPINO C'E' PROPRIO LA STRUTTURA WINDOW IN XCAP
                 self.controller.start_sharing();
                 self.caster_streaming.measures = self.controller.get_measures();
                 Command::none()

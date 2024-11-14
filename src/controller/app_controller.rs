@@ -1,12 +1,7 @@
- use scap::{
-    capturer::{Capturer, Options},
-    targets::Display,
-    Target,
-};
+use futures::lock;
+use xcap::Monitor;
 
-use crate::screenshare::screenshare::stop_screen_sharing;
 use crate::screenshare::screenshare::{start_screen_sharing, take_screenshot};
-use scap::capturer::{Area, Point, Size};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
@@ -14,8 +9,7 @@ use std::thread;
 use std::thread::JoinHandle;
 
 pub struct AppController {
-    pub capturer: Arc<Mutex<Option<Capturer>>>,
-    pub option: Options,
+    pub monitor_chosen: Arc<Mutex<Monitor>>,
     pub streaming_handle: Option<JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>,
     sender: Arc<Sender<Vec<u8>>>,
@@ -24,10 +18,9 @@ pub struct AppController {
 
 impl AppController {
     // Costruttore per AppController
-    pub fn new(option: Options, sender: Sender<Vec<u8>>) -> Self {
+    pub fn new(monitor: Monitor, sender: Sender<Vec<u8>>) -> Self {
         AppController {
-            capturer: Arc::new(Mutex::new(None)),
-            option,
+            monitor_chosen: Arc::new(Mutex::new(monitor)),
             streaming_handle: None,
             stop_flag: Arc::new(AtomicBool::new(false)),
             sender: Arc::new(sender),
@@ -44,33 +37,31 @@ impl AppController {
             self.capturer = Arc::new(Mutex::new(Some(Capturer::new(self.option.clone()))));
         }
         */
-        self.capturer = Arc::new(Mutex::new(Some(Capturer::new(self.option.clone()))));
 
-        let capturer = Arc::clone(&self.capturer);
+        let monitor = self.monitor_chosen.clone();
         let stop_flag = Arc::clone(&self.stop_flag);
         let send = self.sender.clone();
         // Crea un nuovo thread per lo screen sharing
         let handle = Some(thread::spawn(move || {
             // Passiamo stdin e altri dati al thread
-            start_screen_sharing(capturer, stop_flag, send);
+            start_screen_sharing(monitor, stop_flag, send);
         }));
         self.set_handle(handle.unwrap());
     }
 
-    pub fn clean_options(&mut self) {
+    /*  pub fn clean_options(&mut self) {
         self.option.crop_area = None;
-    }
+    }*/
 
     pub fn set_handle(&mut self, handle: JoinHandle<()>) {
         self.streaming_handle = Some(handle);
     }
 
-    pub fn set_display(&mut self, display: Display) {
-        self.option.target = Some(Target::Display(display.clone()));
-        self.option.output_resolution =
-            scap::capturer::Resolution::get_resolution(display.get_width());
+    pub fn set_display(&mut self, monitor: Monitor) {
+        let mut lock_mon = self.monitor_chosen.lock().unwrap();
+        *lock_mon = monitor;
     }
-
+/* 
     pub fn set_coordinates(&mut self, x: f64, y: f64, start_x: f64, start_y: f64) {
         self.option.crop_area = Some(Area {
             origin: Point {
@@ -97,10 +88,14 @@ impl AppController {
             .collect();
 
         return displays;
+    }*/
+
+    pub fn get_available_displays(&self) -> Vec<Monitor> {
+        return Monitor::all().unwrap();
     }
 
     pub fn stop_streaming(&mut self) {
-        if(self.stop_flag.load(Ordering::Relaxed)){
+        if self.stop_flag.load(Ordering::Relaxed) {
             return;
         }
         // Imposta il flag per fermare il thread
@@ -112,15 +107,24 @@ impl AppController {
                 .join()
                 .expect("Errore nella terminazione del thread di streaming");
         }
-        stop_screen_sharing(self.capturer.clone());
     }
+    
     pub fn take_screenshot(&mut self) -> Vec<u8> {
-        self.capturer = Arc::new(Mutex::new(Some(Capturer::new(self.option.clone()))));
-        take_screenshot(self.capturer.clone())
+
+        take_screenshot(self.monitor_chosen.clone())
     }
+    
     pub fn set_is_just_stopped(&mut self, value: bool) {
         self.is_just_stopped = value;
     }
+    pub fn get_measures(&self) -> (u32, u32) {
+        let lock_monitor = self.monitor_chosen.lock().unwrap();
+        let x =  lock_monitor.width();
+        let y = lock_monitor.height();
+        println!("width {}, height {}", x, y);
+        return (x,y);
+    }
+    /*
     pub fn get_measures(&self) -> (u32, u32) {
         match self.option.output_resolution {
             scap::capturer::Resolution::_480p => (640, 480), // 480p: 640x480
@@ -131,5 +135,5 @@ impl AppController {
             scap::capturer::Resolution::_4320p => (7680, 4320), // 4320p: 7680x4320
             scap::capturer::Resolution::Captured => (1920, 1080),
         }
-    }
+    }*/
 }
