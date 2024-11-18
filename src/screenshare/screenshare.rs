@@ -8,7 +8,9 @@ use std::ptr;
 #[cfg(target_os = "windows")]
 use winapi::shared::windef::HBITMAP;
 #[cfg(target_os = "windows")]
-use winapi::um::wingdi::{CreateCompatibleDC, DeleteDC, GetBitmapBits, GetObjectA, SelectObject, BITMAP};
+use winapi::um::wingdi::{
+    CreateCompatibleDC, DeleteDC, GetBitmapBits, GetObjectA, SelectObject, BITMAP,
+};
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::{CopyIcon, GetCursorInfo, GetIconInfo, CURSORINFO, ICONINFO};
 
@@ -31,14 +33,20 @@ pub fn start_screen_sharing(
                 #[cfg(target_os = "windows")]
                 {
                     if let Some((cursor_x, cursor_y, hbm_color)) = get_cursor_data() {
-                        overlay_cursor_on_frame(
-                            &mut raw_data,
-                            width,
-                            height,
-                            cursor_x,
-                            cursor_y,
-                            hbm_color,
-                        );
+                        if hbm_color.is_null() {
+                            // Sovrapponi manualmente un cursore a forma di "I"
+                            overlay_text_cursor(&mut raw_data, width, height, cursor_x, cursor_y);
+                        } else {
+                            // Sovrapponi il cursore normale usando la bitmap
+                            overlay_cursor_on_frame(
+                                &mut raw_data,
+                                width,
+                                height,
+                                cursor_x,
+                                cursor_y,
+                                hbm_color,
+                            );
+                        }
                     }
                 }
 
@@ -207,20 +215,48 @@ fn overlay_cursor_on_frame(
 
 
 #[cfg(target_os = "windows")]
+fn overlay_text_cursor(
+    raw_data: &mut Vec<u8>,
+    frame_width: u32,
+    frame_height: u32,
+    cursor_x: i32,
+    cursor_y: i32,
+) {
+    // Definisci le dimensioni del cursore a forma di "I"
+    let cursor_height = 20; // Altezza del cursore "I" in pixel
+    //let cursor_width: i32 = 10;   // Larghezza del cursore "I" in pixel
+
+    //let adjusted_cursor_x = cursor_x - (cursor_width / 2); // utile per disegnarlo un po' più in alto per renderlo uguale alla realtà
+    let adjusted_cursor_x = cursor_x + 10; //utile per disegnarlo un po' più a destra per renderlo uguale alla realtà
+
+    for y in 0..cursor_height {
+        let frame_y = cursor_y + y;
+        if frame_y >= 0 && frame_y < frame_height as i32 {
+            let frame_index = ((frame_y as usize * frame_width as usize + adjusted_cursor_x as usize) * 4) as usize;
+            if frame_index + 3 < raw_data.len() {
+                // Colore del cursore a forma di "I" (es. nero)
+                raw_data[frame_index] = 255;     // B
+                raw_data[frame_index + 1] = 255; // G
+                raw_data[frame_index + 2] = 255; // R
+                raw_data[frame_index + 3] = 255; // A (opaco)
+            }
+        }
+    }
+}
+
+
+#[cfg(target_os = "windows")]
 fn get_cursor_data() -> Option<(i32, i32, HBITMAP)> {
     unsafe {
-        // Struttura per ottenere le informazioni sul cursore
         let mut cursor_info = CURSORINFO {
             cbSize: std::mem::size_of::<CURSORINFO>() as u32,
             ..std::mem::zeroed()
         };
 
-        // Ottieni le informazioni sul cursore
         if GetCursorInfo(&mut cursor_info) == 0 {
             return None;
         }
 
-        // Ottieni l'icona del cursore
         let hicon = CopyIcon(cursor_info.hCursor);
         if hicon.is_null() {
             return None;
@@ -238,7 +274,17 @@ fn get_cursor_data() -> Option<(i32, i32, HBITMAP)> {
         let cursor_x = cursor_info.ptScreenPos.x;
         let cursor_y = cursor_info.ptScreenPos.y;
 
-        // Ritorna la posizione e l'immagine del cursore (HBITMAP)
-        Some((cursor_x, cursor_y, icon_info.hbmColor))
+        let adjusted_cursor_x = cursor_x  - icon_info.xHotspot as i32;
+        let adjusted_cursor_y = cursor_y - icon_info.yHotspot as i32;
+
+        // Verifica se l'HBITMAP è valido
+        if icon_info.hbmColor.is_null() && icon_info.hbmMask.is_null() {
+            // Se entrambe le bitmap sono NULL, è probabile che si tratti di un cursore speciale
+            // come il cursore a forma di "I". In questo caso, possiamo gestirlo separatamente.
+            // Ritorna una rappresentazione personalizzata o un segnale per sovrapporre manualmente un cursore "I".
+            return Some((adjusted_cursor_x, adjusted_cursor_y, ptr::null_mut())); // Usa `ptr::null_mut()` come segnale speciale
+        }
+
+        Some((adjusted_cursor_x, adjusted_cursor_y, icon_info.hbmColor))
     }
 }
