@@ -18,6 +18,7 @@ dependencies = [
  "time",
  "tokio",
  "url",
+ "winapi 0.3.9",
  "xcap",
 ]
 
