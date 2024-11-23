@@ -13,18 +13,19 @@ use iced::{
     keyboard::{KeyCode, Event::KeyPressed},
     Event
 };
+use xcap::image::RgbaImage;
 
 pub struct CasterStreaming {
     pub toggler: bool,
-    pub receiver: Arc<Mutex<Receiver<Vec<u8>>>>,
-    pub frame_to_update: Arc<Mutex<Option<Vec<u8>>>>,
+    pub receiver: Arc<Mutex<Receiver<RgbaImage>>>,
+    pub frame_to_update: Arc<Mutex<Option<RgbaImage>>>,
     pub measures: (u32, u32) //width, height
 }
 
 #[derive(Debug, Clone)]
 pub enum MessageUpdate {
     TogglerChanged(bool),
-    NewFrame(Vec<u8>),
+    NewFrame(RgbaImage),
     StopStreaming
 }
 
@@ -78,9 +79,10 @@ impl<'a> Component<'a> for CasterStreaming {
                 }
                 Some(ref frame_data) => {
                     // Assicurati che il frame sia in un formato valido
-                    Image::new(image::Handle::from_pixels(self.measures.0, self.measures.1,frame_data.clone())).width(iced::Length::Fill)
+                    Image::new(image::Handle::from_pixels(frame_data.width(), frame_data.height(),frame_data.clone().into_raw())).width(iced::Length::Fill)
                         .height(iced::Length::Fill)
                 }
+
             }
 
         };

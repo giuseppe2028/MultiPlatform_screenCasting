@@ -7,18 +7,19 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
+use xcap::image::RgbaImage;
 
 pub struct AppController {
     pub monitor_chosen: Arc<Mutex<Monitor>>,
     pub streaming_handle: Option<JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>,
-    sender: Arc<Sender<Vec<u8>>>,
+    sender: Arc<Sender<RgbaImage>>,
     pub is_just_stopped: bool,
 }
 
 impl AppController {
     // Costruttore per AppController
-    pub fn new(monitor: Monitor, sender: Sender<Vec<u8>>) -> Self {
+    pub fn new(monitor: Monitor, sender: Sender<RgbaImage>) -> Self {
         AppController {
             monitor_chosen: Arc::new(Mutex::new(monitor)),
             streaming_handle: None,

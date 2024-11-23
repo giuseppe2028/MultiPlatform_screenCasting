@@ -20,6 +20,7 @@ use iced::{executor, Application, Command, Subscription};
 use scap::capturer::Options;
 use iced::time::{self, Duration};
 use scap::targets::get_target_dimensions;
+use xcap::image::RgbaImage;
 use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
 use crate::utils::utils::get_screen_scaled;
 use super::component::caster_streaming;
@@ -90,7 +91,7 @@ impl Application for App {
             ..Default::default()
         };
 
-        let (sender,receiver) = channel::<Vec<u8>>();
+        let (sender,receiver) = channel::<RgbaImage>();
 
         let monitors = Monitor::all().unwrap();
         println!("{:?}", monitors);
