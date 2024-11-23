@@ -14,17 +14,7 @@ use winapi::um::wingdi::{
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::{CopyIcon, GetCursorInfo, GetIconInfo, CURSORINFO, ICONINFO};
 use xcap::image::{DynamicImage, GenericImageView, RgbImage, RgbaImage};
-
-#[cfg(target_os = "macos")]
-use cocoa::appkit::{NSApplication, NSScreen, NSWindow};
-#[cfg(target_os = "macos")]
-use core_graphics::display::{CGDisplay, CGDisplayBounds, CGMainDisplayID};
-#[cfg(target_os = "macos")]
-use core_graphics::event::{CGEvent, CGEventType};
-#[cfg(target_os = "macos")]
-use core_graphics::geometry::CGPoint;
-#[cfg(target_os = "macos")]
-use core_graphics::image::{CGImage, CGImageRef};
+use mouse_position::mouse_position::Mouse;
 
 pub fn start_screen_sharing(
     monitor: Arc<Mutex<Monitor>>,
@@ -40,24 +30,7 @@ pub fn start_screen_sharing(
         match frame_result {
             Ok(frame) => {
                 let (width, height) = (frame.width(), frame.height());
-                // /*frame
-                //     .save("target/monitors/monitor-Ciaoo.png".to_string())
-                //     .unwrap();*/
-                // let luma = DynamicImage::ImageRgba8(frame).into_rgba8();
                 let mut raw_data = frame.clone().into_raw();
-                // let image_buffer: RgbaImage = RgbaImage::from_raw(width, height, luma.clone().into_raw())
-                //     .expect("Errore nella creazione dell'immagine");
-                // println!("altezza {} lunghezza {}",width,height);
-                // image_buffer.save("target/monitors/monitor-Ciaoo1.5.png").unwrap();
-                // // if raw_data.len() != (1440 * 900 * 3) {
-                // //     eprintln!("Errore: La lunghezza dei dati raw non è corretta!");
-                // //     eprintln!("Errore: la lunghezza è {:?}",raw_data.len());
-                // // }
-
-                // Converte e salva come JPEG
-                /*if let Err(e) = image_buffer.save("target/monitors/monitor-Cia12oo.png") {
-                    eprintln!("Errore nel salvataggio dell'immagine JPEG: {:?}", e);
-                }*/
                 #[cfg(target_os = "windows")]
                 {
                     if let Some((cursor_x, cursor_y, hbm_color)) = get_cursor_data() {
@@ -131,15 +104,6 @@ pub fn start_screen_sharing(
 }*/
 
 /*
-    FUNZIONI UTILI?
-pub fn check_issupported() -> bool {
-    scap::is_supported()
-}
-
-pub fn check_haspermission() -> bool {
-    scap::has_permission()
-}
-
 pub fn set_options() -> Options {
     //TODO we can set the options
     return Options {
@@ -386,11 +350,22 @@ fn convert_cursor_coordinates(
     }
 }
 
+
 #[cfg(target_os = "macos")]
 fn get_cursor_position() -> Option<(f64, f64)> {
-    let event = CGEvent::new(CGEventType::MouseMoved)?;
+    // Creare un CGEventSource
+   /* let event_source = CGEventSource::new(()).ok()?; // Gestisce eventuali errori
+    let event = CGEvent::new(event_source).ok()?;  // Crea l'evento con la sorgente
     let location = event.location();
-    Some((location.x, location.y))
+    Some((location.x, location.y))*/
+    let position = Mouse::get_mouse_position();
+    match position {
+        Mouse::Position { x, y } => Some((x as f64,y as f64)),
+        Mouse::Error => {
+            print!("Errore get cursor");
+            None
+        }
+    }
 }
 
 // Funzione per sovrapporre il cursore al frame catturato
@@ -403,7 +378,7 @@ fn overlay_cursor_on_frame(
     cursor_y: f64,
 ) {
     // Definisci un cursore semplice, ad esempio un piccolo rettangolo nero, o usa un'immagine predefinita
-    let cursor_size = 10;
+    let cursor_size = 0;
     let x = cursor_x as i32;
     let y = cursor_y as i32;
 
