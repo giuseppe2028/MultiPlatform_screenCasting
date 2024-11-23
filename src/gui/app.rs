@@ -21,7 +21,9 @@ use scap::capturer::Options;
 use iced::time::{self, Duration};
 use scap::targets::get_target_dimensions;
 use xcap::image::RgbaImage;
+use crate::controller::SocketController::SocketController;
 use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
+use crate::socket::socket::CasterSocket;
 use crate::utils::utils::get_screen_scaled;
 use super::component::caster_streaming;
 
@@ -34,7 +36,7 @@ pub struct App {
     receiver_streamimg: ReceiverStreaming,
     caster_streaming: CasterStreaming,
     controller: AppController,
-    windows_part_screen: WindowPartScreen
+    windows_part_screen: WindowPartScreen,
 }
 
 #[derive(Debug, Clone)]
@@ -136,6 +138,13 @@ impl Application for App {
             Message::RoleChosen(role) => match role {
                 home::Message::ChosenRole(role) => match role {
                     Role::Caster => {
+                        self.controller.set_socket(
+                            SocketController::CasterSocketController(
+                                CasterSocket::new(
+
+                                )
+                            )
+                        );
                         self.current_page = Page::CasterSettings;
                         Command::none()
                     }

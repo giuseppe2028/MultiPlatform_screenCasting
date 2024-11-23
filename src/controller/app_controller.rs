@@ -8,6 +8,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
 use xcap::image::RgbaImage;
+use crate::controller::SocketController::SocketController;
+use crate::controller::SocketController::SocketController::CasterSocketController;
 
 pub struct AppController {
     pub monitor_chosen: Arc<Mutex<Monitor>>,
@@ -15,6 +17,7 @@ pub struct AppController {
     stop_flag: Arc<AtomicBool>,
     sender: Arc<Sender<RgbaImage>>,
     pub is_just_stopped: bool,
+    socket_controller:SocketController
 }
 
 impl AppController {
@@ -26,7 +29,12 @@ impl AppController {
             stop_flag: Arc::new(AtomicBool::new(false)),
             sender: Arc::new(sender),
             is_just_stopped: false,
+            socket_controller: SocketController::NotDefined,
         }
+    }
+
+    pub fn set_socket(&mut self,socket:SocketController){
+        self.socket_controller = socket;
     }
 
     // Funzione che avvia la condivisione dello schermo

@@ -7,9 +7,9 @@ grabbing the content of the screen (or a portion of it) and stream it to a set o
 The application should fulfill the following requirements:
 
 1. **Platform Support**: The utility should be compatible with multiple desktop operating systems,
-   including Windows, macOS, and Linux.
+   including Windows, macOS, and Linux. ✅
 2. **User Interface (UI)**: The utility should have an intuitive and user-friendly interface that allows
-   users to easily navigate through the application's features.
+   users to easily navigate through the application's features.✅
 3. **Operating mode**: At startup, the user will choose whether the application should operate as a
    caster or as a receiver. In the latter case, the user should be able to specify the address of the
    caster it should connect to.
@@ -25,4 +25,4 @@ The application should fulfill the following requirements:
    content to a video file.
 8. **Multi-monitor Support**: The utility should be able to recognize and handle
    multiple monitors independently, allowing users to cast content from any of the connected
-   displays.
+   displays.✅
