@@ -144,7 +144,7 @@ impl<'a> Component<'a> for CasterStreaming {
                 .icon(crate::gui::theme::icon::Icon::Pause)
                 .build(30)
                 .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
+                .on_press(app::Message::StartRecording),
             CircleButton::new("blank")
                 .style(Style::Primary)
                 .icon(crate::gui::theme::icon::Icon::Blanking)

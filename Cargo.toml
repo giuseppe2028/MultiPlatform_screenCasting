@@ -19,6 +19,8 @@ futures = "0.3.31"
 rand = "0.8.5"
 enigo = "0.2.1"
 xcap = { git="https://github.com/giuseppe2028/xcap.git" }
+image = { version = "0.24", features = ["png", "jpeg"] }
+
 [target.'cfg(target_os = "linux")'.dependencies]
 libspa-sys = "0.8.0"
 [target.'cfg(target_os = "windows")'.dependencies]

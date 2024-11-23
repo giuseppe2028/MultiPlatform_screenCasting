@@ -57,7 +57,7 @@ pub enum Message {
     ReceiverInputIp(receiver_ip::Message),
     SetSettingsCaster(caster_settings::Window),
     Back(Page),
-    StartRecording(receiver_streaming::Message),
+    StartRecording,
     TogglerChanged(caster_streaming::MessageUpdate),
     SelectDisplay(Monitor),
     Close,
@@ -206,9 +206,18 @@ impl Application for App {
 
                 Command::none()
             }
-            Message::StartRecording(message) => {
+            Message::StartRecording => {
+                println!("entro");
+                if(self.controller.is_just_recorded){
+                    self.controller.stop_recording();
+                    self.controller.set_is_just_recorded(false);
+                }
+                else {
+                    self.controller.start_recording();
+                    self.controller.set_is_just_recorded(true);
+                }
                 //funzioni backend
-                let _ = self.receiver_streamimg.update(message);
+                //let _ = self.receiver_streamimg.update(message);
                 Command::none()
             }
             Message::TogglerChanged(message) => {

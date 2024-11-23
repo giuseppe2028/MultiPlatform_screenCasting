@@ -1,3 +1,4 @@
+use std::process::{Command, exit};
 use futures::lock;
 use xcap::Monitor;
 
@@ -7,14 +8,19 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
+use std::time::Instant;
+use time::Duration;
 use xcap::image::RgbaImage;
+use crate::screenshare::screenrecording::start_screen_recording;
 
 pub struct AppController {
     pub monitor_chosen: Arc<Mutex<Monitor>>,
     pub streaming_handle: Option<JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>,
+    stop_recording: Arc<AtomicBool>,
     sender: Arc<Sender<RgbaImage>>,
     pub is_just_stopped: bool,
+    pub is_just_recorded:bool
 }
 
 impl AppController {
@@ -24,8 +30,10 @@ impl AppController {
             monitor_chosen: Arc::new(Mutex::new(monitor)),
             streaming_handle: None,
             stop_flag: Arc::new(AtomicBool::new(false)),
+            stop_recording: Arc::new(AtomicBool::new(false)),
             sender: Arc::new(sender),
             is_just_stopped: false,
+            is_just_recorded:false
         }
     }
 
@@ -118,6 +126,10 @@ impl AppController {
     pub fn set_is_just_stopped(&mut self, value: bool) {
         self.is_just_stopped = value;
     }
+
+    pub fn set_is_just_recorded(&mut self, value: bool) {
+        self.is_just_recorded = value;
+    }
     pub fn get_measures(&self) -> (u32, u32) {
         let lock_monitor = self.monitor_chosen.lock().unwrap();
         let x =  lock_monitor.width();
@@ -137,4 +149,62 @@ impl AppController {
             scap::capturer::Resolution::Captured => (1920, 1080),
         }
     }*/
+    pub fn start_recording(&mut self){
+        let frame = 20;
+        let start = Instant::now();
+        let monitor = self.monitor_chosen.clone();
+        let monitor = monitor.clone().lock().unwrap().clone();
+        let stop_flag = Arc::clone(&self.stop_flag);
+        let handle = Some(thread::spawn(move || {
+            // Passiamo stdin e altri dati al thread
+            start_screen_recording(monitor,stop_flag)
+        }));
+
+        self.set_handle(handle.unwrap());
+
+
+        /*println!("time {:?}", start.elapsed());
+        let actual_fps = 900 / start.elapsed().as_secs();
+        println!("actual fps: {}", actual_fps);*/
+    }
+
+    pub fn stop_recording(&mut self){
+        if self.stop_flag.load(Ordering::Relaxed) {
+            return;
+        }
+
+        // Set the flag to stop the thread
+        self.stop_flag.store(true, Ordering::Relaxed);
+
+        // Wait for the streaming thread to finish (if it exists)
+        if let Some(handle) = self.streaming_handle.take() {
+            handle
+                .join()
+                .expect("Errore nella terminazione del thread di streaming");
+        }
+
+        // Execute ffmpeg command after recording has stopped
+        let actual_fps = 2; // Replace with the actual FPS if needed
+        let output_file = "output.mp4"; // The output file name
+        let command = format!("ffmpeg -framerate {} -i target/monitors/recording-%d.png -c:v libx264 -pix_fmt yuv420p {}", actual_fps, output_file);
+
+        let output = Command::new("bash")
+            .arg("-c")
+            .arg(command)
+            .output();
+
+        match output {
+            Ok(output) => {
+                if !output.status.success() {
+                    eprintln!("Error executing ffmpeg: {}", String::from_utf8_lossy(&output.stderr));
+                } else {
+                    println!("ffmpeg command executed successfully: {}", String::from_utf8_lossy(&output.stdout));
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to execute ffmpeg: {}", e);
+                exit(1); // Exit if ffmpeg fails to start
+            }
+        }
+    }
 }

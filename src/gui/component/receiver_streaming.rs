@@ -20,7 +20,7 @@ pub enum Message {
 
 impl From<Message> for app::Message {
     fn from(message: Message) -> Self {
-        app::Message::StartRecording(message)
+        app::Message::StartRecording
     }
 }
 

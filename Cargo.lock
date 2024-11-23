@@ -12,6 +12,7 @@ dependencies = [
  "futures",
  "iced",
  "iced_aw",
+ "image 0.24.9",
  "libspa-sys",
  "mouse_position",
  "nix 0.29.0",
