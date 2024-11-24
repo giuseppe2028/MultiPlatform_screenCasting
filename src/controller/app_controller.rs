@@ -15,6 +15,7 @@ pub struct AppController {
     stop_flag: Arc<AtomicBool>,
     sender: Arc<Sender<RgbaImage>>,
     pub is_just_stopped: bool,
+    pub screen_dimension:(f64,f64)
 }
 
 impl AppController {
@@ -26,6 +27,7 @@ impl AppController {
             stop_flag: Arc::new(AtomicBool::new(false)),
             sender: Arc::new(sender),
             is_just_stopped: false,
+            screen_dimension: (0.0, 0.0),
         }
     }
 
@@ -50,7 +52,7 @@ impl AppController {
         self.set_handle(handle.unwrap());
     }
 
-    pub fn start_sharing_partial_sharing(&mut self) {
+    pub fn start_sharing_partial_sharing(&mut self,dimensions:[(f64,f64);2]) {
         self.stop_flag.store(false, Ordering::Relaxed);
 
         /*let mut capturer_guard = self.capturer.lock().unwrap();
@@ -65,7 +67,7 @@ impl AppController {
         // Crea un nuovo thread per lo screen sharing
         let handle = Some(thread::spawn(move || {
             // Passiamo stdin e altri dati al thread
-            start_partial_sharing(monitor, stop_flag, send);
+            start_partial_sharing(monitor, stop_flag, send,dimensions);
         }));
         self.set_handle(handle.unwrap());
     }

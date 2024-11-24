@@ -99,11 +99,12 @@ pub fn start_partial_sharing(
     monitor: Arc<Mutex<Monitor>>,
     stop_flag: Arc<AtomicBool>,
     sender: Arc<Sender<RgbaImage>>,
+    dimensions: [(f64,f64);2]
 ) {
     while !stop_flag.load(Ordering::Relaxed) {
         let frame_result = {
             let mon_lock = monitor.lock().unwrap();
-            mon_lock.capture_image(Some([(20.0,20.0),(400.0,900.0)]))
+            mon_lock.capture_image(Some([dimensions[0],dimensions[1]]))
         };
 
         match frame_result {

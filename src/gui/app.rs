@@ -246,13 +246,16 @@ impl Application for App {
                 Command::none()
             }
             Message::StartPartialSharing(x,y,start_x,start_y)=>{
+                let screen_scaled = get_screen_scaled(x as f64, y as f64, (self.controller.get_measures().0 as u64, self.controller.get_measures().1 as u64));
+                let start_screen_scaled = get_screen_scaled(start_x, start_y, (self.controller.get_measures().0 as u64, self.controller.get_measures().1 as u64));
+                print!("x: {} y: {} start_x: {} start_y: {}", x,y,screen_scaled.0,screen_scaled.1 );
                 self.current_page = Page::CasterStreaming;                
                // let target = self.controller.option.target.clone(); PEPPINO
                 //calcolo la x rapportata ai valori dello schermo:
                 //let (x,y) = get_screen_scaled(x,get_target_dimensions(&target.unwrap())); PEPPINO
                 // self.controller.set_coordinates(x as f64, y as f64,start_x,start_y); SEMPRE PEPPINO C'E' PROPRIO LA STRUTTURA WINDOW IN XCAP
 
-                self.controller.start_sharing_partial_sharing();
+                self.controller.start_sharing_partial_sharing([start_screen_scaled,(screen_scaled)]);
                 self.caster_streaming.measures = self.controller.get_measures();
                 Command::none()
             }
