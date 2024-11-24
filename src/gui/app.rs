@@ -251,7 +251,8 @@ impl Application for App {
                 //calcolo la x rapportata ai valori dello schermo:
                 //let (x,y) = get_screen_scaled(x,get_target_dimensions(&target.unwrap())); PEPPINO
                 // self.controller.set_coordinates(x as f64, y as f64,start_x,start_y); SEMPRE PEPPINO C'E' PROPRIO LA STRUTTURA WINDOW IN XCAP
-                self.controller.start_sharing();
+
+                self.controller.start_sharing_partial_sharing();
                 self.caster_streaming.measures = self.controller.get_measures();
                 Command::none()
             }

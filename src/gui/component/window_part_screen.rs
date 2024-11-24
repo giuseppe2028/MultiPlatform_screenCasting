@@ -2,6 +2,7 @@ use iced::widget::{Image, image, mouse_area, row};
 use iced::{Command, Event, Subscription};
 
 use iced::mouse;
+use xcap::image::RgbaImage;
 use crate::column_iced;
 use crate::gui::app;
 use crate::gui::app::Message;
@@ -12,7 +13,7 @@ use crate::gui::theme::widget::Element;
 use crate::utils::utils:: get_screen_dimension;
 
 pub struct WindowPartScreen {
-    pub screenshot: Option<Vec<u8>>,
+    pub screenshot: Option<RgbaImage>,
     pub(crate) coordinate: [(f32, f32); 2],
     pub cursor_position: (f32, f32), // Aggiungi un campo per la posizione del mouse
     pub screen_dimension:(f32,f32),
@@ -56,8 +57,9 @@ impl<'a> Component<'a> for WindowPartScreen {
     }
 
     fn view(&self) -> Element<'_, app::Message> {
+        let screenshot = self.screenshot.clone().unwrap();
         let mouse_area1 = mouse_area(
-            Image::new(image::Handle::from_pixels(self.measures.0, self.measures.1, self.screenshot.clone().unwrap()))
+            Image::new(image::Handle::from_pixels(screenshot.width(), screenshot.height(), screenshot.into_raw()))
                 .width(iced::Length::from(1000))
                 .height(iced::Length::from(625))
         )

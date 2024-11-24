@@ -2,7 +2,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use xcap::Monitor;
-
 #[cfg(target_os = "windows")]
 use std::ptr;
 #[cfg(target_os = "windows")]
@@ -15,7 +14,6 @@ use winapi::um::wingdi::{
 use winapi::um::winuser::{CopyIcon, GetCursorInfo, GetIconInfo, CURSORINFO, ICONINFO};
 use xcap::image::{DynamicImage, GenericImageView, RgbImage, RgbaImage};
 use mouse_position::mouse_position::Mouse;
-
 pub fn start_screen_sharing(
     monitor: Arc<Mutex<Monitor>>,
     stop_flag: Arc<AtomicBool>,
@@ -24,7 +22,7 @@ pub fn start_screen_sharing(
     while !stop_flag.load(Ordering::Relaxed) {
         let frame_result = {
             let mon_lock = monitor.lock().unwrap();
-            mon_lock.capture_image()
+            mon_lock.capture_image(None)
         };
 
         match frame_result {
@@ -95,6 +93,86 @@ pub fn start_screen_sharing(
     }
 }
 
+
+
+pub fn start_partial_sharing(
+    monitor: Arc<Mutex<Monitor>>,
+    stop_flag: Arc<AtomicBool>,
+    sender: Arc<Sender<RgbaImage>>,
+) {
+    while !stop_flag.load(Ordering::Relaxed) {
+        let frame_result = {
+            let mon_lock = monitor.lock().unwrap();
+            mon_lock.capture_image(Some([(20.0,20.0),(400.0,900.0)]))
+        };
+
+        match frame_result {
+            Ok(frame) => {
+                let (width, height) = (frame.width(), frame.height());
+                let mut raw_data = frame.clone().into_raw();
+                #[cfg(target_os = "windows")]
+                {
+                    if let Some((cursor_x, cursor_y, hbm_color)) = get_cursor_data() {
+                        // Converti le coordinate globali del cursore in coordinate relative al monitor
+                        let monitor_lock = monitor.lock().unwrap();
+                        if let Some((relative_x, relative_y)) =
+                            convert_cursor_coordinates(cursor_x, cursor_y, &*monitor_lock)
+                        {
+                            if hbm_color.is_null() {
+                                // Sovrapponi manualmente un cursore a forma di "I"
+                                overlay_text_cursor(
+                                    &mut raw_data,
+                                    width,
+                                    height,
+                                    relative_x,
+                                    relative_y,
+                                );
+                            } else {
+                                // Sovrapponi il cursore normale usando la bitmap
+                                overlay_cursor_on_frame(
+                                    &mut raw_data,
+                                    width,
+                                    height,
+                                    relative_x,
+                                    relative_y,
+                                    hbm_color,
+                                );
+                            }
+                        }
+                    }
+                }
+                #[cfg(target_os = "macos")]
+                {
+                    if let Some((cursor_x, cursor_y)) = get_cursor_position() {
+                        overlay_cursor_on_frame(&mut raw_data, width, height, cursor_x, cursor_y);
+                    }
+                }
+
+                // Verifica che la lunghezza del buffer sia corretta
+                if raw_data.len() != ((width * height * 4)).try_into().unwrap() {
+                    eprintln!(
+                        "Errore: Dimensioni del buffer non valide! Lunghezza attesa: {}",
+                        width * height * 4
+                    );
+                    return;
+                }
+
+                // Ricrea il frame da raw_data
+                if let Some(new_frame) = RgbaImage::from_raw(width, height, raw_data) {
+                    // Invia il nuovo frame tramite il sender
+                    if let Err(send_err) = sender.send(new_frame) {
+                        eprintln!("Errore nell'invio dei dati del frame: {:?}", send_err);
+                    }
+                } else {
+                    eprintln!("Errore: impossibile ricreare il frame da raw_data");
+                }
+            }
+            Err(e) => {
+                eprintln!("Errore durante la cattura dello schermo: {:?}", e);
+            }
+        }
+    }
+}
 /*pub fn stop_screen_sharing(capturer: Arc<Mutex<Option<Capturer>>>) {
     // Acquire the lock and stop capture if `capturer` is available
     let mut capturer_lock = capturer.lock().unwrap();
@@ -122,25 +200,23 @@ pub fn create_capture(options: Options) -> Capturer {
     Capturer::new(options)
 }
 */
-pub fn take_screenshot(monitor: Arc<Mutex<Monitor>>) -> Vec<u8> {
+pub fn take_screenshot(monitor: Arc<Mutex<Monitor>>) -> RgbaImage {
     let frame_result = {
         let mon_lock = monitor.lock().unwrap();
-        mon_lock.capture_image()
+        mon_lock.capture_image(None)
     };
 
     match frame_result {
         Ok(frame) => {
             // Estrai i dati del buffer in formato raw
-            let raw_data = frame.into_raw(); // Questo metodo estrae i dati del buffer
-
-            return raw_data;
+            frame
         }
         Err(e) => {
             // Gestione dell'errore: registrare o stampare l'errore
             eprintln!("Errore durante la cattura dello schermo: {:?}", e);
+            RgbaImage::new(1440,900)
         }
     }
-    return vec![];
 }
 
 #[cfg(target_os = "windows")]

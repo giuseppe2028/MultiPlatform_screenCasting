@@ -1,7 +1,7 @@
 use futures::lock;
 use xcap::Monitor;
 
-use crate::screenshare::screenshare::{start_screen_sharing, take_screenshot};
+use crate::screenshare::screenshare::{start_partial_sharing, start_screen_sharing, take_screenshot};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
@@ -46,6 +46,26 @@ impl AppController {
         let handle = Some(thread::spawn(move || {
             // Passiamo stdin e altri dati al thread
             start_screen_sharing(monitor, stop_flag, send);
+        }));
+        self.set_handle(handle.unwrap());
+    }
+
+    pub fn start_sharing_partial_sharing(&mut self) {
+        self.stop_flag.store(false, Ordering::Relaxed);
+
+        /*let mut capturer_guard = self.capturer.lock().unwrap();
+        if capturer_guard.is_none() {
+            self.capturer = Arc::new(Mutex::new(Some(Capturer::new(self.option.clone()))));
+        }
+        */
+
+        let monitor = self.monitor_chosen.clone();
+        let stop_flag = Arc::clone(&self.stop_flag);
+        let send = self.sender.clone();
+        // Crea un nuovo thread per lo screen sharing
+        let handle = Some(thread::spawn(move || {
+            // Passiamo stdin e altri dati al thread
+            start_partial_sharing(monitor, stop_flag, send);
         }));
         self.set_handle(handle.unwrap());
     }
@@ -110,7 +130,7 @@ impl AppController {
         }
     }
     
-    pub fn take_screenshot(&mut self) -> Vec<u8> {
+    pub fn take_screenshot(&mut self) -> RgbaImage {
 
         take_screenshot(self.monitor_chosen.clone())
     }
