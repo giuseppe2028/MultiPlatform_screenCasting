@@ -1,8 +1,11 @@
+use crate::socket::socket::{CasterSocket, ReceiverSocket};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use xcap::Monitor;
 
+#[cfg(target_os = "macos")]
+use mouse_position::mouse_position::Mouse;
 #[cfg(target_os = "windows")]
 use std::ptr;
 #[cfg(target_os = "windows")]
@@ -13,13 +16,13 @@ use winapi::um::wingdi::{
 };
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::{CopyIcon, GetCursorInfo, GetIconInfo, CURSORINFO, ICONINFO};
-use xcap::image::{DynamicImage, GenericImageView, RgbImage, RgbaImage};
-use mouse_position::mouse_position::Mouse;
+use xcap::image::RgbaImage;
 
 pub fn start_screen_sharing(
     monitor: Arc<Mutex<Monitor>>,
     stop_flag: Arc<AtomicBool>,
     sender: Arc<Sender<RgbaImage>>,
+    socket: Arc<Mutex<CasterSocket>>,
 ) {
     while !stop_flag.load(Ordering::Relaxed) {
         let frame_result = {
@@ -70,7 +73,7 @@ pub fn start_screen_sharing(
                 }
 
                 // Verifica che la lunghezza del buffer sia corretta
-                if raw_data.len() != ((width * height * 4)).try_into().unwrap() {
+                if raw_data.len() != (width * height * 4).try_into().unwrap() {
                     eprintln!(
                         "Errore: Dimensioni del buffer non valide! Lunghezza attesa: {}",
                         width * height * 4
@@ -84,6 +87,11 @@ pub fn start_screen_sharing(
                     if let Err(send_err) = sender.send(new_frame) {
                         eprintln!("Errore nell'invio dei dati del frame: {:?}", send_err);
                     }
+
+                        let sock_lock = socket.lock().unwrap();
+                        sock_lock.send_to_receivers(frame);
+                        println!("CASTER SOCKET: frame mandato!");
+                      
                 } else {
                     eprintln!("Errore: impossibile ricreare il frame da raw_data");
                 }
@@ -94,6 +102,40 @@ pub fn start_screen_sharing(
         }
     }
 }
+
+pub fn start_screen_receiving(stop_flag: Arc<AtomicBool>, socket: Arc<Mutex<ReceiverSocket>>) {
+    let sock_lock = socket.lock().unwrap();
+    println!("Sto aspettando i frame...");
+            while !stop_flag.load(Ordering::Relaxed) {
+                // Prova a ricevere un frame
+                match sock_lock.receive_from() {
+                    Ok(serialized_image) => {
+                        println!("ricevuto qualcosa");
+                        // Converti il SerializableImage in RgbaImage
+                        if let Some(image) = RgbaImage::from_raw(
+                            serialized_image.width(),
+                            serialized_image.height(),
+                            serialized_image.data().to_vec(),
+                        ) {
+                            // Qui puoi fare ulteriori operazioni sul frame
+                            // Ad esempio: salvataggio, elaborazione o rendering
+                            println!(
+                                "Ricevuto un frame di dimensioni {}x{}",
+                                image.width(),
+                                image.height()
+                            );
+                        } else {
+                            eprintln!("Errore: impossibile creare RgbaImage dai dati ricevuti");
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Errore nella ricezione del frame: {:?}", e);
+                    }
+                }
+            }
+            println!("SIUM");
+        }
+
 
 /*pub fn stop_screen_sharing(capturer: Arc<Mutex<Option<Capturer>>>) {
     // Acquire the lock and stop capture if `capturer` is available
@@ -350,17 +392,16 @@ fn convert_cursor_coordinates(
     }
 }
 
-
 #[cfg(target_os = "macos")]
 fn get_cursor_position() -> Option<(f64, f64)> {
     // Creare un CGEventSource
-   /* let event_source = CGEventSource::new(()).ok()?; // Gestisce eventuali errori
+    /* let event_source = CGEventSource::new(()).ok()?; // Gestisce eventuali errori
     let event = CGEvent::new(event_source).ok()?;  // Crea l'evento con la sorgente
     let location = event.location();
     Some((location.x, location.y))*/
     let position = Mouse::get_mouse_position();
     match position {
-        Mouse::Position { x, y } => Some((x as f64,y as f64)),
+        Mouse::Position { x, y } => Some((x as f64, y as f64)),
         Mouse::Error => {
             print!("Errore get cursor");
             None

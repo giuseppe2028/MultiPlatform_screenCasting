@@ -1,15 +1,14 @@
-use futures::lock;
-use xcap::Monitor;
-
-use crate::screenshare::screenshare::{start_screen_sharing, take_screenshot};
+use crate::screenshare::screenshare::{
+    start_screen_receiving, start_screen_sharing, take_screenshot,
+};
+use crate::socket::socket::CasterSocket;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
 use xcap::image::RgbaImage;
-use crate::controller::SocketController::SocketController;
-use crate::controller::SocketController::SocketController::CasterSocketController;
+use xcap::Monitor;
 
 pub struct AppController {
     pub monitor_chosen: Arc<Mutex<Monitor>>,
@@ -17,24 +16,24 @@ pub struct AppController {
     stop_flag: Arc<AtomicBool>,
     sender: Arc<Sender<RgbaImage>>,
     pub is_just_stopped: bool,
-    socket_controller:SocketController
+    socket: Arc<Mutex<CasterSocket>>,
 }
 
 impl AppController {
     // Costruttore per AppController
-    pub fn new(monitor: Monitor, sender: Sender<RgbaImage>) -> Self {
+    pub fn new(monitor: Monitor, sender: Sender<RgbaImage>, socket: CasterSocket) -> Self {
         AppController {
             monitor_chosen: Arc::new(Mutex::new(monitor)),
             streaming_handle: None,
             stop_flag: Arc::new(AtomicBool::new(false)),
             sender: Arc::new(sender),
             is_just_stopped: false,
-            socket_controller: SocketController::NotDefined,
+            socket: Arc::new(Mutex::new(socket)),
         }
     }
 
-    pub fn set_socket(&mut self,socket:SocketController){
-        self.socket_controller = socket;
+    pub fn set_socket(&mut self, socket: CasterSocket) {
+        self.socket = Arc::new(Mutex::new(socket));
     }
 
     // Funzione che avvia la condivisione dello schermo
@@ -50,14 +49,20 @@ impl AppController {
         let monitor = self.monitor_chosen.clone();
         let stop_flag = Arc::clone(&self.stop_flag);
         let send = self.sender.clone();
+        let socket = self.socket.clone();
         // Crea un nuovo thread per lo screen sharing
         let handle = Some(thread::spawn(move || {
             // Passiamo stdin e altri dati al thread
-            start_screen_sharing(monitor, stop_flag, send);
+            start_screen_sharing(monitor, stop_flag, send, socket);
         }));
         self.set_handle(handle.unwrap());
     }
 
+    pub fn listens_for_receivers(&mut self) {
+        // Borrow the Arc, not the Arc itself
+        let mut sock_lock = self.socket.lock().unwrap();
+        sock_lock.listen_for_registration();
+    }
     /*  pub fn clean_options(&mut self) {
         self.option.crop_area = None;
     }*/
@@ -70,7 +75,7 @@ impl AppController {
         let mut lock_mon = self.monitor_chosen.lock().unwrap();
         *lock_mon = monitor;
     }
-/* 
+    /*
     pub fn set_coordinates(&mut self, x: f64, y: f64, start_x: f64, start_y: f64) {
         self.option.crop_area = Some(Area {
             origin: Point {
@@ -117,32 +122,20 @@ impl AppController {
                 .expect("Errore nella terminazione del thread di streaming");
         }
     }
-    
-    pub fn take_screenshot(&mut self) -> Vec<u8> {
 
+    pub fn take_screenshot(&mut self) -> Vec<u8> {
         take_screenshot(self.monitor_chosen.clone())
     }
-    
+
     pub fn set_is_just_stopped(&mut self, value: bool) {
         self.is_just_stopped = value;
     }
+
     pub fn get_measures(&self) -> (u32, u32) {
         let lock_monitor = self.monitor_chosen.lock().unwrap();
-        let x =  lock_monitor.width();
+        let x = lock_monitor.width();
         let y = lock_monitor.height();
         println!("width {}, height {}", x, y);
-        return (x,y);
+        return (x, y);
     }
-    /*
-    pub fn get_measures(&self) -> (u32, u32) {
-        match self.option.output_resolution {
-            scap::capturer::Resolution::_480p => (640, 480), // 480p: 640x480
-            scap::capturer::Resolution::_720p => (1280, 720), // 720p: 1280x720
-            scap::capturer::Resolution::_1080p => (1920, 1080), // 1080p: 1920x1080
-            scap::capturer::Resolution::_1440p => (1440, 900), // 1440p: 2560x1440
-            scap::capturer::Resolution::_2160p => (3840, 2160), // 2160p: 3840x2160
-            scap::capturer::Resolution::_4320p => (7680, 4320), // 4320p: 7680x4320
-            scap::capturer::Resolution::Captured => (1920, 1080),
-        }
-    }*/
 }

@@ -10,6 +10,7 @@ dependencies = [
  "cocoa 0.26.0",
  "core-graphics 0.24.0",
  "enigo",
+ "flate2",
  "futures",
  "iced",
  "iced_aw",

@@ -70,7 +70,7 @@ impl<'a> Component<'a> for ReceiverStreaming {
                     .style(Style::Danger)
                     .icon(Icon::Cancel)
                     .build(21)
-                    .on_press(app::Message::Back(app::Page::ReceiverStreaming)),
+                    .on_press(app::Message::Close),
             ]
             .spacing(5)
             .padding(8)

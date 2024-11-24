@@ -1,2 +1,2 @@
 pub mod app_controller;
-pub mod SocketController;
+pub mod receiver_controller;
