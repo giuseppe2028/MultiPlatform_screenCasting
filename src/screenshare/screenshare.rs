@@ -31,7 +31,7 @@ pub async fn start_screen_sharing(
             let monitor = monitor.clone();
             move || {
                 let monitor_lock = monitor.lock().unwrap(); // Usa blocking_lock per operazioni sincrone
-                monitor_lock.capture_image()
+                monitor_lock.capture_image(None)
             }
         })
         .await; // Aspetta il risultato del task bloccante
@@ -157,7 +157,7 @@ pub async fn take_screenshot(monitor: Arc<std::sync::Mutex<Monitor>>) -> Vec<u8>
         let monitor = monitor.clone();
         move || {
             let mon_lock = monitor.lock().unwrap();
-            mon_lock.capture_image()
+            mon_lock.capture_image(None)
         }
     })
     .await
