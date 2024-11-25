@@ -1,7 +1,9 @@
 use crate::socket::socket::{CasterSocket, ReceiverSocket};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::Sender;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::mpsc::Sender;
+use tokio::sync::Mutex;
+use xcap::image::RgbaImage;
 use xcap::Monitor;
 
 #[cfg(target_os = "macos")]
@@ -16,173 +18,158 @@ use winapi::um::wingdi::{
 };
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::{CopyIcon, GetCursorInfo, GetIconInfo, CURSORINFO, ICONINFO};
-use xcap::image::RgbaImage;
 
-pub fn start_screen_sharing(
-    monitor: Arc<Mutex<Monitor>>,
+pub async fn start_screen_sharing(
+    monitor: Arc<std::sync::Mutex<Monitor>>,
     stop_flag: Arc<AtomicBool>,
-    sender: Arc<Sender<RgbaImage>>,
-    socket: Arc<Mutex<CasterSocket>>,
+    sender: Arc<tokio::sync::mpsc::Sender<RgbaImage>>,
+    socket: Arc<tokio::sync::Mutex<CasterSocket>>,
 ) {
     while !stop_flag.load(Ordering::Relaxed) {
-        let frame_result = {
-            let mon_lock = monitor.lock().unwrap();
-            mon_lock.capture_image()
+        // Cattura lo schermo in un task bloccante
+        let frame_result = tokio::task::spawn_blocking({
+            let monitor = monitor.clone();
+            move || {
+                let monitor_lock = monitor.lock().unwrap(); // Usa blocking_lock per operazioni sincrone
+                monitor_lock.capture_image()
+            }
+        })
+        .await; // Aspetta il risultato del task bloccante
+
+        // Gestione dell'errore del task
+        let frame = match frame_result {
+            Ok(Ok(frame)) => frame, // Task completato con successo
+            Ok(Err(e)) => {
+                eprintln!("Error capturing screen: {:?}", e);
+                continue;
+            }
+            Err(e) => {
+                eprintln!("Task failed: {:?}", e);
+                continue;
+            }
         };
 
-        match frame_result {
-            Ok(frame) => {
-                let (width, height) = (frame.width(), frame.height());
-                let mut raw_data = frame.clone().into_raw();
-                #[cfg(target_os = "windows")]
-                {
-                    if let Some((cursor_x, cursor_y, hbm_color)) = get_cursor_data() {
-                        // Converti le coordinate globali del cursore in coordinate relative al monitor
-                        let monitor_lock = monitor.lock().unwrap();
-                        if let Some((relative_x, relative_y)) =
-                            convert_cursor_coordinates(cursor_x, cursor_y, &*monitor_lock)
-                        {
-                            if hbm_color.is_null() {
-                                // Sovrapponi manualmente un cursore a forma di "I"
-                                overlay_text_cursor(
-                                    &mut raw_data,
-                                    width,
-                                    height,
-                                    relative_x,
-                                    relative_y,
-                                );
-                            } else {
-                                // Sovrapponi il cursore normale usando la bitmap
-                                overlay_cursor_on_frame(
-                                    &mut raw_data,
-                                    width,
-                                    height,
-                                    relative_x,
-                                    relative_y,
-                                    hbm_color,
-                                );
-                            }
-                        }
-                    }
-                }
-                #[cfg(target_os = "macos")]
-                {
-                    if let Some((cursor_x, cursor_y)) = get_cursor_position() {
-                        overlay_cursor_on_frame(&mut raw_data, width, height, cursor_x, cursor_y);
-                    }
-                }
+        let (width, height) = (frame.width(), frame.height());
+        let mut raw_data = frame.into_raw();
 
-                // Verifica che la lunghezza del buffer sia corretta
-                if raw_data.len() != (width * height * 4).try_into().unwrap() {
-                    eprintln!(
-                        "Errore: Dimensioni del buffer non valide! Lunghezza attesa: {}",
-                        width * height * 4
+        // Overlay del cursore per Windows
+        #[cfg(target_os = "windows")]
+        {
+            if let Some((cursor_x, cursor_y, hbm_color)) = get_cursor_data() {
+                let relative_coordinates = {
+                    let monitor_lock = monitor.lock().unwrap();
+                    convert_cursor_coordinates(cursor_x, cursor_y, &*monitor_lock)
+                };
+        
+                if let Some((relative_x, relative_y)) = relative_coordinates {
+                    if hbm_color.is_null() {
+                        overlay_text_cursor(&mut raw_data, width, height, relative_x, relative_y);
+                    } else {
+                        overlay_cursor_on_frame(
+                            &mut raw_data,
+                            width,
+                            height,
+                            relative_x,
+                            relative_y,
+                            hbm_color,
+                        );
+                    }
+                }
+            }
+        }
+        
+        
+
+        // Overlay del cursore per macOS
+        #[cfg(target_os = "macos")]
+        {
+            if let Some((cursor_x, cursor_y)) = get_cursor_position() {
+                overlay_cursor_on_frame(&mut raw_data, width, height, cursor_x, cursor_y);
+            }
+        }
+
+        // Validazione della lunghezza del buffer
+        if raw_data.len() != (width * height * 4) as usize {
+            eprintln!(
+                "Invalid buffer length: expected {}, got {}",
+                width * height * 4,
+                raw_data.len()
+            );
+            continue;
+        }
+
+        // Creazione del nuovo frame
+        if let Some(new_frame) = RgbaImage::from_raw(width, height, raw_data) {
+            // Invia il frame al canale
+            if let Err(send_err) = sender.send(new_frame.clone()).await {
+                eprintln!("Error sending frame data: {:?}", send_err);
+            }
+
+            // Invia il frame ai socket dei peer
+            let mut sock_lock = socket.lock().await;
+            sock_lock.send_to_receivers(new_frame).await;
+            println!("CASTER SOCKET: frame sent!");
+        } else {
+            eprintln!("Error recreating the frame from raw data");
+        }
+    }
+}
+
+pub async fn start_screen_receiving(
+    stop_flag: Arc<AtomicBool>,
+    sender: Arc<Sender<RgbaImage>>,
+    socket: Arc<Mutex<ReceiverSocket>>,
+) {
+    println!("Waiting for frames...");
+    while !stop_flag.load(Ordering::Relaxed) {
+        let mut sock_lock = socket.lock().await;
+        match sock_lock.receive_from().await {
+            Ok(serialized_image) => {
+                if let Some(image) = RgbaImage::from_raw(
+                    serialized_image.width(),
+                    serialized_image.height(),
+                    serialized_image.data().to_vec(),
+                ) {
+                    println!(
+                        "Received a frame of size {}x{}",
+                        image.width(),
+                        image.height()
                     );
-                    return;
-                }
-
-                // Ricrea il frame da raw_data
-                if let Some(new_frame) = RgbaImage::from_raw(width, height, raw_data) {
-                    // Invia il nuovo frame tramite il sender
-                    if let Err(send_err) = sender.send(new_frame) {
-                        eprintln!("Errore nell'invio dei dati del frame: {:?}", send_err);
+                    if let Err(send_err) = sender.send(image).await {
+                        eprintln!("Error sending frame data: {:?}", send_err);
                     }
-
-                        let sock_lock = socket.lock().unwrap();
-                        sock_lock.send_to_receivers(frame);
-                        println!("CASTER SOCKET: frame mandato!");
-                      
                 } else {
-                    eprintln!("Errore: impossibile ricreare il frame da raw_data");
+                    eprintln!("Error creating RgbaImage from received data");
                 }
             }
             Err(e) => {
-                eprintln!("Errore durante la cattura dello schermo: {:?}", e);
+                eprintln!("Error receiving frame: {:?}", e);
             }
         }
+        drop(sock_lock);
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
     }
+    println!("Stopped receiving frames.");
 }
 
-pub fn start_screen_receiving(stop_flag: Arc<AtomicBool>, socket: Arc<Mutex<ReceiverSocket>>) {
-    let sock_lock = socket.lock().unwrap();
-    println!("Sto aspettando i frame...");
-            while !stop_flag.load(Ordering::Relaxed) {
-                // Prova a ricevere un frame
-                match sock_lock.receive_from() {
-                    Ok(serialized_image) => {
-                        println!("ricevuto qualcosa");
-                        // Converti il SerializableImage in RgbaImage
-                        if let Some(image) = RgbaImage::from_raw(
-                            serialized_image.width(),
-                            serialized_image.height(),
-                            serialized_image.data().to_vec(),
-                        ) {
-                            // Qui puoi fare ulteriori operazioni sul frame
-                            // Ad esempio: salvataggio, elaborazione o rendering
-                            println!(
-                                "Ricevuto un frame di dimensioni {}x{}",
-                                image.width(),
-                                image.height()
-                            );
-                        } else {
-                            eprintln!("Errore: impossibile creare RgbaImage dai dati ricevuti");
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("Errore nella ricezione del frame: {:?}", e);
-                    }
-                }
-            }
-            println!("SIUM");
+pub async fn take_screenshot(monitor: Arc<std::sync::Mutex<Monitor>>) -> Vec<u8> {
+    let frame_result = tokio::task::spawn_blocking({
+        let monitor = monitor.clone();
+        move || {
+            let mon_lock = monitor.lock().unwrap();
+            mon_lock.capture_image()
         }
-
-
-/*pub fn stop_screen_sharing(capturer: Arc<Mutex<Option<Capturer>>>) {
-    // Acquire the lock and stop capture if `capturer` is available
-    let mut capturer_lock = capturer.lock().unwrap();
-    if let Some(ref mut cap) = *capturer_lock {
-        cap.stop_capture();
-    }
-}*/
-
-/*
-pub fn set_options() -> Options {
-    //TODO we can set the options
-    return Options {
-        fps: 120,
-        show_cursor: true,
-        show_highlight: true,
-        excluded_targets: None,
-        output_type: scap::frame::FrameType::RGB,
-        output_resolution: scap::capturer::Resolution::_1440p,
-
-        ..Default::default()
-    };
-}
-
-pub fn create_capture(options: Options) -> Capturer {
-    Capturer::new(options)
-}
-*/
-pub fn take_screenshot(monitor: Arc<Mutex<Monitor>>) -> Vec<u8> {
-    let frame_result = {
-        let mon_lock = monitor.lock().unwrap();
-        mon_lock.capture_image()
-    };
+    })
+    .await
+    .unwrap();
 
     match frame_result {
-        Ok(frame) => {
-            // Estrai i dati del buffer in formato raw
-            let raw_data = frame.into_raw(); // Questo metodo estrae i dati del buffer
-
-            return raw_data;
-        }
+        Ok(frame) => frame.into_raw(),
         Err(e) => {
-            // Gestione dell'errore: registrare o stampare l'errore
-            eprintln!("Errore durante la cattura dello schermo: {:?}", e);
+            eprintln!("Error capturing screen: {:?}", e);
+            vec![]
         }
     }
-    return vec![];
 }
 
 #[cfg(target_os = "windows")]

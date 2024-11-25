@@ -1,7 +1,3 @@
-use std::sync::mpsc::{channel, Sender};
-use std::sync::{Arc, Mutex};
-use xcap::Monitor;
-
 use super::component::caster_streaming;
 use crate::controller::app_controller::AppController;
 use crate::controller::receiver_controller::ReceiverController;
@@ -14,15 +10,21 @@ use crate::gui::component::home::Role;
 use crate::gui::component::receiver_ip;
 use crate::gui::component::receiver_ip::ReceiverIp;
 use crate::gui::component::receiver_streaming;
-use crate::gui::component::receiver_streaming::ReceiverStreaming;
+use crate::gui::component::receiver_streaming::{ReceiverStreaming, UpdateMessage};
 use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
 use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
+use crate::socket::socket::{CasterSocket, ReceiverSocket};
 use iced::time::{self, Duration};
 use iced::{executor, Application, Command, Subscription};
-use scap::capturer::Options;
+use std::sync::Arc;
+use tokio::sync::{
+    mpsc::{channel, Sender},
+    Mutex,
+};
 use xcap::image::RgbaImage;
+use xcap::Monitor;
 
 pub struct App {
     current_page: Page,
@@ -30,15 +32,17 @@ pub struct App {
     connection: Connection,
     receiver_ip: ReceiverIp,
     caster_settings: CasterSettings,
-    receiver_streamimg: ReceiverStreaming,
+    receiver_streaming: ReceiverStreaming,
     caster_streaming: CasterStreaming,
     controller: Controller,
     windows_part_screen: WindowPartScreen,
-    sender: Sender<RgbaImage>,
+    sender_caster: Sender<RgbaImage>,
+    sender_receiver: Sender<RgbaImage>,
 }
+
 enum Controller {
     ReceiverController(ReceiverController),
-    CasterContoller(AppController),
+    CasterController(AppController),
     NotDefined,
 }
 
@@ -56,13 +60,14 @@ pub enum Page {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    StartSharing, /*(connection::Message)*/
+    Route(Page),
+    StartSharing,
     RoleChosen(home::Message),
     ReceiverSharing(String),
     ReceiverInputIp(receiver_ip::Message),
     SetSettingsCaster(caster_settings::Window),
     Back(Page),
-    StartRecording(receiver_streaming::Message),
+    StartRecording(receiver_streaming::UpdateMessage),
     TogglerChanged(caster_streaming::MessageUpdate),
     SelectDisplay(Monitor),
     Close,
@@ -73,6 +78,8 @@ pub enum Message {
     CursorMoved(f32, f32),
     StopStreaming,
     None,
+    CasterControllerCreated(CasterSocket, Sender<RgbaImage>, Page),
+    ReceiverControllerCreated(ReceiverSocket, Sender<RgbaImage>, Page),
 }
 
 impl Application for App {
@@ -83,7 +90,8 @@ impl Application for App {
     type Flags = ();
 
     fn new(_flags: Self::Flags) -> (Self, iced::Command<Self::Message>) {
-        let (sender, receiver) = channel::<RgbaImage>();
+        let (sender_caster, receiver_caster) = channel::<RgbaImage>(32); // Define buffer size
+        let (sender_receiver, receiver_receiver) = channel::<RgbaImage>(32); // Define buffer size
 
         (
             Self {
@@ -95,16 +103,22 @@ impl Application for App {
                 receiver_ip: ReceiverIp {
                     indirizzo_ip: "".to_string(),
                 },
-                receiver_streamimg: ReceiverStreaming { recording: false },
+                receiver_streaming: ReceiverStreaming {
+                    recording: false,
+                    receiver: Arc::new(Mutex::new(receiver_receiver)),
+                    frame_to_update: Arc::new(Mutex::new(None)),
+                    is_loading: true,
+                },
                 caster_settings: CasterSettings {
-                    available_displays: Monitor::all().unwrap(), //controller.get_available_displays(),
-                    selected_display: Monitor::all().unwrap().get(0).unwrap().clone(), //controller.get_available_displays().get(0).unwrap().clone(),
-                }, //implementare un metodo backend da chiamare per trovare gli screen
+                    available_displays: Monitor::all().unwrap(),
+                    selected_display: Monitor::all().unwrap().get(0).unwrap().clone(),
+                },
                 caster_streaming: CasterStreaming {
                     toggler: false,
-                    receiver: Arc::new(Mutex::new(receiver)),
+                    receiver: Arc::new(Mutex::new(receiver_caster)),
                     frame_to_update: Arc::new(Mutex::new(None)),
                     measures: (0, 0),
+                    is_loading: true,
                 },
                 windows_part_screen: WindowPartScreen {
                     screenshot: None,
@@ -113,8 +127,9 @@ impl Application for App {
                     screen_dimension: (0.0, 0.0),
                     measures: (0, 0),
                 },
-                controller: Controller::NotDefined, //definisco il controller quando scelgo il ruolo
-                sender,
+                controller: Controller::NotDefined,
+                sender_caster,
+                sender_receiver,
             },
             Command::none(),
         )
@@ -133,14 +148,26 @@ impl Application for App {
             Message::RoleChosen(role) => match role {
                 home::Message::ChosenRole(role) => match role {
                     Role::Caster => {
-                        let socket = crate::socket::socket::CasterSocket::new("127.0.0.1:8000"); //"0.0.0.0:8000"
-                        self.controller = Controller::CasterContoller(AppController::new(
-                            Monitor::all().unwrap().get(0).unwrap().clone(),
-                            self.sender.clone(),
-                            socket,
-                        ));
-                        self.current_page = Page::CasterSettings;
-                        Command::none()
+                        let sender = self.sender_caster.clone();
+                        Command::perform(
+                            async move {
+                                let socket =
+                                    crate::socket::socket::CasterSocket::new("127.0.0.1:8000")
+                                        .await;
+                                /*let caster_controller = Controller::CasterController(AppController::new(
+                                    Monitor::all().unwrap().get(0).unwrap().clone(),
+                                    sender,
+                                    socket,
+                                ));*/
+                                let page = Page::CasterSettings;
+                                (socket, sender, page)
+                            },
+                            |(socket, sender, page)| {
+                                // Once the operation is complete, send a "ControllerCreated" message
+                                //self.controller = caster_controller;
+                                Message::CasterControllerCreated(socket, sender, page)
+                            },
+                        )
                     }
                     Role::Receiver => {
                         self.current_page = Page::Selection;
@@ -148,84 +175,94 @@ impl Application for App {
                     }
                 },
             },
+            Message::Route(page) => Command::none(),
+            Message::CasterControllerCreated(socket, sender, page) => {
+                self.controller = Controller::CasterController(AppController::new(
+                    Monitor::all().unwrap().get(0).unwrap().clone(),
+                    sender,
+                    socket,
+                ));
+                self.current_page = page;
+                Command::none()
+            }
             Message::StartSharing => {
-                self.current_page = Page::CasterStreaming; //dovrei mettere qui una pagina di caricamento
-                if let Controller::CasterContoller(caster) = &mut self.controller {
-                    caster.listens_for_receivers(); //dato che questa funzione finché non si collega almeno yun bro non si ferma e poi quando esce mettere la pagina CasterStreaming
+                self.current_page = Page::CasterStreaming;
+                if let Controller::CasterController(caster) = &mut self.controller {
+                    caster.listens_for_receivers();
                     caster.start_sharing();
                     self.caster_streaming.measures = caster.get_measures();
                 }
                 Command::none()
             }
             Message::ReceiverSharing(ip_caster) => {
-                let socket = crate::socket::socket::ReceiverSocket::new(
-                    "127.0.0.1:8001",
-                    &format!("{}:8000", ip_caster),
-                ); //TODO: calcolare la porta disponibile, tenere traccia del n di receiver
-                self.controller = Controller::ReceiverController(ReceiverController::new(socket));
-                self.current_page = Page::ReceiverStreaming;
+                let sender = self.sender_receiver.clone();
+                Command::perform(
+                    async move {
+                        let socket = crate::socket::socket::ReceiverSocket::new(
+                            "127.0.0.1:8001",
+                            &format!("{}:8000", ip_caster),
+                        )
+                        .await;
+                        let page = Page::ReceiverStreaming;
+                        (socket, sender, page)
+                    },
+                    |(socket, sender, page)| {
+                        // Once the operation is complete, send a "ControllerCreated" message
+                        //self.controller = caster_controller;
+                        Message::ReceiverControllerCreated(socket, sender, page)
+                    },
+                )
+            },
+            Message::ReceiverControllerCreated(socket, sender , page ) => {
+                self.controller = Controller::ReceiverController(ReceiverController::new(
+                    sender,
+                    socket,
+                ));
+                self.current_page = page;
                 if let Controller::ReceiverController(receiver) = &mut self.controller {
                     receiver.register();
                     receiver.start_receiving();
                 }
-                //aggiungere funzione backend
                 Command::none()
             }
             Message::Back(page) => {
-                match page {
-                    Page::Home => {}
-                    Page::Selection => {
-                        self.current_page = Page::Home;
-                    }
-                    Page::Connection => {
-                        //self.controller.clean_options(); // MODIFICARE PER GIUSEPPE
-                        self.current_page = Page::CasterSettings;
-                    }
-                    Page::ReceiverIp => {
-                        self.current_page = Page::Home;
-                    }
-                    Page::ReceiverStreaming => {
-                        self.current_page = Page::Home;
-                    }
-                    Page::CasterSettings => {
-                        self.current_page = Page::Home;
-                    }
-                    Page::CasterStreaming => {
-                        self.current_page = Page::Home;
-                    }
-                    Page::WindowPartScreen => {
-                        self.current_page = Page::Home;
-                    }
-                }
+                self.current_page = match page {
+                    Page::Home => Page::Home,
+                    Page::Selection => Page::Home,
+                    Page::Connection => Page::CasterSettings,
+                    Page::ReceiverIp => Page::Home,
+                    Page::ReceiverStreaming => Page::Home,
+                    Page::CasterSettings => Page::Home,
+                    Page::CasterStreaming => Page::Home,
+                    Page::WindowPartScreen => Page::Home,
+                };
                 Command::none()
             }
             Message::ReceiverInputIp(message) => {
                 let _ = self.receiver_ip.update(message);
                 Command::none()
             }
-            //TODO adjust self.connection.ip_address = "".parse().unwrap();
             Message::SetSettingsCaster(message) => {
-                self.connection.ip_address = "127.0.0.1".parse().unwrap(); //richiamare la funzione che si mette ad aspettare almeno una connessione e restituisce l'indirizzo ip del caster
-
+                self.connection.ip_address = "127.0.0.1".parse().unwrap();
                 match message {
                     caster_settings::Window::FullScreen => {
                         self.current_page = Page::Connection;
-                        //settare la risoluzione
                     }
                     caster_settings::Window::Area => {
-                        if let Controller::CasterContoller(caster) = &mut self.controller {
-                            self.windows_part_screen.screenshot = Some(caster.take_screenshot());
+                        if let Controller::CasterController(caster) = &mut self.controller {
+                            async {
+                                self.windows_part_screen.screenshot =
+                                    Some(caster.take_screenshot().await);
+                            };
                             self.windows_part_screen.measures = caster.get_measures();
                         }
                         self.current_page = Page::WindowPartScreen
                     }
                 }
-
                 Command::none()
             }
             Message::StartRecording(message) => {
-                //funzioni backend
-                let _ = self.receiver_streamimg.update(message);
+                let _ = self.receiver_streaming.update(message);
                 Command::none()
             }
             Message::TogglerChanged(message) => {
@@ -233,8 +270,7 @@ impl Application for App {
                 Command::none()
             }
             Message::SelectDisplay(display) => {
-                //azione di quando sceglie quale schermo condividere
-                if let Controller::CasterContoller(caster) = &mut self.controller {
+                if let Controller::CasterController(caster) = &mut self.controller {
                     caster.set_display(display.clone());
                 }
                 let _ = self
@@ -243,73 +279,49 @@ impl Application for App {
                 Command::none()
             }
             Message::Close => {
-                if let Controller::CasterContoller(caster) = &mut self.controller {
+                if let Controller::CasterController(caster) = &mut self.controller {
                     caster.stop_streaming();
-                }
-                else if let Controller::ReceiverController(receiver) = &mut self.controller {
+                } else if let Controller::ReceiverController(receiver) = &mut self.controller {
                     receiver.stop_streaming();
                 }
-                //self.controller.clean_options(); DA FARE PER PEPPINO
                 self.current_page = Page::Home;
-                //TODO fare in modo di tornare alla schermata precedente
                 Command::none()
             }
             Message::UpdateScreen => {
-                // Scope the lock to limit the immutable borrow of `self.caster_streaming.receiver`
-                let frame = {
-                    if let Ok(receiver) = self.caster_streaming.receiver.lock() {
-                        receiver.try_recv().ok()
-                    } else {
-                        None
+                match &self.controller {
+                    Controller::ReceiverController(_) => {
+                        let frame = {
+                            if let Ok(receiver) =
+                                self.receiver_streaming.receiver.blocking_lock().try_recv()
+                            {
+                                receiver
+                            } else {
+                                return Command::none();
+                            }
+                        };
+                        let _ = self
+                            .receiver_streaming
+                            .update(UpdateMessage::NewFrame(frame));
                     }
-                };
 
-                // Now that the lock is dropped, we can mutate `self.caster_streaming`
-                if let Some(frame) = frame {
-                    let _ = self.caster_streaming.update(MessageUpdate::NewFrame(frame));
-                }
-
-                Command::none()
-            }
-            Message::StartPartialSharing(x, y, start_x, start_y) => {
-                self.current_page = Page::CasterStreaming;
-                // let target = self.controller.option.target.clone(); PEPPINO
-                //calcolo la x rapportata ai valori dello schermo:
-                //let (x,y) = get_screen_scaled(x,get_target_dimensions(&target.unwrap())); PEPPINO
-                // self.controller.set_coordinates(x as f64, y as f64,start_x,start_y); SEMPRE PEPPINO C'E' PROPRIO LA STRUTTURA WINDOW IN XCAP
-                if let Controller::CasterContoller(caster) = &mut self.controller {
-                    caster.start_sharing();
-                    self.caster_streaming.measures = caster.get_measures();
-                }
-                Command::none()
-            }
-            Message::AreaSelectedFirst => {
-                let _ = self.windows_part_screen.update(MessagePress::FirstPress);
-                Command::none()
-            }
-            Message::AreaSelectedSecond => {
-                let _ = self.windows_part_screen.update(MessagePress::SecondPress);
-                Command::none()
-            }
-            Message::CursorMoved(x, y) => {
-                let _ = self
-                    .windows_part_screen
-                    .update(MessagePress::CursorMoved(x, y));
-                Command::none()
-            }
-            Message::StopStreaming => {
-                if let Controller::CasterContoller(caster) = &mut self.controller {
-                    if caster.is_just_stopped {
-                        caster.start_sharing();
-                        caster.set_is_just_stopped(false);
-                    } else {
-                        caster.stop_streaming();
-                        caster.set_is_just_stopped(true);
+                    Controller::CasterController(_) => {
+                        let frame = {
+                            if let Ok(receiver) =
+                                self.caster_streaming.receiver.blocking_lock().try_recv()
+                            {
+                                receiver
+                            } else {
+                                return Command::none();
+                            }
+                        };
+                        let _ = self.caster_streaming.update(MessageUpdate::NewFrame(frame));
                     }
+                    _ => {}
                 }
                 Command::none()
-            }
-            Message::None => Command::none(),
+            },
+            
+            _ => Command::none(),
         }
     }
 
@@ -319,7 +331,7 @@ impl Application for App {
             Page::Selection => self.receiver_ip.view(),
             Page::Connection => self.connection.view(),
             Page::ReceiverIp => self.receiver_ip.view(),
-            Page::ReceiverStreaming => self.receiver_streamimg.view(),
+            Page::ReceiverStreaming => self.receiver_streaming.view(),
             Page::CasterSettings => self.caster_settings.view(),
             Page::CasterStreaming => self.caster_streaming.view(),
             Page::WindowPartScreen => self.windows_part_screen.view(),
