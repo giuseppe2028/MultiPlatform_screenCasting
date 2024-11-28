@@ -70,7 +70,8 @@ pub fn start_screen_sharing(
                 }
 
                 // Verifica che la lunghezza del buffer sia corretta
-                if raw_data.len() != ((width * height * 4)).try_into().unwrap() {
+                let expected_len: usize = (width * height * 4).try_into().unwrap();
+                if raw_data.len() != expected_len {
                     eprintln!(
                         "Errore: Dimensioni del buffer non valide! Lunghezza attesa: {}",
                         width * height * 4
