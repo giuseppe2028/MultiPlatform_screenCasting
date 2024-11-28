@@ -1,57 +1,110 @@
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread;
-use std::time::{Duration, Instant};
-use xcap::image::RgbaImage;
-use xcap::Monitor;
+use std::process::{Child, Command};
+use std::sync::{Arc, Mutex};
 
-pub fn start_screen_recording(
-    monitor: Monitor,
-    stop_flag: Arc<AtomicBool>
-) {
-    let mut i = 0;
-    let frame_rate_ms = 1000 / 30; // 30 fps, quindi 33 ms per fotogramma
-    let start = Instant::now();
-
-    while !stop_flag.load(Ordering::Relaxed) {
-        i += 1;
-        let time = Instant::now();
-        let image = monitor.capture_image().unwrap();
-        save_image_async(image, format!("target/monitors/recording-{}.png", i));
-
-        // Calcola il tempo da aspettare per raggiungere il frame rate
-        let elapsed_time = start.elapsed().as_millis();
-        let target_time = i * frame_rate_ms as u128;
-
-        // Se elapsed_time supera target_time, significa che il fotogramma è stato acquisito troppo velocemente
-        // e non è necessario fare nessuna pausa
-        let sleep_time = if target_time > elapsed_time {
-            target_time - elapsed_time
-        } else {
-            0 // Non attendere se il fotogramma è stato acquisito troppo velocemente
-        };
-
-        // Se il tempo di attesa è positivo, dorme per quel tempo
-        if sleep_time > 0 {
-            thread::sleep(Duration::from_millis(sleep_time as u64));
+pub fn start_screen_recording(process_handle: Arc<Mutex<Option<Child>>>,options:Option<[(f64,f64);2]>) {
+    #[cfg(target_os = "macos")]
+    let ffmpeg_command = match options {
+        None => {
+            Command::new("ffmpeg")
+                .args(&[
+                    "-f", "avfoundation",  // Sorgente AVFoundation (macOS)
+                    "-framerate", "30",    // Frame rate
+                    "-i", "1",             // Indice del dispositivo (modifica se necessario)
+                    "-video_size", "1920x1080", // Risoluzione
+                    "-c:v", "libx264",     // Codec video
+                    "-preset", "fast",     // Preset per velocità
+                    "-crf", "23",          // Qualità del file (23 è un buon bilanciamento)
+                    "output.mp4",          // File di output
+                ])
+                .spawn()
         }
-
-        println!(
-            "Frame {} - sleep_time: {:?} current_step_time: {:?}",
-            i,
-            sleep_time,
-            time.elapsed()
-        );
-
-        // Interrompe la registrazione dopo aver acquisito 900 fotogrammi
-        if i >= 900 {
-            break;
+        Some(option) => {
+            Command::new("ffmpeg")
+                .args(&[
+                    "-f", "avfoundation",  // Sorgente AVFoundation (macOS)
+                    "-framerate", "30",    // Frame rate
+                    "-i", "1",             // Indice del dispositivo (modifica se necessario)
+                    "-video_size", "1920x1080", // Risoluzione
+                    "-vf",&format!("crop={}:{}:{}:{}", option[0].0, option[0].1, option[1].0, option[1].1),
+                    "-c:v", "libx264",     // Codec video
+                    "-preset", "fast",     // Preset per velocità
+                    "-crf", "23",          // Qualità del file (23 è un buon bilanciamento)
+                    "output.mp4",          // File di output
+                ])
+                .spawn()
+        }
+    };
+    match ffmpeg_command {
+        Ok(child) => {
+            println!("FFmpeg avviato. Registrazione in corso...");
+            *process_handle.lock().unwrap() = Some(child);
+        }
+        Err(e) => {
+            eprintln!("Impossibile avviare FFmpeg: {}", e);
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let ffmpeg_command = match options {
+            None => {
+                Command::new("ffmpeg")
+                    .args(&[
+                        "-f", "gdigrab",
+                        "-framerate", "30",
+                        "-i", "desktop",
+                        "-video_size", "1920x1080",
+                        "-c:v", "libx264",
+                        "-preset", "fast",
+                        "-crf", "23",
+                        "output.mp4",
+                    ])
+                    .output()
+                    .expect("Failed to execute ffmpeg for Windows desktop capture")
+            }
+            Some(option) => {
+                Command::new("ffmpeg")
+                    .args(&[
+                        "-f", "avfoundation",  // Sorgente AVFoundation (macOS)
+                        "-framerate", "30",    // Frame rate
+                        "-i", "1",             // Indice del dispositivo (modifica se necessario)
+                        "-video_size", "1920x1080", // Risoluzione
+                        "-vf", &format!("crop={}:{}:{}:{}", option[0].0, option[0].1, option[1].0, option[1].1),
+                        "-c:v", "libx264",     // Codec video
+                        "-preset", "fast",     // Preset per velocità
+                        "-crf", "23",          // Qualità del file (23 è un buon bilanciamento)
+                        "output.mp4",          // File di output
+                    ])
+                    .spawn()
+            }
+        };
+        match ffmpeg_command {
+            Ok(child) => {
+                println!("FFmpeg avviato. Registrazione in corso...");
+                *process_handle.lock().unwrap() = Some(child);
+            }
+            Err(e) => {
+                eprintln!("Impossibile avviare FFmpeg: {}", e);
+            }
         }
     }
 }
 
-fn save_image_async(image: RgbaImage, filename: String) {
-    thread::spawn(move || {
-        image.save(filename).unwrap();
-    });
+pub fn stop_recording(process_handle: Arc<Mutex<Option<Child>>>) {
+    let mut handle = process_handle.lock().unwrap();
+    if let Some(child) = handle.as_mut() {
+        match child.kill() {
+            Ok(_) => println!("Registrazione interrotta con successo."),
+            Err(e) => eprintln!("Errore durante l'interruzione di FFmpeg: {}", e),
+        }
+    } else {
+        println!("Nessun processo di registrazione attivo.");
+    }
+
+    // Assicurati di attendere la terminazione completa del processo
+    if let Some(mut child) = handle.take() {
+        match child.wait() {
+            Ok(status) => println!("Processo terminato con stato: {}", status),
+            Err(e) => eprintln!("Errore durante l'attesa del processo: {}", e),
+        }
+    }
 }

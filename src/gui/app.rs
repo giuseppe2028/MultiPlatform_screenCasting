@@ -208,14 +208,7 @@ impl Application for App {
             }
             Message::StartRecording => {
                 println!("entro");
-                if(self.controller.is_just_recorded){
-                    self.controller.stop_recording();
-                    self.controller.set_is_just_recorded(false);
-                }
-                else {
-                    self.controller.start_recording();
-                    self.controller.set_is_just_recorded(true);
-                }
+                self.controller.recording();
                 //funzioni backend
                 //let _ = self.receiver_streamimg.update(message);
                 Command::none()

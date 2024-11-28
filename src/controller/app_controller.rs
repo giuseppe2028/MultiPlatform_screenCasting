@@ -1,4 +1,4 @@
-use std::process::{Command, exit};
+use std::process::{Child, Command, exit};
 use futures::lock;
 use xcap::Monitor;
 
@@ -11,7 +11,7 @@ use std::thread::JoinHandle;
 use std::time::Instant;
 use time::Duration;
 use xcap::image::RgbaImage;
-use crate::screenshare::screenrecording::start_screen_recording;
+use crate::screenshare::screenrecording::{start_screen_recording, stop_recording};
 
 pub struct AppController {
     pub monitor_chosen: Arc<Mutex<Monitor>>,
@@ -20,7 +20,8 @@ pub struct AppController {
     stop_recording: Arc<AtomicBool>,
     sender: Arc<Sender<RgbaImage>>,
     pub is_just_stopped: bool,
-    pub is_just_recorded:bool
+    pub is_just_recorded:bool,
+    pub recording_handle: Arc<Mutex<Option<Child>>>,
 }
 
 impl AppController {
@@ -33,7 +34,8 @@ impl AppController {
             stop_recording: Arc::new(AtomicBool::new(false)),
             sender: Arc::new(sender),
             is_just_stopped: false,
-            is_just_recorded:false
+            is_just_recorded:false,
+            recording_handle: Arc::new(Mutex::new(None))
         }
     }
 
@@ -149,18 +151,28 @@ impl AppController {
             scap::capturer::Resolution::Captured => (1920, 1080),
         }
     }*/
-    pub fn start_recording(&mut self){
+    pub fn recording(&mut self){
         let frame = 20;
         let start = Instant::now();
         let monitor = self.monitor_chosen.clone();
         let monitor = monitor.clone().lock().unwrap().clone();
         let stop_flag = Arc::clone(&self.stop_flag);
-        let handle = Some(thread::spawn(move || {
-            // Passiamo stdin e altri dati al thread
-            start_screen_recording(monitor,stop_flag)
-        }));
+        let process_handle_clone = Arc::clone(&self.recording_handle);
 
-        self.set_handle(handle.unwrap());
+        if self.is_just_recorded{
+            //fermo la registrazione
+            stop_recording(process_handle_clone);
+            self.is_just_recorded = false;
+        }else{
+            let handle = Some(thread::spawn(move || {
+                // Passiamo stdin e altri dati al thread
+                start_screen_recording(process_handle_clone,None);
+            }));
+            self.is_just_recorded = true;
+        }
+
+
+        //self.set_handle(handle.unwrap());
 
 
         /*println!("time {:?}", start.elapsed());
