@@ -1,6 +1,6 @@
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
-
+use std::io::{Write, Result};
 pub fn start_screen_recording(process_handle: Arc<Mutex<Option<Child>>>,options:Option<[(f64,f64);2]>) {
     #[cfg(target_os = "macos")]
     let ffmpeg_command = match options {
@@ -11,12 +11,15 @@ pub fn start_screen_recording(process_handle: Arc<Mutex<Option<Child>>>,options:
                     "-framerate", "30",    // Frame rate
                     "-i", "1",             // Indice del dispositivo (modifica se necessario)
                     "-video_size", "1920x1080", // Risoluzione
+                    "-pix_fmt", "uyvy422", // Forza l'uso del formato pixel supportato
                     "-c:v", "libx264",     // Codec video
                     "-preset", "fast",     // Preset per velocità
                     "-crf", "23",          // Qualità del file (23 è un buon bilanciamento)
                     "output.mp4",          // File di output
                 ])
+                .stdin(Stdio::piped())
                 .spawn()
+
         }
         Some(option) => {
             Command::new("ffmpeg")
@@ -25,13 +28,15 @@ pub fn start_screen_recording(process_handle: Arc<Mutex<Option<Child>>>,options:
                     "-framerate", "30",    // Frame rate
                     "-i", "1",             // Indice del dispositivo (modifica se necessario)
                     "-video_size", "1920x1080", // Risoluzione
-                    "-vf",&format!("crop={}:{}:{}:{}", option[0].0, option[0].1, option[1].0, option[1].1),
+                    "-pix_fmt", "uyvy422", // Forza l'uso del formato pixel supportato
                     "-c:v", "libx264",     // Codec video
                     "-preset", "fast",     // Preset per velocità
                     "-crf", "23",          // Qualità del file (23 è un buon bilanciamento)
                     "output.mp4",          // File di output
                 ])
+                .stdin(Stdio::piped())
                 .spawn()
+
         }
     };
     match ffmpeg_command {
@@ -92,19 +97,16 @@ pub fn start_screen_recording(process_handle: Arc<Mutex<Option<Child>>>,options:
 pub fn stop_recording(process_handle: Arc<Mutex<Option<Child>>>) {
     let mut handle = process_handle.lock().unwrap();
     if let Some(child) = handle.as_mut() {
-        match child.kill() {
-            Ok(_) => println!("Registrazione interrotta con successo."),
-            Err(e) => eprintln!("Errore durante l'interruzione di FFmpeg: {}", e),
+        if let Some(stdin) = child.stdin.as_mut() {
+            if let Err(e) = writeln!(stdin, "q") {
+                eprintln!("Errore durante l'invio del comando a FFmpeg: {}", e);
+            } else {
+                println!("Comando 'q' inviato a FFmpeg. Terminazione in corso...");
+            }
+        } else {
+            eprintln!("Impossibile accedere a stdin del processo FFmpeg.");
         }
     } else {
         println!("Nessun processo di registrazione attivo.");
-    }
-
-    // Assicurati di attendere la terminazione completa del processo
-    if let Some(mut child) = handle.take() {
-        match child.wait() {
-            Ok(status) => println!("Processo terminato con stato: {}", status),
-            Err(e) => eprintln!("Errore durante l'attesa del processo: {}", e),
-        }
     }
 }
