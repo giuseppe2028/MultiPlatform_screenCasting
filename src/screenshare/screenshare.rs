@@ -1,8 +1,10 @@
 use crate::socket::socket::{CasterSocket, ReceiverSocket};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Mutex;
+use tokio::time::timeout;
 use xcap::image::RgbaImage;
 use xcap::Monitor;
 
@@ -60,7 +62,7 @@ pub async fn start_screen_sharing(
                     let monitor_lock = monitor.lock().unwrap();
                     convert_cursor_coordinates(cursor_x, cursor_y, &*monitor_lock)
                 };
-        
+
                 if let Some((relative_x, relative_y)) = relative_coordinates {
                     if hbm_color.is_null() {
                         overlay_text_cursor(&mut raw_data, width, height, relative_x, relative_y);
@@ -77,8 +79,6 @@ pub async fn start_screen_sharing(
                 }
             }
         }
-        
-        
 
         // Overlay del cursore per macOS
         #[cfg(target_os = "macos")]
@@ -106,13 +106,14 @@ pub async fn start_screen_sharing(
             }
 
             // Invia il frame ai socket dei peer
-            let mut sock_lock = socket.lock().await;
+            let sock_lock = socket.lock().await;
             sock_lock.send_to_receivers(new_frame).await;
             println!("CASTER SOCKET: frame sent!");
         } else {
             eprintln!("Error recreating the frame from raw data");
         }
     }
+    println!("Stopped sending frames");
 }
 
 pub async fn start_screen_receiving(
@@ -122,9 +123,11 @@ pub async fn start_screen_receiving(
 ) {
     println!("Waiting for frames...");
     while !stop_flag.load(Ordering::Relaxed) {
-        let mut sock_lock = socket.lock().await;
-        match sock_lock.receive_from().await {
-            Ok(serialized_image) => {
+        let sock_lock = socket.lock().await;
+
+        // Timeout di 1 secondo per la ricezione
+        match timeout(Duration::from_secs(1), sock_lock.receive_from()).await {
+            Ok(Ok(serialized_image)) => {
                 if let Some(image) = RgbaImage::from_raw(
                     serialized_image.width(),
                     serialized_image.height(),
@@ -142,26 +145,23 @@ pub async fn start_screen_receiving(
                     eprintln!("Error creating RgbaImage from received data");
                 }
             }
-            Err(e) => {
+            Ok(Err(e)) => {
                 eprintln!("Error receiving frame: {:?}", e);
             }
+            Err(_) => {
+                // Timeout scaduto, controlla lo stop_flag
+                if stop_flag.load(Ordering::Relaxed) {
+                    break;
+                }
+            }
         }
-        drop(sock_lock);
-        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
     }
     println!("Stopped receiving frames.");
 }
 
-pub async fn take_screenshot(monitor: Arc<std::sync::Mutex<Monitor>>) -> Vec<u8> {
-    let frame_result = tokio::task::spawn_blocking({
-        let monitor = monitor.clone();
-        move || {
-            let mon_lock = monitor.lock().unwrap();
-            mon_lock.capture_image(None)
-        }
-    })
-    .await
-    .unwrap();
+pub fn take_screenshot(monitor: Arc<std::sync::Mutex<Monitor>>) -> Vec<u8> {
+    let mon_lock = monitor.lock().unwrap();
+    let frame_result = mon_lock.capture_image(None);
 
     match frame_result {
         Ok(frame) => frame.into_raw(),

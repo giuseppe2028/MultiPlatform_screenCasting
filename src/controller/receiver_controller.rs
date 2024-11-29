@@ -1,11 +1,11 @@
-use std::sync::Arc;
-use tokio::runtime::Runtime;
-use tokio::sync::{Mutex, mpsc::Sender};
-use tokio::task;
-use xcap::image::RgbaImage;
 use crate::screenshare::screenshare::start_screen_receiving;
 use crate::socket::socket::ReceiverSocket;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use tokio::runtime::Runtime;
+use tokio::sync::{mpsc::Sender, Mutex};
+use tokio::task;
+use xcap::image::RgbaImage;
 
 pub struct ReceiverController {
     pub streaming_handle: Option<task::JoinHandle<()>>,
@@ -24,11 +24,13 @@ impl ReceiverController {
         }
     }
 
-    pub async fn set_socket(&mut self, socket: ReceiverSocket) {
+    pub fn set_socket(&mut self, socket: ReceiverSocket) {
         self.socket = Arc::new(Mutex::new(socket));
     }
 
     pub fn start_receiving(&mut self) {
+        self.stop_flag.store(false, Ordering::Relaxed);
+
         let stop_flag = Arc::clone(&self.stop_flag);
         let socket = self.socket.clone();
         let send = self.sender.clone();
@@ -50,16 +52,21 @@ impl ReceiverController {
         self.streaming_handle = handle;
     }
 
-    pub async fn stop_streaming(&mut self) {
+    pub fn stop_streaming(&mut self) {
         if self.stop_flag.load(Ordering::Relaxed) {
             return;
         }
         // Imposta il flag per fermare il thread
         self.stop_flag.store(true, Ordering::Relaxed);
+        self.socket.blocking_lock().destroy();
 
-        // Attendi che il task di streaming termini (se esiste)
-        if let Some(handle) = self.streaming_handle.take() {
-            handle.await.expect("Errore nella terminazione del task di streaming");
-        }
+        /*async {
+            // Attendi che il task di streaming termini (se esiste)
+            if let Some(handle) = self.streaming_handle.take() {
+                handle
+                    .await
+                    .expect("Errore nella terminazione del task di streaming");
+            }
+        };*/
     }
 }

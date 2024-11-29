@@ -1,6 +1,4 @@
-use crate::screenshare::screenshare::{
-    start_screen_receiving, start_screen_sharing, take_screenshot,
-};
+use crate::screenshare::screenshare::{start_screen_sharing, take_screenshot};
 use crate::socket::socket::CasterSocket;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -58,9 +56,9 @@ impl AppController {
 
     // Function to listen for receivers using the socket
     pub fn listens_for_receivers(&mut self) {
-            let sock_lock = self.socket.blocking_lock();
-            let rt = Runtime::new().unwrap();
-            rt.block_on(sock_lock.listen_for_registration());
+        let sock_lock = self.socket.blocking_lock();
+        let rt = Runtime::new().unwrap();
+        rt.block_on(sock_lock.listen_for_registration());
     }
 
     pub fn set_task(&mut self, task: tokio::task::JoinHandle<()>) {
@@ -68,10 +66,8 @@ impl AppController {
     }
 
     pub fn set_display(&mut self, monitor: Monitor) {
-        async {
-            let mut lock_mon = self.monitor_chosen.lock().unwrap();
-            *lock_mon = monitor;
-        };
+        let mut lock_mon = self.monitor_chosen.lock().unwrap();
+        *lock_mon = monitor;
     }
 
     pub fn get_available_displays(&self) -> Vec<Monitor> {
@@ -79,22 +75,25 @@ impl AppController {
     }
 
     // Stop streaming, async-safe
-    pub async fn stop_streaming(&mut self) {
+    pub fn stop_streaming(&mut self) {
         if self.stop_flag.load(Ordering::Relaxed) {
             return;
         }
         // Set the flag to stop streaming
         self.stop_flag.store(true, Ordering::Relaxed);
+        self.socket.blocking_lock().destroy()
 
-        // Await the task to ensure it finishes (if any)
-        if let Some(task) = self.streaming_task.take() {
-            task.await.expect("Error in stopping the streaming task");
-        }
+        /*async {                                           CI SERVE VERAMENTE A QUALCOSA ASPETTARE CHE IL TASK FINISCA?? TANTO FINISCE UGUALMENTE...
+            // Await the task to ensure it finishes (if any)
+            if let Some(task) = self.streaming_task.take() {
+                task.await.expect("Error in stopping the streaming task");
+            }
+        };*/
     }
 
     // Take a screenshot asynchronously
-    pub async fn take_screenshot(&mut self) -> Vec<u8> {
-        take_screenshot(self.monitor_chosen.clone()).await
+    pub fn take_screenshot(&mut self) -> Vec<u8> {
+        take_screenshot(self.monitor_chosen.clone())
     }
 
     pub fn set_is_just_stopped(&mut self, value: bool) {

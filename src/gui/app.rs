@@ -148,26 +148,8 @@ impl Application for App {
             Message::RoleChosen(role) => match role {
                 home::Message::ChosenRole(role) => match role {
                     Role::Caster => {
-                        let sender = self.sender_caster.clone();
-                        Command::perform(
-                            async move {
-                                let socket =
-                                    crate::socket::socket::CasterSocket::new("127.0.0.1:8000")
-                                        .await;
-                                /*let caster_controller = Controller::CasterController(AppController::new(
-                                    Monitor::all().unwrap().get(0).unwrap().clone(),
-                                    sender,
-                                    socket,
-                                ));*/
-                                let page = Page::CasterSettings;
-                                (socket, sender, page)
-                            },
-                            |(socket, sender, page)| {
-                                // Once the operation is complete, send a "ControllerCreated" message
-                                //self.controller = caster_controller;
-                                Message::CasterControllerCreated(socket, sender, page)
-                            },
-                        )
+                        self.current_page = Page::CasterSettings;
+                        Command::none()
                     }
                     Role::Receiver => {
                         self.current_page = Page::Selection;
@@ -175,49 +157,87 @@ impl Application for App {
                     }
                 },
             },
-            Message::Route(page) => Command::none(),
+            Message::Route(page) => {
+                self.current_page = page;
+                Command::none()
+            }
             Message::CasterControllerCreated(socket, sender, page) => {
                 self.controller = Controller::CasterController(AppController::new(
                     Monitor::all().unwrap().get(0).unwrap().clone(),
                     sender,
                     socket,
                 ));
-                self.current_page = page;
-                Command::none()
-            }
-            Message::StartSharing => {
-                self.current_page = Page::CasterStreaming;
                 if let Controller::CasterController(caster) = &mut self.controller {
                     caster.listens_for_receivers();
                     caster.start_sharing();
                     self.caster_streaming.measures = caster.get_measures();
                 }
+                self.current_page = page;
                 Command::none()
             }
+            Message::StartSharing => {
+                if let Controller::NotDefined = &mut self.controller {
+                    let sender = self.sender_caster.clone();
+                    Command::perform(
+                        async move {
+                            println!("Creata nuova socket caster");
+                            let socket =
+                                crate::socket::socket::CasterSocket::new("127.0.0.1:8000").await;
+                            /*let caster_controller = Controller::CasterController(AppController::new(
+                                Monitor::all().unwrap().get(0).unwrap().clone(),
+                                sender,
+                                socket,
+                            ));*/
+                            let page = Page::CasterStreaming;
+                            (socket, sender, page)
+                        },
+                        |(socket, sender, page)| {
+                            // Once the operation is complete, send a "ControllerCreated" message
+                            //self.controller = caster_controller;
+                            Message::CasterControllerCreated(socket, sender, page)
+                        },
+                    )
+                } else {
+                    self.current_page = Page::CasterStreaming;
+                    if let Controller::CasterController(caster) = &mut self.controller {
+                        //caster.listens_for_receivers();
+                        caster.start_sharing();
+                        self.caster_streaming.measures = caster.get_measures();
+                    }
+                    Command::none()
+                }
+            }
             Message::ReceiverSharing(ip_caster) => {
-                let sender = self.sender_receiver.clone();
-                Command::perform(
-                    async move {
-                        let socket = crate::socket::socket::ReceiverSocket::new(
-                            "127.0.0.1:8001",
-                            &format!("{}:8000", ip_caster),
-                        )
-                        .await;
-                        let page = Page::ReceiverStreaming;
-                        (socket, sender, page)
-                    },
-                    |(socket, sender, page)| {
-                        // Once the operation is complete, send a "ControllerCreated" message
-                        //self.controller = caster_controller;
-                        Message::ReceiverControllerCreated(socket, sender, page)
-                    },
-                )
-            },
-            Message::ReceiverControllerCreated(socket, sender , page ) => {
-                self.controller = Controller::ReceiverController(ReceiverController::new(
-                    sender,
-                    socket,
-                ));
+                if let Controller::NotDefined = &mut self.controller {
+                    let sender = self.sender_receiver.clone();
+                    Command::perform(
+                        async move {
+                            let socket = crate::socket::socket::ReceiverSocket::new(
+                                "127.0.0.1:8001",
+                                &format!("{}:8000", ip_caster),
+                            )
+                            .await;
+                            let page = Page::ReceiverStreaming;
+                            (socket, sender, page)
+                        },
+                        |(socket, sender, page)| {
+                            // Once the operation is complete, send a "ControllerCreated" message
+                            //self.controller = caster_controller;
+                            Message::ReceiverControllerCreated(socket, sender, page)
+                        },
+                    )
+                } else {
+                    self.current_page = Page::ReceiverStreaming;
+                    if let Controller::ReceiverController(receiver) = &mut self.controller {
+                        receiver.register();
+                        receiver.start_receiving();
+                    }
+                    Command::none()
+                }
+            }
+            Message::ReceiverControllerCreated(socket, sender, page) => {
+                self.controller =
+                    Controller::ReceiverController(ReceiverController::new(sender, socket));
                 self.current_page = page;
                 if let Controller::ReceiverController(receiver) = &mut self.controller {
                     receiver.register();
@@ -250,10 +270,7 @@ impl Application for App {
                     }
                     caster_settings::Window::Area => {
                         if let Controller::CasterController(caster) = &mut self.controller {
-                            async {
-                                self.windows_part_screen.screenshot =
-                                    Some(caster.take_screenshot().await);
-                            };
+                            self.windows_part_screen.screenshot = Some(caster.take_screenshot());
                             self.windows_part_screen.measures = caster.get_measures();
                         }
                         self.current_page = Page::WindowPartScreen
@@ -281,8 +298,10 @@ impl Application for App {
             Message::Close => {
                 if let Controller::CasterController(caster) = &mut self.controller {
                     caster.stop_streaming();
+                    self.controller = Controller::NotDefined;
                 } else if let Controller::ReceiverController(receiver) = &mut self.controller {
                     receiver.stop_streaming();
+                    self.controller = Controller::NotDefined;
                 }
                 self.current_page = Page::Home;
                 Command::none()
@@ -319,8 +338,8 @@ impl Application for App {
                     _ => {}
                 }
                 Command::none()
-            },
-            
+            }
+
             _ => Command::none(),
         }
     }
