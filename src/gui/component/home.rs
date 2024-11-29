@@ -5,6 +5,7 @@ use iced::Length::Fill;
 
 use crate::column_iced;
 use crate::gui::app;
+use crate::gui::app::Page;
 use crate::gui::component::Component;
 use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;
@@ -46,6 +47,7 @@ impl<'a> Component<'a> for Home {
                     app::Message::RoleChosen(Message::ChosenRole(Role::Receiver));
                     Command::none()
                 }
+
             },
         }
     }
@@ -65,7 +67,12 @@ impl<'a> Component<'a> for Home {
                         .style(Style::Primary)
                         .build()
                         .on_press(Self::Message::ChosenRole(Role::Receiver).into())
-                ]
+                ],
+                row![MyButton::new("Shortcut")
+                    .icon(Icon::Tools)
+                    .style(Style::Secondary)
+                    .build()
+                    .on_press(app::Message::Route(Page::Shortcut))]
                 .spacing(20)
             ]
             .align_items(iced::Alignment::Center)

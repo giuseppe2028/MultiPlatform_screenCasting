@@ -11,6 +11,8 @@ pub mod receiver_streaming;
 pub mod caster_settings;
 pub mod caster_streaming;
 pub mod window_part_screen;
+pub mod shorcut;
+pub mod keycodeutils;
 
 pub trait Component<'a> {
     type Message: Into<app::Message> + Clone + Debug;

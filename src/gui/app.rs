@@ -21,6 +21,7 @@ use scap::capturer::Options;
 use iced::time::{self, Duration};
 use scap::targets::get_target_dimensions;
 use xcap::image::RgbaImage;
+use crate::gui::component::shorcut::{Shortcut, ShortcutMessage, Shortcuts};
 use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
 use crate::utils::utils::get_screen_scaled;
 use super::component::caster_streaming;
@@ -34,7 +35,8 @@ pub struct App {
     receiver_streamimg: ReceiverStreaming,
     caster_streaming: CasterStreaming,
     controller: AppController,
-    windows_part_screen: WindowPartScreen
+    windows_part_screen: WindowPartScreen,
+    shortcut_screen: Shortcut,
 }
 
 #[derive(Debug, Clone)]
@@ -46,7 +48,8 @@ pub enum Page {
     CasterSettings,
     ReceiverStreaming,
     CasterStreaming,
-    WindowPartScreen
+    WindowPartScreen,
+    Shortcut
 }
 
 #[derive(Debug, Clone)]
@@ -67,6 +70,8 @@ pub enum Message {
     AreaSelectedSecond,
     CursorMoved(f32,f32),
     StopStreaming,
+    Route(Page),
+    ChosenShortcuts(Shortcuts),
     None
 }
 
@@ -118,6 +123,15 @@ impl Application for App {
                 caster_streaming: CasterStreaming { toggler: false, receiver: Arc::new(Mutex::new(receiver)), frame_to_update: Arc::new(Mutex::new(None)), measures: (0, 0) },
                 windows_part_screen: WindowPartScreen {screenshot: None,coordinate:[(0.0,0.0);2], cursor_position: (0.0, 0.0), screen_dimension: (0.0, 0.0), measures: (0, 0) },
                 controller,
+                shortcut_screen: Shortcut {
+                    // @giuseppe2028 metti le funzioni di default
+                    manage_transmission: String::from("A"),
+                    // @giuseppe2028 metti le funzioni di default
+                    blancking_screen: String::from("B"),
+                    // @giuseppe2028 metti le funzioni di default
+                    terminate_session: String::from("C"),
+                    err_key_set: false,
+                },
             },
             Command::none(),
         )
@@ -179,6 +193,9 @@ impl Application for App {
                         self.current_page = Page::Home;
                     }
                     Page::WindowPartScreen=>{
+                        self.current_page = Page::Home;
+                    }
+                    Page::Shortcut => {
                         self.current_page = Page::Home;
                     }
                 }
@@ -246,7 +263,7 @@ impl Application for App {
                 Command::none()
             }
             Message::StartPartialSharing(x,y,start_x,start_y)=>{
-                self.current_page = Page::CasterStreaming;                
+                self.current_page = Page::CasterStreaming;
                // let target = self.controller.option.target.clone(); PEPPINO
                 //calcolo la x rapportata ai valori dello schermo:
                 //let (x,y) = get_screen_scaled(x,get_target_dimensions(&target.unwrap())); PEPPINO
@@ -278,7 +295,38 @@ impl Application for App {
                 }
                 Command::none()
             }
-            Message::None=>Command::none()
+            Message::ChosenShortcuts(shortcuts) => {
+                match shortcuts {
+                    Shortcuts::ManageTransmission(key) => {
+                        //TODO @giuseppe2028 implementare funzione per fare update delle shortcuts
+                        let _ = self
+                            .shortcut_screen
+                            .update(ShortcutMessage::ManageTransmission(
+                                key
+                            ));
+                    }
+                    Shortcuts::BlanckingScreen(key) => {
+                        //TODO @giuseppe2028 implementare funzione per fare update delle shortcuts
+                        let _ = self
+                            .shortcut_screen
+                            .update(ShortcutMessage::BlanckingScreen(key));
+                    }
+                    Shortcuts::TerminateSession(key) => {
+                        //TODO @giuseppe2028 implementare funzione per fare update delle shortcuts
+                        let _ = self
+                            .shortcut_screen
+                            .update(ShortcutMessage::TerminateSession(
+                                key
+                            ));
+                    }
+                }
+                Command::none()
+            }
+            Message::None=>Command::none(),
+            Message::Route(page) => {
+                self.current_page = page;
+                Command::none()
+            }
         }
     }
 
@@ -291,7 +339,8 @@ impl Application for App {
             Page::ReceiverStreaming => self.receiver_streamimg.view(),
             Page::CasterSettings => self.caster_settings.view(),
             Page::CasterStreaming => self.caster_streaming.view(),
-            Page::WindowPartScreen => self.windows_part_screen.view()
+            Page::WindowPartScreen => self.windows_part_screen.view(),
+            Page::Shortcut => self.shortcut_screen.view(),
         }
     }
     fn subscription(&self) -> Subscription<Self::Message> {
