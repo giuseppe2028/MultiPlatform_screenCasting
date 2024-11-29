@@ -67,7 +67,7 @@ impl<'a> Component<'a> for Home {
                         .style(Style::Primary)
                         .build()
                         .on_press(Self::Message::ChosenRole(Role::Receiver).into())
-                ],
+                ].spacing(10),
                 row![MyButton::new("Shortcut")
                     .icon(Icon::Tools)
                     .style(Style::Secondary)

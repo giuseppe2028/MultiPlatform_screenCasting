@@ -14,6 +14,7 @@ use winapi::um::wingdi::{
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::{CopyIcon, GetCursorInfo, GetIconInfo, CURSORINFO, ICONINFO};
 use xcap::image::{DynamicImage, GenericImageView, RgbImage, RgbaImage};
+#[cfg(target_os = "macos")]
 use mouse_position::mouse_position::Mouse;
 
 pub fn start_screen_sharing(

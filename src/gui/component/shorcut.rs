@@ -124,7 +124,7 @@ impl<'a> Component<'a> for Shortcut {
             column_iced![
                 back_button,
                 container(column_iced![
-                             row![bold("scegli le shortcut").size(40)].padding([0,0,0,150]).align_items(Alignment::Center),
+                             row![bold("Costumize your Shortcuts").size(40)].padding([0,0,0,70]).align_items(Alignment::Center),
                     row![
                         column_iced![
                             row![text("Choose a key for pausing/resuming the trasmission").vertical_alignment(Vertical::Center),Space::new(0,20),],
