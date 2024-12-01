@@ -17,11 +17,11 @@ use crate::gui::theme::widget::Element;
 
 use super::keycodeutils::get_keycode_list;
 
-pub struct Shortcut {
+pub struct Shortcut{
     pub manage_transmission: String,
     pub blancking_screen: String,
     pub terminate_session: String,
-    pub err_key_set:bool
+    pub err_key_set:bool,
 }
 
 #[derive(Debug, Clone)]
@@ -54,7 +54,7 @@ impl From<ShortcutMessage> for app::Message {
     }
 }
 
-impl<'a> Component<'a> for Shortcut {
+impl<'a> Component<'a> for Shortcut{
     fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
             ShortcutMessage::ManageTransmission(key) => {

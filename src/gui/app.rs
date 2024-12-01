@@ -23,6 +23,7 @@ use scap::targets::get_target_dimensions;
 use xcap::image::RgbaImage;
 use crate::gui::component::shorcut::{Shortcut, ShortcutMessage, Shortcuts};
 use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
+use crate::model::Shortcut::ShortcutController;
 use crate::utils::utils::get_screen_scaled;
 use super::component::caster_streaming;
 
@@ -120,18 +121,19 @@ impl Application for App {
                     available_displays: controller.get_available_displays(),
                     selected_display: controller.get_available_displays().get(0).unwrap().clone(),
                 }, //implementare un metodo backend da chiamare per trovare gli screen
-                caster_streaming: CasterStreaming { toggler: false, receiver: Arc::new(Mutex::new(receiver)), frame_to_update: Arc::new(Mutex::new(None)), measures: (0, 0) },
+                caster_streaming: CasterStreaming { toggler: false, receiver: Arc::new(Mutex::new(receiver)), frame_to_update: Arc::new(Mutex::new(None)), measures: (0, 0), shortcut: ShortcutController::new_from_file() },
                 windows_part_screen: WindowPartScreen {screenshot: None,coordinate:[(0.0,0.0);2], cursor_position: (0.0, 0.0), screen_dimension: (0.0, 0.0), measures: (0, 0) },
-                controller,
-                shortcut_screen: Shortcut {
+                shortcut_screen: Shortcut{
                     // @giuseppe2028 metti le funzioni di default
-                    manage_transmission: String::from("A"),
+                    manage_transmission: controller.get_trasmission_shortcut(),
                     // @giuseppe2028 metti le funzioni di default
-                    blancking_screen: String::from("B"),
+                    blancking_screen:controller.get_blanking_screen(),
                     // @giuseppe2028 metti le funzioni di default
-                    terminate_session: String::from("C"),
+                    terminate_session: controller.get_terminate_screen(),
                     err_key_set: false,
                 },
+                controller,
+
             },
             Command::none(),
         )
@@ -298,7 +300,8 @@ impl Application for App {
             Message::ChosenShortcuts(shortcuts) => {
                 match shortcuts {
                     Shortcuts::ManageTransmission(key) => {
-                        //TODO @giuseppe2028 implementare funzione per fare update delle shortcuts
+                        print!("entro manage");
+                        self.controller.set_trasmission_shortcut(key.clone());
                         let _ = self
                             .shortcut_screen
                             .update(ShortcutMessage::ManageTransmission(
@@ -306,13 +309,15 @@ impl Application for App {
                             ));
                     }
                     Shortcuts::BlanckingScreen(key) => {
-                        //TODO @giuseppe2028 implementare funzione per fare update delle shortcuts
+                        print!("entro blanking");
+                        self.controller.set_blanking_screen(key.clone());
                         let _ = self
                             .shortcut_screen
                             .update(ShortcutMessage::BlanckingScreen(key));
                     }
                     Shortcuts::TerminateSession(key) => {
-                        //TODO @giuseppe2028 implementare funzione per fare update delle shortcuts
+                        print!("entro Trasmission");
+                        self.controller.set_terminate_screen(key.clone());
                         let _ = self
                             .shortcut_screen
                             .update(ShortcutMessage::TerminateSession(

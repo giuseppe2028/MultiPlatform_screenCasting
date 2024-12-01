@@ -14,12 +14,15 @@ use iced::{
     Event
 };
 use xcap::image::RgbaImage;
+use crate::gui::component::shorcut::Shortcut;
+use crate::model::Shortcut::{from_str_to_key_code, ShortcutController};
 
 pub struct CasterStreaming {
     pub toggler: bool,
     pub receiver: Arc<Mutex<Receiver<RgbaImage>>>,
     pub frame_to_update: Arc<Mutex<Option<RgbaImage>>>,
-    pub measures: (u32, u32) //width, height
+    pub measures: (u32, u32),//width, height
+    pub shortcut: ShortcutController
 }
 
 #[derive(Debug, Clone)]
@@ -33,6 +36,7 @@ pub enum MessageUpdate {
 
 
 impl From<MessageUpdate> for app::Message {
+
     fn from(message: MessageUpdate) -> Self {
         match message {
             MessageUpdate::TogglerChanged(_) => {app::Message::TogglerChanged(message)}
@@ -190,13 +194,26 @@ impl<'a> Component<'a> for CasterStreaming {
         }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        iced::subscription::events_with(|event,status| match (event,status) {
-            (Event::Keyboard(KeyPressed {
-                                 key_code: KeyCode::Space, ..
-                             }), event::Status::Ignored) => {
+        iced::subscription::events_with(|event, status| match (event, status) {
+            // Scorciatoia: Space -> StopStreaming
+            (
+                Event::Keyboard(KeyPressed { key_code:KeyCode::Q , .. }), event::Status::Ignored
+            ) => {
                 Some(MessageUpdate::StopStreaming)
             }
-            _ => None
+            // Scorciatoia: B -> BlankingScreen
+            (Event::Keyboard(KeyPressed { key_code, .. }), event::Status::Ignored) => {
+                if key_code == self.shortcut.get_manage_trasmition_shortcut() {
+                    Some(MessageUpdate::StopStreaming)
+                }else{
+                    None
+                }
+            }
+            // Scorciatoia: Q -> TerminateSession
+            (Event::Keyboard(KeyPressed { key_code: KeyCode::Q, .. }), event::Status::Ignored) => {
+                Some(MessageUpdate::StopStreaming)
+            }
+            _ => None,
         })
     }
 }

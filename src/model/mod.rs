@@ -1,2 +1,2 @@
 pub mod display;
-mod Shortcut;
+pub mod Shortcut;

@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
 use xcap::image::RgbaImage;
+use crate::model::Shortcut::{from_key_code_to_string, from_str_to_key_code, ShortcutController};
 
 pub struct AppController {
     pub monitor_chosen: Arc<Mutex<Monitor>>,
@@ -15,6 +16,7 @@ pub struct AppController {
     stop_flag: Arc<AtomicBool>,
     sender: Arc<Sender<RgbaImage>>,
     pub is_just_stopped: bool,
+    pub shortcut:ShortcutController
 }
 
 impl AppController {
@@ -26,6 +28,7 @@ impl AppController {
             stop_flag: Arc::new(AtomicBool::new(false)),
             sender: Arc::new(sender),
             is_just_stopped: false,
+            shortcut: ShortcutController::new_from_file(),
         }
     }
 
@@ -137,4 +140,24 @@ impl AppController {
             scap::capturer::Resolution::Captured => (1920, 1080),
         }
     }*/
+    pub fn get_trasmission_shortcut(&self)->String{
+        println!("ciaooo {}", from_key_code_to_string(self.shortcut.get_manage_trasmition_shortcut()).to_string());
+       from_key_code_to_string(self.shortcut.get_manage_trasmition_shortcut()).to_string()
+    }
+    pub fn get_blanking_screen(&self)->String{
+        from_key_code_to_string(self.shortcut.get_blanking_screen_shortcut()).to_string()
+    }
+    pub fn get_terminate_screen(&self)->String{
+        from_key_code_to_string(self.shortcut.get_terminate_session_shortcut()).to_string()
+    }
+    pub fn set_trasmission_shortcut(&mut self, shorcut:String){
+        self.shortcut.set_manage_trasmition(shorcut.as_str())
+    }
+    pub fn set_blanking_screen(&mut self, shorcut:String){
+        self.shortcut.set_blanking_screen(shorcut.as_str())
+    }
+    pub fn set_terminate_screen(&mut self,shorcut:String){
+        self.shortcut.set_terminate_session(shorcut.as_str())
+    }
+
 }

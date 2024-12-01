@@ -8,30 +8,54 @@ use std::str::FromStr;
 
 /// La struttura Shortcut
 #[derive(Debug)]
-pub struct Shortcut {
+pub struct ShortcutController {
     manage_trasmition: KeyCode,
     blanking_screen: KeyCode,
     terminate_session: KeyCode,
 }
 
-impl Shortcut {
-    pub fn new_from_file() -> Result<Self, Box<dyn Error>> {
+impl ShortcutController {
+    pub fn new_from_file() -> Self {
         let path = "src/model/test_shortcuts.json";
-        // Apri il file
-        let file = File::open(path)?;
-        // Leggi il contenuto del file JSON in una mappa chiave-valore
-        let shortcuts: HashMap<String, String> = serde_json::from_reader(file)?;
 
-        // Converte i valori della mappa in KeyCode
-        let manage_trasmition = from_str_to_key_code(&shortcuts["manage_trasmition"])?;
-        let blanking_screen = from_str_to_key_code(&shortcuts["blanking_screen"])?;
-        let terminate_session = from_str_to_key_code(&shortcuts["terminate_session"])?;
+        // Prova ad aprire il file
+        let file = File::open(path);
 
-        Ok(Shortcut {
+        let shortcuts: HashMap<String, String> = match file {
+            Ok(f) => serde_json::from_reader(f).unwrap_or_else(|err| {
+                eprintln!("Errore durante il parsing del JSON: {}. Uso valori di default.", err);
+                HashMap::new()
+            }),
+            Err(_) => {
+                eprintln!("File non trovato. Uso valori di default.");
+                HashMap::new() // Se il file non esiste, crea una mappa vuota
+            }
+        };
+
+        // Recupera i valori dalla mappa o usa direttamente il valore di default
+        let manage_trasmition = from_str_to_key_code(shortcuts.get("manage_trasmition").unwrap_or(&"No Shortcut selected".to_string()))
+            .unwrap_or_else(|_| {
+                eprintln!("Errore nel parsing di 'manage_trasmition'. Uso valore di default.");
+                KeyCode::F1
+            });
+
+        let blanking_screen = from_str_to_key_code(shortcuts.get("blanking_screen").unwrap_or(&"No Shortcut selected".to_string()))
+            .unwrap_or_else(|_| {
+                eprintln!("Errore nel parsing di 'blanking_screen'. Uso valore di default.");
+                KeyCode::F1
+            });
+
+        let terminate_session = from_str_to_key_code(shortcuts.get("terminate_session").unwrap_or(&"No Shortcut selected".to_string()))
+            .unwrap_or_else(|_| {
+                eprintln!("Errore nel parsing di 'terminate_session'. Uso valore di default.");
+                KeyCode::F1
+            });
+
+        ShortcutController {
             manage_trasmition,
             blanking_screen,
             terminate_session,
-        })
+        }
     }
     pub fn set_manage_trasmition(&mut self,manage_trasmition:&str){
        self.manage_trasmition = from_str_to_key_code(manage_trasmition).unwrap();
@@ -191,6 +215,7 @@ pub fn from_key_code_to_string(keyCode:KeyCode)->&'static str{
         KeyCode::X => "X",
         KeyCode::Y => "Y",
         KeyCode::Z => "Z",
+        KeyCode::F1 => "F1",
         _ => ""
     }
 }
