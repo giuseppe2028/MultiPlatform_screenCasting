@@ -4,7 +4,11 @@ use std::sync::Arc;
 use tokio::{net::UdpSocket, sync::RwLock};
 use xcap::image::RgbaImage;
 
-const MAX_UDP_PAYLOAD: usize = 65507;
+const MTU: usize = 1500; // Dimensione massima del pacchetto
+const UDP_HEADER_SIZE: usize = 8; // Dimensione dell'header UDP
+const IP_HEADER_SIZE: usize = 20; // Dimensione dell'header IP
+const MAX_PAYLOAD: usize = MTU - UDP_HEADER_SIZE - IP_HEADER_SIZE; // Spazio disponibile per il payload UDP
+
 
 #[derive(Serialize, Deserialize)]
 pub struct SerializableImage {
@@ -62,18 +66,18 @@ impl CasterSocket {
 
             let serialized = bincode::serialize(&serializable_image).unwrap();
             let total_packets =
-                (serialized.len() + MAX_UDP_PAYLOAD - 8 - 1) / (MAX_UDP_PAYLOAD - 8);
+                (serialized.len() + MAX_PAYLOAD - 8 - 1) / (MAX_PAYLOAD - 8);
 
             // Usa una read-lock per accedere ai destinatari
             let receivers = self.receiver_sockets.read().await;
 
             for address in &*receivers {
                 for i in 0..total_packets {
-                    let start = i * (MAX_UDP_PAYLOAD - 8);
-                    let end = ((i + 1) * (MAX_UDP_PAYLOAD - 8)).min(serialized.len());
+                    let start = i * (MAX_PAYLOAD - 8);
+                    let end = ((i + 1) * (MAX_PAYLOAD - 8)).min(serialized.len());
                     let chunk = &serialized[start..end];
 
-                    let mut packet = Vec::with_capacity(MAX_UDP_PAYLOAD);
+                    let mut packet = Vec::with_capacity(MAX_PAYLOAD);
                     packet.extend(&(i as u32).to_be_bytes()); // Numero del pacchetto
                     packet.extend(&(total_packets as u32).to_be_bytes()); // Numero totale di pacchetti
                     packet.extend(chunk); // Dati del pacchetto
@@ -155,7 +159,7 @@ impl ReceiverSocket {
         &self,
     ) -> Result<SerializableImage, Box<dyn std::error::Error + Send + Sync>> {
         if let Some(socket) = self.socket.as_ref() {
-            let mut buf = vec![0u8; MAX_UDP_PAYLOAD];
+            let mut buf = vec![0u8; MAX_PAYLOAD];
             let mut received_packets = HashMap::new();
             let mut total_packets = None;
 
