@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::Receiver;
+use enigo::Key;
 use iced::widget::{container, image, Image, row};
 use iced::{Color, Subscription};
 use crate::column_iced;
@@ -29,6 +30,7 @@ pub struct CasterStreaming {
 pub enum MessageUpdate {
     TogglerChanged(bool),
     NewFrame(RgbaImage),
+    KeyPressed(KeyCode),
     StopStreaming
 }
 
@@ -46,6 +48,7 @@ impl From<MessageUpdate> for app::Message {
             MessageUpdate::StopStreaming => {
                 app::Message::StopStreaming
             }
+            _ => {app::Message::StopStreaming}
         }
 
     }
@@ -66,6 +69,18 @@ impl<'a> Component<'a> for CasterStreaming {
             MessageUpdate::StopStreaming=> {
 
             }
+            MessageUpdate::KeyPressed(key_code) => {
+                if key_code == self.shortcut.get_blanking_screen_shortcut() {
+                    //manda messaggio
+                }
+                else if key_code == self.shortcut.get_manage_trasmition_shortcut() {
+                    app::Message::StopStreaming;
+                }
+                else if key_code == self.shortcut.get_terminate_session_shortcut() {
+                    //manda relativo messaggio
+                }
+                
+            },
         }
         iced::Command::none()
     }
@@ -197,22 +212,10 @@ impl<'a> Component<'a> for CasterStreaming {
         iced::subscription::events_with(|event, status| match (event, status) {
             // Scorciatoia: Space -> StopStreaming
             (
-                Event::Keyboard(KeyPressed { key_code:KeyCode::Q , .. }), event::Status::Ignored
+                Event::Keyboard(KeyPressed { key_code , .. }), event::Status::Ignored
             ) => {
-                Some(MessageUpdate::StopStreaming)
-            }
-            // Scorciatoia: B -> BlankingScreen
-            (Event::Keyboard(KeyPressed { key_code, .. }), event::Status::Ignored) => {
-                if key_code == self.shortcut.get_manage_trasmition_shortcut() {
-                    Some(MessageUpdate::StopStreaming)
-                }else{
-                    None
-                }
-            }
-            // Scorciatoia: Q -> TerminateSession
-            (Event::Keyboard(KeyPressed { key_code: KeyCode::Q, .. }), event::Status::Ignored) => {
-                Some(MessageUpdate::StopStreaming)
-            }
+                Some(MessageUpdate::KeyPressed(key_code))
+            },
             _ => None,
         })
     }
