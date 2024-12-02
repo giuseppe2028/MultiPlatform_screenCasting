@@ -1,4 +1,4 @@
-use crate::screenshare::screenshare::{start_screen_sharing, take_screenshot};
+use crate::screenshare::screenshare::{start_screen_sharing, take_screenshot, start_partial_sharing};
 use crate::socket::socket::CasterSocket;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -14,6 +14,7 @@ pub struct AppController {
     sender: Arc<tokio::sync::mpsc::Sender<RgbaImage>>, // Tokio mpsc channel for async communication
     pub is_just_stopped: bool,
     socket: Arc<Mutex<CasterSocket>>,
+    pub screen_dimension:(f64,f64)
 }
 
 impl AppController {
@@ -30,6 +31,7 @@ impl AppController {
             sender: Arc::new(sender),
             is_just_stopped: false,
             socket: Arc::new(Mutex::new(socket)),
+            screen_dimension: (0.0, 0.0),
         }
     }
 
@@ -59,6 +61,25 @@ impl AppController {
         let sock_lock = self.socket.blocking_lock();
         let rt = Runtime::new().unwrap();
         rt.block_on(sock_lock.listen_for_registration());
+    }
+    pub fn start_sharing_partial_sharing(&mut self,dimensions:[(f64,f64);2]) {
+        self.stop_flag.store(false, Ordering::Relaxed);
+
+        /*let mut capturer_guard = self.capturer.lock().unwrap();
+        if capturer_guard.is_none() {
+            self.capturer = Arc::new(Mutex::new(Some(Capturer::new(self.option.clone()))));
+        }
+        */
+
+        let monitor = self.monitor_chosen.clone();
+        let stop_flag = Arc::clone(&self.stop_flag);
+        let send = self.sender.clone();
+        // Crea un nuovo thread per lo screen sharing
+        let handle = Some(thread::spawn(move || {
+            // Passiamo stdin e altri dati al thread
+            start_partial_sharing(monitor, stop_flag, send,dimensions);
+        }));
+        self.set_handle(handle.unwrap());
     }
 
     pub fn set_task(&mut self, task: tokio::task::JoinHandle<()>) {
@@ -90,7 +111,7 @@ impl AppController {
             }
         };*/
     }
-
+    
     // Take a screenshot asynchronously
     pub fn take_screenshot(&mut self) -> Vec<u8> {
         take_screenshot(self.monitor_chosen.clone())
