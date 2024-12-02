@@ -44,7 +44,7 @@ impl ReceiverController {
     pub fn register(&self) {
         let sock_lock = self.socket.blocking_lock();
         let rt = Runtime::new().unwrap();
-        rt.block_on(sock_lock.register_with_caster());
+        let _ = rt.block_on(sock_lock.register_with_caster());
         println!("Ho inviato la richiesta di registrazione!");
     }
 

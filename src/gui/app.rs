@@ -16,6 +16,7 @@ use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
 use crate::socket::socket::{CasterSocket, ReceiverSocket};
+use crate::utils::utils::get_screen_scaled;
 use iced::time::{self, Duration};
 use iced::{executor, Application, Command, Subscription};
 use std::sync::Arc;
@@ -44,6 +45,12 @@ enum Controller {
     ReceiverController(ReceiverController),
     CasterController(AppController),
     NotDefined,
+}
+
+#[derive(Debug, Clone)]
+enum Modality {
+    Partial(f32, f32, f64, f64),
+    Full,
 }
 
 #[derive(Debug, Clone)]
@@ -78,7 +85,7 @@ pub enum Message {
     CursorMoved(f32, f32),
     StopStreaming,
     None,
-    CasterControllerCreated(CasterSocket, Sender<RgbaImage>, Page),
+    SetCasterSocket(CasterSocket, Page, Modality),
     ReceiverControllerCreated(ReceiverSocket, Sender<RgbaImage>, Page),
 }
 
@@ -148,6 +155,11 @@ impl Application for App {
             Message::RoleChosen(role) => match role {
                 home::Message::ChosenRole(role) => match role {
                     Role::Caster => {
+                        self.controller = Controller::CasterController(AppController::new(
+                            Monitor::all().unwrap().get(0).unwrap().clone(),
+                            self.sender_caster.clone(),
+                            None,
+                        ));
                         self.current_page = Page::CasterSettings;
                         Command::none()
                     }
@@ -161,53 +173,22 @@ impl Application for App {
                 self.current_page = page;
                 Command::none()
             }
-            Message::CasterControllerCreated(socket, sender, page) => {
-                self.controller = Controller::CasterController(AppController::new(
-                    Monitor::all().unwrap().get(0).unwrap().clone(),
-                    sender,
-                    socket,
-                ));
-                if let Controller::CasterController(caster) = &mut self.controller {
-                    caster.listens_for_receivers();
-                    caster.start_sharing();
-                    self.caster_streaming.measures = caster.get_measures();
-                }
-                self.current_page = page;
-                Command::none()
-            }
             Message::StartSharing => {
-                if let Controller::NotDefined = &mut self.controller {
-                    let sender = self.sender_caster.clone();
-                    Command::perform(
-                        async move {
-                            println!("Creata nuova socket caster");
-                            let socket =
-                                crate::socket::socket::CasterSocket::new("127.0.0.1:8000").await;
-                            /*let caster_controller = Controller::CasterController(AppController::new(
-                                Monitor::all().unwrap().get(0).unwrap().clone(),
-                                sender,
-                                socket,
-                            ));*/
-                            let page = Page::CasterStreaming;
-                            (socket, sender, page)
-                        },
-                        |(socket, sender, page)| {
-                            // Once the operation is complete, send a "ControllerCreated" message
-                            //self.controller = caster_controller;
-                            Message::CasterControllerCreated(socket, sender, page)
-                        },
-                    )
-                } else {
-                    self.current_page = Page::CasterStreaming;
-                    if let Controller::CasterController(caster) = &mut self.controller {
-                        //caster.listens_for_receivers();
-                        caster.start_sharing();
-                        self.caster_streaming.measures = caster.get_measures();
-                    }
-                    Command::none()
-                }
+                //devo creare solo la socket
+                Command::perform(
+                    async move {
+                        println!("Creata nuova socket caster");
+                        let socket =
+                            crate::socket::socket::CasterSocket::new("127.0.0.1:8000").await;
+
+                        let page = Page::CasterStreaming;
+                        (socket, page)
+                    },
+                    move|(socket, page)| Message::SetCasterSocket(socket, page, Modality::Full),
+                )
             }
             Message::ReceiverSharing(ip_caster) => {
+                //creo controller e socket insieme tanto il controller non mi serve prima per il receiver
                 if let Controller::NotDefined = &mut self.controller {
                     let sender = self.sender_receiver.clone();
                     Command::perform(
@@ -220,7 +201,7 @@ impl Application for App {
                             let page = Page::ReceiverStreaming;
                             (socket, sender, page)
                         },
-                        |(socket, sender, page)| {
+                        move |(socket, sender, page)| {
                             // Once the operation is complete, send a "ControllerCreated" message
                             //self.controller = caster_controller;
                             Message::ReceiverControllerCreated(socket, sender, page)
@@ -270,12 +251,17 @@ impl Application for App {
                     }
                     caster_settings::Window::Area => {
                         if let Controller::CasterController(caster) = &mut self.controller {
-                            self.windows_part_screen.screenshot = Some(caster.take_screenshot());
+                            println!("CHIAMO LA FUNZIONE DELLO SCREENSHOT");
+                            let frame = caster.take_screenshot();
+                            self.windows_part_screen.screenshot = Some(frame);
                             self.windows_part_screen.measures = caster.get_measures();
+                            self.current_page = Page::WindowPartScreen;
+                        } else {
+                            eprintln!("ERRORE");
                         }
-                        self.current_page = Page::WindowPartScreen
                     }
                 }
+
                 Command::none()
             }
             Message::StartRecording(message) => {
@@ -289,6 +275,8 @@ impl Application for App {
             Message::SelectDisplay(display) => {
                 if let Controller::CasterController(caster) = &mut self.controller {
                     caster.set_display(display.clone());
+                } else {
+                    eprintln!("ERRORE NELLA SELEZIONE DELLO SCHERMO DA CONDIVIDERE");
                 }
                 let _ = self
                     .caster_settings
@@ -302,6 +290,8 @@ impl Application for App {
                 } else if let Controller::ReceiverController(receiver) = &mut self.controller {
                     receiver.stop_streaming();
                     self.controller = Controller::NotDefined;
+                } else {
+                    eprintln!("ERRORE NELLA CHIUSURA DELLA CONDIVISIONE SCHERMO");
                 }
                 self.current_page = Page::Home;
                 Command::none()
@@ -339,44 +329,97 @@ impl Application for App {
                 }
                 Command::none()
             }
-            Message::StartPartialSharing(x,y,start_x,start_y)=>{
-                let screen_scaled = get_screen_scaled(x as f64, y as f64, (self.controller.get_measures().0 as u64, self.controller.get_measures().1 as u64));
-                let start_screen_scaled = get_screen_scaled(start_x, start_y, (self.controller.get_measures().0 as u64, self.controller.get_measures().1 as u64));
-                print!("x: {} y: {} start_x: {} start_y: {}", x,y,screen_scaled.0,screen_scaled.1 );
-                self.current_page = Page::CasterStreaming;                
-               // let target = self.controller.option.target.clone(); PEPPINO
-                //calcolo la x rapportata ai valori dello schermo:
-                //let (x,y) = get_screen_scaled(x,get_target_dimensions(&target.unwrap())); PEPPINO
-                // self.controller.set_coordinates(x as f64, y as f64,start_x,start_y); SEMPRE PEPPINO C'E' PROPRIO LA STRUTTURA WINDOW IN XCAP
+            Message::StartPartialSharing(x, y, start_x, start_y) => {
+                //creo la caster socket
+                Command::perform(
+                    async move {
+                        println!("Creata nuova socket caster");
+                        let socket =
+                            crate::socket::socket::CasterSocket::new("127.0.0.1:8000").await;
 
-                self.controller.start_sharing_partial_sharing([start_screen_scaled,(screen_scaled)]);
-                self.caster_streaming.measures = self.controller.get_measures();
-                Command::none()
+                        let page = Page::CasterStreaming;
+                        (socket, page)
+                    },
+                    move|(socket, page)| Message::SetCasterSocket(socket, page, Modality::Partial(x, y, start_x, start_y)),
+                )
             }
-            Message::AreaSelectedFirst=>{
+            Message::AreaSelectedFirst => {
                 let _ = self.windows_part_screen.update(MessagePress::FirstPress);
                 Command::none()
             }
-            Message::AreaSelectedSecond=>{
+            Message::AreaSelectedSecond => {
                 let _ = self.windows_part_screen.update(MessagePress::SecondPress);
                 Command::none()
             }
-            Message::CursorMoved(x,y)=>{
-                let _ = self.windows_part_screen.update(MessagePress::CursorMoved(x, y));
+            Message::CursorMoved(x, y) => {
+                let _ = self
+                    .windows_part_screen
+                    .update(MessagePress::CursorMoved(x, y));
                 Command::none()
             }
-            Message::StopStreaming=>{
-                if self.controller.is_just_stopped {
-                    self.controller.start_sharing();
-                    self.controller.set_is_just_stopped(false);
-                }
-                else{
-                    self.controller.stop_streaming();
-                    self.controller.set_is_just_stopped(true);
+            Message::StopStreaming => {
+                if let Controller::CasterController(caster) = &mut self.controller {
+                    if caster.is_just_stopped {
+                        caster.start_sharing();
+                        caster.set_is_just_stopped(false);
+                    } else {
+                        caster.stop_streaming();
+                        caster.set_is_just_stopped(true);
+                    }
                 }
                 Command::none()
             }
-            Message::None=>Command::none()
+            Message::None => Command::none(),
+            Message::SetCasterSocket(caster_socket, page, modality) => {
+                match modality {
+                    Modality::Partial(x, y, start_x, start_y) => {
+                        if let Controller::CasterController(caster) = &mut self.controller {
+                            caster.set_socket(caster_socket);
+                            let screen_scaled = get_screen_scaled(
+                                x as f64,
+                                y as f64,
+                                (
+                                    caster.get_measures().0 as u64,
+                                    caster.get_measures().1 as u64,
+                                ),
+                            );
+                            let start_screen_scaled = get_screen_scaled(
+                                start_x,
+                                start_y,
+                                (
+                                    caster.get_measures().0 as u64,
+                                    caster.get_measures().1 as u64,
+                                ),
+                            );
+                            println!(
+                                "x: {} y: {} start_x: {} start_y: {}",
+                                x, y, screen_scaled.0, screen_scaled.1
+                            );
+                            caster.listens_for_receivers();
+                            caster.start_sharing_partial_sharing([
+                                start_screen_scaled,
+                                (screen_scaled),
+                            ]);
+                            self.caster_streaming.measures = caster.get_measures();
+                            self.current_page = page;
+                        } else {
+                            eprintln!("ERRORE NEL SETTAGGIO DELLA SOCKET");
+                        }
+                    }
+                    Modality::Full => {
+                        if let Controller::CasterController(caster) = &mut self.controller {
+                            caster.set_socket(caster_socket);
+                            caster.listens_for_receivers();
+                            caster.start_sharing();
+                            self.caster_streaming.measures = caster.get_measures();
+                            self.current_page = page;
+                        } else {
+                            eprintln!("ERRORE NEL SETTAGGIO DELLA SOCKET")
+                        }
+                    }
+                }
+                Command::none()
+            }
         }
     }
 
@@ -395,7 +438,7 @@ impl Application for App {
     fn subscription(&self) -> Subscription<Self::Message> {
         // Always refresh the screen
         let mut subscriptions =
-            vec![time::every(Duration::from_millis(16)).map(|_| Message::UpdateScreen)];
+            vec![time::every(Duration::from_millis(10)).map(|_| Message::UpdateScreen)];
 
         // Add `WindowPartScreen`'s subscription only if on `Page::WindowPartScreen`
         if let Page::WindowPartScreen = self.current_page {

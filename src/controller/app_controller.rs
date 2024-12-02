@@ -1,4 +1,6 @@
-use crate::screenshare::screenshare::{start_screen_sharing, take_screenshot, start_partial_sharing};
+use crate::screenshare::screenshare::{
+    start_partial_sharing, start_screen_sharing, take_screenshot,
+};
 use crate::socket::socket::CasterSocket;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -13,8 +15,8 @@ pub struct AppController {
     stop_flag: Arc<AtomicBool>,
     sender: Arc<tokio::sync::mpsc::Sender<RgbaImage>>, // Tokio mpsc channel for async communication
     pub is_just_stopped: bool,
-    socket: Arc<Mutex<CasterSocket>>,
-    pub screen_dimension:(f64,f64)
+    socket: Arc<Mutex<Option<CasterSocket>>>,
+    pub screen_dimension: (f64, f64),
 }
 
 impl AppController {
@@ -22,7 +24,7 @@ impl AppController {
     pub fn new(
         monitor: Monitor,
         sender: tokio::sync::mpsc::Sender<RgbaImage>,
-        socket: CasterSocket,
+        socket: Option<CasterSocket>,
     ) -> Self {
         AppController {
             monitor_chosen: Arc::new(std::sync::Mutex::new(monitor)),
@@ -36,7 +38,7 @@ impl AppController {
     }
 
     pub fn set_socket(&mut self, socket: CasterSocket) {
-        self.socket = Arc::new(Mutex::new(socket));
+        self.socket = Arc::new(Mutex::new(Some(socket)));
     }
 
     // Function to start screen sharing using Tokio async task
@@ -59,10 +61,15 @@ impl AppController {
     // Function to listen for receivers using the socket
     pub fn listens_for_receivers(&mut self) {
         let sock_lock = self.socket.blocking_lock();
-        let rt = Runtime::new().unwrap();
-        rt.block_on(sock_lock.listen_for_registration());
+        if let Some(sock) = sock_lock.as_ref() {
+            let rt = Runtime::new().unwrap();
+            rt.block_on(sock.listen_for_registration());
+        } else {
+            eprintln!("No socket available to listen for receivers.");
+        }
     }
-    pub fn start_sharing_partial_sharing(&mut self,dimensions:[(f64,f64);2]) {
+
+    pub fn start_sharing_partial_sharing(&mut self, dimensions: [(f64, f64); 2]) {
         self.stop_flag.store(false, Ordering::Relaxed);
 
         /*let mut capturer_guard = self.capturer.lock().unwrap();
@@ -74,12 +81,13 @@ impl AppController {
         let monitor = self.monitor_chosen.clone();
         let stop_flag = Arc::clone(&self.stop_flag);
         let send = self.sender.clone();
+        let socket = self.socket.clone();
         // Crea un nuovo thread per lo screen sharing
-        let handle = Some(thread::spawn(move || {
+        let task = tokio::spawn(async move {
             // Passiamo stdin e altri dati al thread
-            start_partial_sharing(monitor, stop_flag, send,dimensions);
-        }));
-        self.set_handle(handle.unwrap());
+            start_partial_sharing(monitor, stop_flag, send, dimensions, socket).await;
+        });
+        self.set_task(task);
     }
 
     pub fn set_task(&mut self, task: tokio::task::JoinHandle<()>) {
@@ -96,27 +104,24 @@ impl AppController {
     }
 
     // Stop streaming, async-safe
-    pub fn stop_streaming(&mut self) {
-        if self.stop_flag.load(Ordering::Relaxed) {
-            return;
-        }
-        // Set the flag to stop streaming
-        self.stop_flag.store(true, Ordering::Relaxed);
-        self.socket.blocking_lock().destroy()
-
-        /*async {                                           CI SERVE VERAMENTE A QUALCOSA ASPETTARE CHE IL TASK FINISCA?? TANTO FINISCE UGUALMENTE...
-            // Await the task to ensure it finishes (if any)
-            if let Some(task) = self.streaming_task.take() {
-                task.await.expect("Error in stopping the streaming task");
+        pub fn stop_streaming(&mut self) {
+            if self.stop_flag.load(Ordering::Relaxed) {
+                return;
             }
-        };*/
-    }
-    
-    // Take a screenshot asynchronously
-    pub fn take_screenshot(&mut self) -> Vec<u8> {
+            // Set the flag to stop streaming
+            self.stop_flag.store(true, Ordering::Relaxed);
+        
+            // Distruggi la socket, se presente
+            if let Some(socket) = self.socket.blocking_lock().as_mut() {
+                socket.destroy();
+            }
+            // Rimuovi il task di streaming
+            self.streaming_task.take(); // Task non viene più aspettato
+        }
+
+    pub fn take_screenshot(&mut self) -> RgbaImage {
         take_screenshot(self.monitor_chosen.clone())
     }
-
     pub fn set_is_just_stopped(&mut self, value: bool) {
         self.is_just_stopped = value;
     }

@@ -5,7 +5,7 @@ use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Mutex;
 use tokio::time::timeout;
-use xcap::image::RgbaImage;
+use xcap::image::{ImageBuffer, Rgba, RgbaImage};
 use xcap::Monitor;
 
 #[cfg(target_os = "macos")]
@@ -15,15 +15,17 @@ use std::ptr;
 #[cfg(target_os = "windows")]
 use winapi::shared::windef::HBITMAP;
 #[cfg(target_os = "windows")]
-use winapi::um::wingdi::{CreateCompatibleDC, DeleteDC, GetBitmapBits, GetObjectA, SelectObject, BITMAP};
+use winapi::um::wingdi::{
+    CreateCompatibleDC, DeleteDC, GetBitmapBits, GetObjectA, SelectObject, BITMAP,
+};
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::{CopyIcon, GetCursorInfo, GetIconInfo, CURSORINFO, ICONINFO};
 
 pub async fn start_screen_sharing(
-    monitor: Arc<Mutex<Monitor>>,
+    monitor: Arc<std::sync::Mutex<Monitor>>,
     stop_flag: Arc<AtomicBool>,
     sender: Arc<tokio::sync::mpsc::Sender<RgbaImage>>,
-    socket: Arc<tokio::sync::Mutex<CasterSocket>>,
+    socket: Arc<tokio::sync::Mutex<Option<CasterSocket>>>,
 ) {
     while !stop_flag.load(Ordering::Relaxed) {
         // Cattura lo schermo in un task bloccante
@@ -105,8 +107,12 @@ pub async fn start_screen_sharing(
 
             // Invia il frame ai socket dei peer
             let sock_lock = socket.lock().await;
-            sock_lock.send_to_receivers(new_frame).await;
-            println!("CASTER SOCKET: frame sent!");
+            if let Some(sock) = sock_lock.as_ref() {
+                sock.send_to_receivers(new_frame).await;
+                println!("CASTER SOCKET: frame sent!");
+            } else {
+                eprintln!("No CasterSocket available");
+            }
         } else {
             eprintln!("Error recreating the frame from raw data");
         }
@@ -157,16 +163,17 @@ pub async fn start_screen_receiving(
     println!("Stopped receiving frames.");
 }
 
-pub fn start_partial_sharing(
-    monitor: Arc<Mutex<Monitor>>,
+pub async fn start_partial_sharing(
+    monitor: Arc<std::sync::Mutex<Monitor>>,
     stop_flag: Arc<AtomicBool>,
     sender: Arc<Sender<RgbaImage>>,
-    dimensions: [(f64,f64);2]
+    dimensions: [(f64, f64); 2],
+    socket: Arc<tokio::sync::Mutex<Option<CasterSocket>>>,
 ) {
     while !stop_flag.load(Ordering::Relaxed) {
         let frame_result = {
             let mon_lock = monitor.lock().unwrap();
-            mon_lock.capture_image(Some([dimensions[0],dimensions[1]]))
+            mon_lock.capture_image(Some([dimensions[0], dimensions[1]]))
         };
 
         match frame_result {
@@ -212,7 +219,7 @@ pub fn start_partial_sharing(
                 }
 
                 // Verifica che la lunghezza del buffer sia corretta
-                if raw_data.len() != ((width * height * 4)).try_into().unwrap() {
+                if raw_data.len() != (width * height * 4).try_into().unwrap() {
                     eprintln!(
                         "Errore: Dimensioni del buffer non valide! Lunghezza attesa: {}",
                         width * height * 4
@@ -223,9 +230,18 @@ pub fn start_partial_sharing(
                 // Ricrea il frame da raw_data
                 if let Some(new_frame) = RgbaImage::from_raw(width, height, raw_data) {
                     // Invia il nuovo frame tramite il sender
-                    if let Err(send_err) = sender.send(new_frame) {
-                        eprintln!("Errore nell'invio dei dati del frame: {:?}", send_err);
+                    if let Err(send_err) = sender.send(new_frame.clone()).await {
+                        eprintln!("Error sending frame data: {:?}", send_err);
                     }
+
+                    let sock_lock = socket.lock().await;
+                    if let Some(sock) = sock_lock.as_ref() {
+                        sock.send_to_receivers(new_frame).await;
+                        println!("CASTER SOCKET: frame sent!");
+                    } else {
+                        eprintln!("No CasterSocket available");
+                    }
+
                 } else {
                     eprintln!("Errore: impossibile ricreare il frame da raw_data");
                 }
@@ -237,19 +253,25 @@ pub fn start_partial_sharing(
     }
 }
 
-pub fn take_screenshot(monitor: Arc<std::sync::Mutex<Monitor>>) -> Vec<u8> {
-    let mon_lock = monitor.lock().unwrap();
-    let frame_result = mon_lock.capture_image(None);
+pub fn take_screenshot(monitor: Arc<std::sync::Mutex<Monitor>>) -> RgbaImage {
+    let frame_result = {
+        let mon_lock = monitor.lock().unwrap();
+        mon_lock.capture_image(None)
+    };
 
     match frame_result {
-        Ok(frame) => frame.into_raw(),
+        Ok(frame) => {
+            // Estrai i dati del buffer in formato raw
+            println!("FATTO SCREENSHOT");
+            frame
+        }
         Err(e) => {
-            eprintln!("Error capturing screen: {:?}", e);
-            vec![]
+            // Gestione dell'errore: registrare o stampare l'errore
+            eprintln!("Errore durante la cattura dello schermo: {:?}", e);
+            RgbaImage::new(1440, 900)
         }
     }
 }
-
 #[cfg(target_os = "windows")]
 fn overlay_cursor_on_frame(
     raw_data: &mut Vec<u8>,
