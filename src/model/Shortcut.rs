@@ -78,7 +78,7 @@ impl ShortcutController {
     pub fn get_terminate_session_shortcut(&self)->KeyCode{
         self.terminate_session
     }
-
+    
     pub fn save_to_file(&self) -> Result<(), Box<dyn Error>> {
         let path = "src/model/test_shortcuts.json"; // Specifica il percorso del file
         let mut file = OpenOptions::new().write(true).truncate(true).open(path)?;

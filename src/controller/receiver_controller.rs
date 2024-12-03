@@ -52,7 +52,7 @@ impl ReceiverController {
         self.streaming_handle = handle;
     }
 
-    pub fn stop_streaming(&mut self) {
+    pub fn close_streaming(&mut self) {
         if self.stop_flag.load(Ordering::Relaxed) {
             return;
         }

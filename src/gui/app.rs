@@ -2,7 +2,6 @@ use super::component::caster_streaming;
 use crate::controller::app_controller::AppController;
 use crate::controller::receiver_controller::ReceiverController;
 use crate::gui::component::caster_settings;
-use crate::gui::component::{caster_settings, shorcut};
 use crate::gui::component::caster_settings::CasterSettings;
 use crate::gui::component::caster_streaming::{CasterStreaming, MessageUpdate};
 use crate::gui::component::connection::Connection;
@@ -12,20 +11,15 @@ use crate::gui::component::receiver_ip;
 use crate::gui::component::receiver_ip::ReceiverIp;
 use crate::gui::component::receiver_streaming;
 use crate::gui::component::receiver_streaming::{ReceiverStreaming, UpdateMessage};
+use crate::gui::component::shorcut::{Shortcut, ShortcutMessage, Shortcuts};
 use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
 use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
-use crate::socket::socket::{CasterSocket, ReceiverSocket};
-use iced::{executor, Application, Command, Subscription};
-use iced::keyboard::KeyCode;
-use iced::time::{self, Duration};
-use xcap::image::RgbaImage;
-use crate::gui::app;
-use crate::gui::component::shorcut::{Shortcut, ShortcutMessage, Shortcuts};
-use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
 use crate::model::Shortcut::{from_key_code_to_string, ShortcutController};
+use crate::socket::socket::{CasterSocket, ReceiverSocket};
 use crate::utils::utils::get_screen_scaled;
+use iced::keyboard::KeyCode;
 use iced::time::{self, Duration};
 use iced::{executor, Application, Command, Subscription};
 use std::sync::Arc;
@@ -33,6 +27,7 @@ use tokio::sync::{
     mpsc::{channel, Sender},
     Mutex,
 };
+use xcap::image::RgbaImage;
 use xcap::Monitor;
 
 pub struct App {
@@ -48,6 +43,7 @@ pub struct App {
     sender_caster: Sender<RgbaImage>,
     sender_receiver: Sender<RgbaImage>,
     shortcut_screen: Shortcut,
+    shortcut_controller: ShortcutController,
 }
 
 enum Controller {
@@ -57,7 +53,7 @@ enum Controller {
 }
 
 #[derive(Debug, Clone)]
-enum Modality {
+pub enum Modality {
     Partial(f32, f32, f64, f64),
     Full,
 }
@@ -72,7 +68,7 @@ pub enum Page {
     ReceiverStreaming,
     CasterStreaming,
     WindowPartScreen,
-    Shortcut
+    Shortcut,
 }
 
 #[derive(Debug, Clone)]
@@ -98,9 +94,8 @@ pub enum Message {
     None,
     SetCasterSocket(CasterSocket, Page, Modality),
     ReceiverControllerCreated(ReceiverSocket, Sender<RgbaImage>, Page),
-    Route(Page),
     ChosenShortcuts(Shortcuts),
-    None
+    Blanking,
 }
 
 impl Application for App {
@@ -113,7 +108,7 @@ impl Application for App {
     fn new(_flags: Self::Flags) -> (Self, iced::Command<Self::Message>) {
         let (sender_caster, receiver_caster) = channel::<RgbaImage>(32); // Define buffer size
         let (sender_receiver, receiver_receiver) = channel::<RgbaImage>(32); // Define buffer size
-
+        let shortcut_controller = ShortcutController::new_from_file();
         (
             Self {
                 current_page: Page::Home,
@@ -140,7 +135,8 @@ impl Application for App {
                     frame_to_update: Arc::new(Mutex::new(None)),
                     measures: (0, 0),
                     is_loading: true,
-                    shortcut: ShortcutController::new_from_file() 
+                    shortcut: ShortcutController::new_from_file(),
+                    warning_message: false,
                 },
                 windows_part_screen: WindowPartScreen {
                     screenshot: None,
@@ -152,16 +148,26 @@ impl Application for App {
                 controller: Controller::NotDefined,
                 sender_caster,
                 sender_receiver,
-                
-                    shortcut_screen: Shortcut{
+
+                shortcut_screen: Shortcut {
                     // @giuseppe2028 metti le funzioni di default
-                    manage_transmission: controller.get_trasmission_shortcut(),
+                    manage_transmission: from_key_code_to_string(
+                        shortcut_controller.get_manage_trasmition_shortcut(),
+                    )
+                    .to_string(),
                     // @giuseppe2028 metti le funzioni di default
-                    blancking_screen:controller.get_blanking_screen(),
+                    blancking_screen: from_key_code_to_string(
+                        shortcut_controller.get_blanking_screen_shortcut(),
+                    )
+                    .to_string(),
                     // @giuseppe2028 metti le funzioni di default
-                    terminate_session: controller.get_terminate_screen(),
+                    terminate_session: from_key_code_to_string(
+                        shortcut_controller.get_terminate_session_shortcut(),
+                    )
+                    .to_string(),
                     err_key_set: false,
                 },
+                shortcut_controller,
             },
             Command::none(),
         )
@@ -209,7 +215,7 @@ impl Application for App {
                         let page = Page::CasterStreaming;
                         (socket, page)
                     },
-                    move|(socket, page)| Message::SetCasterSocket(socket, page, Modality::Full),
+                    move |(socket, page)| Message::SetCasterSocket(socket, page, Modality::Full),
                 )
             }
             Message::ReceiverSharing(ip_caster) => {
@@ -261,7 +267,7 @@ impl Application for App {
                     Page::CasterSettings => Page::Home,
                     Page::CasterStreaming => Page::Home,
                     Page::WindowPartScreen => Page::Home,
-                    Page::Shortcut => Page::Home
+                    Page::Shortcut => Page::Home,
                 };
                 Command::none()
             }
@@ -297,27 +303,40 @@ impl Application for App {
             Message::TogglerChanged(message) => {
                 let _ = self.caster_streaming.update(message);
                 Command::none()
-            },
-            Message::KeyShortcut(key_code)=>{
-                let key_code = from_key_code_to_string(key_code);
-                println!("convertito {}",key_code);
-                if self.shortcut_screen.blancking_screen == key_code{
-                    println!("convertito");
-                }else if self.shortcut_screen.terminate_session == key_code{
-                    self.controller.stop_streaming();
-                    //self.controller.clean_options(); DA FARE PER PEPPINO
-                    self.current_page = Page::Home;
-                }else if self.shortcut_screen.manage_transmission == key_code{
-                    print!("Chiamato??");
-                    if self.controller.is_just_stopped {
-                        self.controller.start_sharing();
-                        self.controller.set_is_just_stopped(false);
+            }
+            Message::KeyShortcut(key_code) => {
+                if let Controller::CasterController(caster) = &mut self.controller {
+                    let key_code = from_key_code_to_string(key_code);
+                    if self.shortcut_screen.blancking_screen == key_code {
+                        self.caster_streaming.warning_message = !self.caster_streaming.warning_message;
+                        caster.blanking_streaming();
+                    } else if self.shortcut_screen.terminate_session == key_code {
+                        caster.stop_streaming();
+                        //self.controller.clean_options(); DA FARE PER PEPPINO
+                        self.current_page = Page::Home;
+                    } else if self.shortcut_screen.manage_transmission == key_code {
+                        if caster.is_just_stopped {
+                            caster.start_sharing();
+                            caster.set_is_just_stopped(false);
+                        } else {
+                            caster.stop_streaming();
+                            caster.set_is_just_stopped(true);
+                        }
                     }
-                    else{
-                        self.controller.stop_streaming();
-                        self.controller.set_is_just_stopped(true);
-                    }
+                } else {
+                    eprintln!("Dovrebbe essere impossibile arrivare qui SHORTCUT!!");
                 }
+                Command::none()
+            }
+            Message::Blanking => {
+                if let Controller::CasterController(caster) = &mut self.controller {
+                    self.caster_streaming.warning_message = !self.caster_streaming.warning_message;
+                    caster.blanking_streaming();
+                } else {
+                    eprintln!("NON DOVREBBE ENTRARE MAI QUI..BLANKING");
+                }
+
+                //aggiungere logica server
                 Command::none()
             }
             Message::SelectDisplay(display) => {
@@ -333,10 +352,10 @@ impl Application for App {
             }
             Message::Close => {
                 if let Controller::CasterController(caster) = &mut self.controller {
-                    caster.stop_streaming();
+                    caster.close_streaming();
                     self.controller = Controller::NotDefined;
                 } else if let Controller::ReceiverController(receiver) = &mut self.controller {
-                    receiver.stop_streaming();
+                    receiver.close_streaming();
                     self.controller = Controller::NotDefined;
                 } else {
                     eprintln!("ERRORE NELLA CHIUSURA DELLA CONDIVISIONE SCHERMO");
@@ -388,16 +407,16 @@ impl Application for App {
                         let page = Page::CasterStreaming;
                         (socket, page)
                     },
-                    move|(socket, page)| Message::SetCasterSocket(socket, page, Modality::Partial(x, y, start_x, start_y)),
+                    move |(socket, page)| {
+                        Message::SetCasterSocket(
+                            socket,
+                            page,
+                            Modality::Partial(x, y, start_x, start_y),
+                        )
+                    },
                 )
             }
-            Message::StartPartialSharing(x,y,start_x,start_y)=>{
-                self.current_page = Page::CasterStreaming;
-                self.controller.start_sharing();
-                self.caster_streaming.measures = self.controller.get_measures();
-                Command::none()
-            }
-            Message::AreaSelectedFirst=>{
+            Message::AreaSelectedFirst => {
                 let _ = self.windows_part_screen.update(MessagePress::FirstPress);
                 Command::none()
             }
@@ -478,35 +497,26 @@ impl Application for App {
                 match shortcuts {
                     Shortcuts::ManageTransmission(key) => {
                         print!("entro manage");
-                        self.controller.set_trasmission_shortcut(key.clone());
+                        self.shortcut_controller.set_manage_trasmition(&key);
                         let _ = self
                             .shortcut_screen
-                            .update(ShortcutMessage::ManageTransmission(
-                                key
-                            ));
+                            .update(ShortcutMessage::ManageTransmission(key));
                     }
                     Shortcuts::BlanckingScreen(key) => {
                         print!("entro blanking");
-                        self.controller.set_blanking_screen(key.clone());
+                        self.shortcut_controller.set_blanking_screen(&key);
                         let _ = self
                             .shortcut_screen
                             .update(ShortcutMessage::BlanckingScreen(key));
                     }
                     Shortcuts::TerminateSession(key) => {
                         print!("entro Trasmission");
-                        self.controller.set_terminate_screen(key.clone());
+                        self.shortcut_controller.set_terminate_session(&key);
                         let _ = self
                             .shortcut_screen
-                            .update(ShortcutMessage::TerminateSession(
-                                key
-                            ));
+                            .update(ShortcutMessage::TerminateSession(key));
                     }
                 }
-                Command::none()
-            }
-            Message::None=>Command::none(),
-            Message::Route(page) => {
-                self.current_page = page;
                 Command::none()
             }
         }

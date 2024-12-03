@@ -5,7 +5,7 @@ use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Mutex;
 use tokio::time::timeout;
-use xcap::image::{ImageBuffer, Rgba, RgbaImage};
+use xcap::image::RgbaImage;
 use xcap::Monitor;
 
 #[cfg(target_os = "macos")]
@@ -26,6 +26,7 @@ pub async fn start_screen_sharing(
     stop_flag: Arc<AtomicBool>,
     sender: Arc<tokio::sync::mpsc::Sender<RgbaImage>>,
     socket: Arc<tokio::sync::Mutex<Option<CasterSocket>>>,
+    blanking_flag: Arc<AtomicBool>,
 ) {
     while !stop_flag.load(Ordering::Relaxed) {
         // Cattura lo schermo in un task bloccante
@@ -108,8 +109,19 @@ pub async fn start_screen_sharing(
             // Invia il frame ai socket dei peer
             let sock_lock = socket.lock().await;
             if let Some(sock) = sock_lock.as_ref() {
-                sock.send_to_receivers(new_frame).await;
-                println!("CASTER SOCKET: frame sent!");
+                if blanking_flag.load(Ordering::Relaxed) {
+                    //frame nero
+                    println!("Mando frame nero");
+                    let black_frame_data = vec![0u8; (width * height * 4) as usize]; // RGBA: 4 byte per pixel
+                    if let Some(black_frame) = RgbaImage::from_raw(width, height, black_frame_data)
+                    {
+                        sock.send_to_receivers(black_frame).await;
+                    } else {
+                        eprintln!("Error creating black frame");
+                    }
+                } else {
+                    sock.send_to_receivers(new_frame).await;
+                }
             } else {
                 eprintln!("No CasterSocket available");
             }
@@ -125,7 +137,6 @@ pub async fn start_screen_receiving(
     sender: Arc<Sender<RgbaImage>>,
     socket: Arc<Mutex<ReceiverSocket>>,
 ) {
-    println!("Waiting for frames...");
     while !stop_flag.load(Ordering::Relaxed) {
         let sock_lock = socket.lock().await;
 
@@ -137,11 +148,11 @@ pub async fn start_screen_receiving(
                     serialized_image.height(),
                     serialized_image.data().to_vec(),
                 ) {
-                    println!(
+                    /*println!(
                         "Received a frame of size {}x{}",
                         image.width(),
                         image.height()
-                    );
+                    );*/
                     if let Err(send_err) = sender.send(image).await {
                         eprintln!("Error sending frame data: {:?}", send_err);
                     }
@@ -219,7 +230,8 @@ pub async fn start_partial_sharing(
                 }
 
                 // Verifica che la lunghezza del buffer sia corretta
-                if raw_data.len() != (width * height * 4).try_into().unwrap() {
+                let expected_len: usize = (width * height * 4).try_into().unwrap();
+                if raw_data.len() != expected_len {
                     eprintln!(
                         "Errore: Dimensioni del buffer non valide! Lunghezza attesa: {}",
                         width * height * 4
@@ -241,7 +253,6 @@ pub async fn start_partial_sharing(
                     } else {
                         eprintln!("No CasterSocket available");
                     }
-
                 } else {
                     eprintln!("Errore: impossibile ricreare il frame da raw_data");
                 }

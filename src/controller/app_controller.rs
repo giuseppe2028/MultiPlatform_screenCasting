@@ -1,14 +1,10 @@
-use crate::model::Shortcut::{from_key_code_to_string, from_str_to_key_code, ShortcutController};
+use crate::model::Shortcut::{from_key_code_to_string, ShortcutController};
 use crate::screenshare::screenshare::{
     start_partial_sharing, start_screen_sharing, take_screenshot,
 };
 use crate::socket::socket::CasterSocket;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::Sender;
 use std::sync::Arc;
-use std::thread;
-use std::thread::JoinHandle;
 use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
 use xcap::image::RgbaImage;
@@ -18,11 +14,11 @@ pub struct AppController {
     pub monitor_chosen: Arc<std::sync::Mutex<Monitor>>,
     pub streaming_task: Option<tokio::task::JoinHandle<()>>, // Use Tokio's JoinHandle
     stop_flag: Arc<AtomicBool>,
+    blanking_flag: Arc<AtomicBool>,
     sender: Arc<tokio::sync::mpsc::Sender<RgbaImage>>, // Tokio mpsc channel for async communication
     pub is_just_stopped: bool,
     socket: Arc<Mutex<Option<CasterSocket>>>,
     pub screen_dimension: (f64, f64),
-    pub shortcut: ShortcutController,
 }
 
 impl AppController {
@@ -40,7 +36,7 @@ impl AppController {
             is_just_stopped: false,
             socket: Arc::new(Mutex::new(socket)),
             screen_dimension: (0.0, 0.0),
-            shortcut: ShortcutController::new_from_file(),
+            blanking_flag: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -56,10 +52,11 @@ impl AppController {
         let stop_flag = Arc::clone(&self.stop_flag);
         let sender = self.sender.clone();
         let socket = self.socket.clone();
+        let blanking_flag = Arc::clone(&self.blanking_flag);
 
         // Spawn a Tokio async task for screen sharing
         let task = tokio::spawn(async move {
-            start_screen_sharing(monitor, stop_flag, sender, socket).await;
+            start_screen_sharing(monitor, stop_flag, sender, socket, blanking_flag).await;
         });
 
         self.set_task(task);
@@ -111,7 +108,7 @@ impl AppController {
     }
 
     // Stop streaming, async-safe
-    pub fn stop_streaming(&mut self) {
+    pub fn close_streaming(&mut self) {
         if self.stop_flag.load(Ordering::Relaxed) {
             return;
         }
@@ -124,6 +121,22 @@ impl AppController {
         }
         // Rimuovi il task di streaming
         self.streaming_task.take(); // Task non viene più aspettato
+    }
+
+    pub fn stop_streaming(&mut self) {
+        if self.stop_flag.load(Ordering::Relaxed) {
+            return;
+        }
+        // Set the flag to stop streaming
+        self.stop_flag.store(true, Ordering::Relaxed)
+    }
+
+    pub fn blanking_streaming(&mut self) {
+        if self.blanking_flag.load(Ordering::Relaxed) {
+            self.blanking_flag.store(false, Ordering::Relaxed)
+        } else {
+            self.blanking_flag.store(true, Ordering::Relaxed)
+        }
     }
 
     pub fn take_screenshot(&mut self) -> RgbaImage {
@@ -152,23 +165,4 @@ impl AppController {
             scap::capturer::Resolution::Captured => (1920, 1080),
         }
     }*/
-
-    pub fn get_trasmission_shortcut(&self) -> String {
-        from_key_code_to_string(self.shortcut.get_manage_trasmition_shortcut()).to_string()
-    }
-    pub fn get_blanking_screen(&self) -> String {
-        from_key_code_to_string(self.shortcut.get_blanking_screen_shortcut()).to_string()
-    }
-    pub fn get_terminate_screen(&self) -> String {
-        from_key_code_to_string(self.shortcut.get_terminate_session_shortcut()).to_string()
-    }
-    pub fn set_trasmission_shortcut(&mut self, shorcut: String) {
-        self.shortcut.set_manage_trasmition(shorcut.as_str())
-    }
-    pub fn set_blanking_screen(&mut self, shorcut: String) {
-        self.shortcut.set_blanking_screen(shorcut.as_str())
-    }
-    pub fn set_terminate_screen(&mut self, shorcut: String) {
-        self.shortcut.set_terminate_session(shorcut.as_str())
-    }
 }

@@ -16,7 +16,7 @@ The application should fulfill the following requirements:
 4. **Selection Options**: When in casting mode, the utility should allow the user to restrict the
    grabbed content to a custom area.✅
 5. **Hotkey Support**: The utility should support customizable keyboard shortcuts for
-   pausing/resuming the transmission, for blanking the screen and terminating the current session.
+   pausing/resuming the transmission, for blanking the screen and terminating the current session.✅
    As a bonus, the application may also provide the following features:
 6. **Annotation Tools**: When in casting mode, the utility can activate/deactivate a transparent
    layer on top of the grabbed area where annotations like shapes, arrows, text, …, can be

@@ -1,25 +1,20 @@
-use std::sync::{Arc, Mutex};
-use std::sync::mpsc::Receiver;
-use enigo::Key;
-use iced::widget::{container, image, Image, row};
-use iced::{Color, Command, Subscription};
 use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::Style;
+use crate::gui::theme::text::text;
 use crate::gui::theme::widget::Element;
+use crate::model::Shortcut::ShortcutController;
 use iced::widget::{container, image, row, Image};
 use iced::{
     keyboard::{Event::KeyPressed, KeyCode},
     Event,
 };
-use iced::{ Command, Subscription};
+use iced::{Command, Subscription};
 use std::sync::Arc;
 use tokio::sync::{mpsc::Receiver, Mutex};
 use xcap::image::RgbaImage;
-use crate::gui::component::shorcut::Shortcut;
-use crate::model::Shortcut::{from_str_to_key_code, ShortcutController};
 
 pub struct CasterStreaming {
     pub toggler: bool,
@@ -27,35 +22,32 @@ pub struct CasterStreaming {
     pub frame_to_update: Arc<Mutex<Option<RgbaImage>>>,
     pub measures: (u32, u32), // width, height
     pub is_loading: bool,
-    pub shortcut: ShortcutController
+    pub shortcut: ShortcutController,
+    pub warning_message: bool,
 }
 
 #[derive(Debug, Clone)]
 pub enum MessageUpdate {
     TogglerChanged(bool),
     NewFrame(RgbaImage),
-    StopStreaming,
     KeyPressed(KeyCode),
 }
 
 impl From<MessageUpdate> for app::Message {
-
     fn from(message: MessageUpdate) -> Self {
         match message {
-            MessageUpdate::StopStreaming => app::Message::StopStreaming,
-            MessageUpdate::TogglerChanged(_) => {app::Message::TogglerChanged(message)}
-            MessageUpdate::NewFrame(_) => {
-                app::Message::None
-            },
-            MessageUpdate::KeyPressed(code)=>{
-                println!("{:?}",code);
+            MessageUpdate::TogglerChanged(_) => app::Message::TogglerChanged(message),
+            MessageUpdate::NewFrame(_) => app::Message::None,
+            MessageUpdate::KeyPressed(code) => {
+                println!("{:?}", code);
                 app::Message::KeyShortcut(code)
             }
 
             _ => {
                 println!("ENTRO");
-                println!("{:?}",message);
-                app::Message::Close}
+                println!("{:?}", message);
+                app::Message::Close
+            }
         }
     }
 }
@@ -75,15 +67,9 @@ impl<'a> Component<'a> for CasterStreaming {
                 *self.frame_to_update.blocking_lock() = Some(frame);
                 self.is_loading = false;
                 Command::none()
-        
-            }
-            MessageUpdate::StopStreaming => {
-                iced::Command::none()
-
-                // Handle stop streaming logic if needed
             }
             MessageUpdate::KeyPressed(key_code) => {
-                if key_code == self.shortcut.get_blanking_screen_shortcut() {
+                /*if key_code == self.shortcut.get_blanking_screen_shortcut() {
                     //manda messaggio
                     print!("ciaoooo");
                 }
@@ -94,8 +80,9 @@ impl<'a> Component<'a> for CasterStreaming {
                 else if key_code == self.shortcut.get_terminate_session_shortcut() {
                     print!("123 ale 123");
                    app::Message::Close;
-                }
-            },
+                }*/
+                Command::none()
+            }
         }
     }
 
@@ -112,12 +99,15 @@ impl<'a> Component<'a> for CasterStreaming {
                 }
                 Some(ref frame_data) => {
                     // Assicurati che il frame sia in un formato valido
-                    Image::new(image::Handle::from_pixels(frame_data.width(), frame_data.height(),frame_data.clone().into_raw())).width(iced::Length::Fill)
-                        .height(iced::Length::Fill)
+                    Image::new(image::Handle::from_pixels(
+                        frame_data.width(),
+                        frame_data.height(),
+                        frame_data.clone().into_raw(),
+                    ))
+                    .width(iced::Length::Fill)
+                    .height(iced::Length::Fill)
                 }
-
             }
-
         };
 
         // Define the annotation buttons
@@ -183,7 +173,7 @@ impl<'a> Component<'a> for CasterStreaming {
                 .icon(crate::gui::theme::icon::Icon::Blanking)
                 .build(35)
                 .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
+                .on_press(app::Message::Blanking),
             CircleButton::new("exit")
                 .style(Style::Danger)
                 .icon(crate::gui::theme::icon::Icon::Phone)
@@ -206,9 +196,24 @@ impl<'a> Component<'a> for CasterStreaming {
                 .align_items(iced::Alignment::Center),
         );
 
+        let message = row![text("Your screen is blanking")];
         if self.toggler {
             container(
                 column_iced![row![sidebar, streaming]]
+                    .spacing(8)
+                    .align_items(iced::Alignment::Center),
+            )
+            .into()
+        } else if self.warning_message {
+            container(
+                column_iced![message, row![streaming]]
+                    .spacing(8)
+                    .align_items(iced::Alignment::Center),
+            )
+            .into()
+        } else if self.toggler && self.warning_message {
+            container(
+                column_iced![row![message, sidebar, streaming]]
                     .spacing(8)
                     .align_items(iced::Alignment::Center),
             )
@@ -226,11 +231,9 @@ impl<'a> Component<'a> for CasterStreaming {
     fn subscription(&self) -> Subscription<Self::Message> {
         iced::subscription::events_with(|event, status| match (event, status) {
             // Scorciatoia: Space -> StopStreaming
-            (
-                Event::Keyboard(KeyPressed { key_code , .. }),..
-            ) => {
+            (Event::Keyboard(KeyPressed { key_code, .. }), ..) => {
                 Some(MessageUpdate::KeyPressed(key_code))
-            },
+            }
             _ => None,
         })
     }
