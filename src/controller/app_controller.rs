@@ -1,9 +1,14 @@
+use crate::model::Shortcut::{from_key_code_to_string, from_str_to_key_code, ShortcutController};
 use crate::screenshare::screenshare::{
     start_partial_sharing, start_screen_sharing, take_screenshot,
 };
 use crate::socket::socket::CasterSocket;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
+use std::thread;
+use std::thread::JoinHandle;
 use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
 use xcap::image::RgbaImage;
@@ -17,6 +22,7 @@ pub struct AppController {
     pub is_just_stopped: bool,
     socket: Arc<Mutex<Option<CasterSocket>>>,
     pub screen_dimension: (f64, f64),
+    pub shortcut: ShortcutController,
 }
 
 impl AppController {
@@ -34,6 +40,7 @@ impl AppController {
             is_just_stopped: false,
             socket: Arc::new(Mutex::new(socket)),
             screen_dimension: (0.0, 0.0),
+            shortcut: ShortcutController::new_from_file(),
         }
     }
 
@@ -104,20 +111,20 @@ impl AppController {
     }
 
     // Stop streaming, async-safe
-        pub fn stop_streaming(&mut self) {
-            if self.stop_flag.load(Ordering::Relaxed) {
-                return;
-            }
-            // Set the flag to stop streaming
-            self.stop_flag.store(true, Ordering::Relaxed);
-        
-            // Distruggi la socket, se presente
-            if let Some(socket) = self.socket.blocking_lock().as_mut() {
-                socket.destroy();
-            }
-            // Rimuovi il task di streaming
-            self.streaming_task.take(); // Task non viene più aspettato
+    pub fn stop_streaming(&mut self) {
+        if self.stop_flag.load(Ordering::Relaxed) {
+            return;
         }
+        // Set the flag to stop streaming
+        self.stop_flag.store(true, Ordering::Relaxed);
+
+        // Distruggi la socket, se presente
+        if let Some(socket) = self.socket.blocking_lock().as_mut() {
+            socket.destroy();
+        }
+        // Rimuovi il task di streaming
+        self.streaming_task.take(); // Task non viene più aspettato
+    }
 
     pub fn take_screenshot(&mut self) -> RgbaImage {
         take_screenshot(self.monitor_chosen.clone())
@@ -132,5 +139,36 @@ impl AppController {
         let y = lock_monitor.height();
         println!("width {}, height {}", x, y);
         return (x, y);
+    }
+    /*
+    pub fn get_measures(&self) -> (u32, u32) {
+        match self.option.output_resolution {
+            scap::capturer::Resolution::_480p => (640, 480), // 480p: 640x480
+            scap::capturer::Resolution::_720p => (1280, 720), // 720p: 1280x720
+            scap::capturer::Resolution::_1080p => (1920, 1080), // 1080p: 1920x1080
+            scap::capturer::Resolution::_1440p => (1440, 900), // 1440p: 2560x1440
+            scap::capturer::Resolution::_2160p => (3840, 2160), // 2160p: 3840x2160
+            scap::capturer::Resolution::_4320p => (7680, 4320), // 4320p: 7680x4320
+            scap::capturer::Resolution::Captured => (1920, 1080),
+        }
+    }*/
+
+    pub fn get_trasmission_shortcut(&self) -> String {
+        from_key_code_to_string(self.shortcut.get_manage_trasmition_shortcut()).to_string()
+    }
+    pub fn get_blanking_screen(&self) -> String {
+        from_key_code_to_string(self.shortcut.get_blanking_screen_shortcut()).to_string()
+    }
+    pub fn get_terminate_screen(&self) -> String {
+        from_key_code_to_string(self.shortcut.get_terminate_session_shortcut()).to_string()
+    }
+    pub fn set_trasmission_shortcut(&mut self, shorcut: String) {
+        self.shortcut.set_manage_trasmition(shorcut.as_str())
+    }
+    pub fn set_blanking_screen(&mut self, shorcut: String) {
+        self.shortcut.set_blanking_screen(shorcut.as_str())
+    }
+    pub fn set_terminate_screen(&mut self, shorcut: String) {
+        self.shortcut.set_terminate_session(shorcut.as_str())
     }
 }

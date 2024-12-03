@@ -1,3 +1,8 @@
+use std::sync::{Arc, Mutex};
+use std::sync::mpsc::Receiver;
+use enigo::Key;
+use iced::widget::{container, image, Image, row};
+use iced::{Color, Command, Subscription};
 use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::Component;
@@ -13,6 +18,8 @@ use iced::{ Command, Subscription};
 use std::sync::Arc;
 use tokio::sync::{mpsc::Receiver, Mutex};
 use xcap::image::RgbaImage;
+use crate::gui::component::shorcut::Shortcut;
+use crate::model::Shortcut::{from_str_to_key_code, ShortcutController};
 
 pub struct CasterStreaming {
     pub toggler: bool,
@@ -20,6 +27,7 @@ pub struct CasterStreaming {
     pub frame_to_update: Arc<Mutex<Option<RgbaImage>>>,
     pub measures: (u32, u32), // width, height
     pub is_loading: bool,
+    pub shortcut: ShortcutController
 }
 
 #[derive(Debug, Clone)]
@@ -27,14 +35,27 @@ pub enum MessageUpdate {
     TogglerChanged(bool),
     NewFrame(RgbaImage),
     StopStreaming,
+    KeyPressed(KeyCode),
 }
 
 impl From<MessageUpdate> for app::Message {
+
     fn from(message: MessageUpdate) -> Self {
         match message {
-            MessageUpdate::TogglerChanged(_) => app::Message::TogglerChanged(message),
-            MessageUpdate::NewFrame(_) => app::Message::None,
             MessageUpdate::StopStreaming => app::Message::StopStreaming,
+            MessageUpdate::TogglerChanged(_) => {app::Message::TogglerChanged(message)}
+            MessageUpdate::NewFrame(_) => {
+                app::Message::None
+            },
+            MessageUpdate::KeyPressed(code)=>{
+                println!("{:?}",code);
+                app::Message::KeyShortcut(code)
+            }
+
+            _ => {
+                println!("ENTRO");
+                println!("{:?}",message);
+                app::Message::Close}
         }
     }
 }
@@ -61,6 +82,20 @@ impl<'a> Component<'a> for CasterStreaming {
 
                 // Handle stop streaming logic if needed
             }
+            MessageUpdate::KeyPressed(key_code) => {
+                if key_code == self.shortcut.get_blanking_screen_shortcut() {
+                    //manda messaggio
+                    print!("ciaoooo");
+                }
+                else if key_code == self.shortcut.get_manage_trasmition_shortcut() {
+                    print!("ciaooooSoooocaaaa");
+
+                }
+                else if key_code == self.shortcut.get_terminate_session_shortcut() {
+                    print!("123 ale 123");
+                   app::Message::Close;
+                }
+            },
         }
     }
 
@@ -189,11 +224,13 @@ impl<'a> Component<'a> for CasterStreaming {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        iced::subscription::events_with(|event, _| match event {
-            Event::Keyboard(KeyPressed {
-                key_code: KeyCode::Space,
-                ..
-            }) => Some(MessageUpdate::StopStreaming),
+        iced::subscription::events_with(|event, status| match (event, status) {
+            // Scorciatoia: Space -> StopStreaming
+            (
+                Event::Keyboard(KeyPressed { key_code , .. }),..
+            ) => {
+                Some(MessageUpdate::KeyPressed(key_code))
+            },
             _ => None,
         })
     }
