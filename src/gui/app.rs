@@ -3,7 +3,7 @@ use std::sync::mpsc::channel;
 use xcap::Monitor;
 
 use crate::controller::app_controller::AppController;
-use crate::gui::component::caster_settings;
+use crate::gui::component::{caster_settings, shorcut};
 use crate::gui::component::caster_settings::CasterSettings;
 use crate::gui::component::caster_streaming::{CasterStreaming, MessageUpdate};
 use crate::gui::component::connection::Connection;
@@ -17,13 +17,15 @@ use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
 use iced::{executor, Application, Command, Subscription};
+use iced::keyboard::KeyCode;
 use scap::capturer::Options;
 use iced::time::{self, Duration};
 use scap::targets::get_target_dimensions;
 use xcap::image::RgbaImage;
+use crate::gui::app;
 use crate::gui::component::shorcut::{Shortcut, ShortcutMessage, Shortcuts};
 use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
-use crate::model::Shortcut::ShortcutController;
+use crate::model::Shortcut::{from_key_code_to_string, ShortcutController};
 use crate::utils::utils::get_screen_scaled;
 use super::component::caster_streaming;
 
@@ -63,6 +65,7 @@ pub enum Message {
     Back(Page),
     StartRecording(receiver_streaming::Message),
     TogglerChanged(caster_streaming::MessageUpdate),
+    KeyShortcut(KeyCode),
     SelectDisplay(Monitor),
     Close,
     UpdateScreen,
@@ -233,6 +236,28 @@ impl Application for App {
             Message::TogglerChanged(message) => {
                 let _ = self.caster_streaming.update(message);
                 Command::none()
+            },
+            Message::KeyShortcut(key_code)=>{
+                let key_code = from_key_code_to_string(key_code);
+                println!("convertito {}",key_code);
+                if self.shortcut_screen.blancking_screen == key_code{
+                    println!("convertito");
+                }else if self.shortcut_screen.terminate_session == key_code{
+                    self.controller.stop_streaming();
+                    //self.controller.clean_options(); DA FARE PER PEPPINO
+                    self.current_page = Page::Home;
+                }else if self.shortcut_screen.manage_transmission == key_code{
+                    print!("Chiamato??");
+                    if self.controller.is_just_stopped {
+                        self.controller.start_sharing();
+                        self.controller.set_is_just_stopped(false);
+                    }
+                    else{
+                        self.controller.stop_streaming();
+                        self.controller.set_is_just_stopped(true);
+                    }
+                }
+                Command::none()
             }
             Message::SelectDisplay(display) => {
                 //azione di quando sceglie quale schermo condividere
@@ -241,6 +266,7 @@ impl Application for App {
                 Command::none()
             }
             Message::Close=>{
+                println!("ci entro???c");
                 self.controller.stop_streaming();
                 //self.controller.clean_options(); DA FARE PER PEPPINO
                 self.current_page = Page::Home;
@@ -287,6 +313,7 @@ impl Application for App {
                 Command::none()
             }
             Message::StopStreaming=>{
+                print!("Chiamato??");
                 if self.controller.is_just_stopped {
                     self.controller.start_sharing();
                     self.controller.set_is_just_stopped(false);

@@ -20,14 +20,14 @@ impl ShortcutController {
 
         // Prova ad aprire il file
         let file = File::open(path);
-
+        println!("result {:?}",file);
         let shortcuts: HashMap<String, String> = match file {
             Ok(f) => serde_json::from_reader(f).unwrap_or_else(|err| {
                 eprintln!("Errore durante il parsing del JSON: {}. Uso valori di default.", err);
                 HashMap::new()
             }),
-            Err(_) => {
-                eprintln!("File non trovato. Uso valori di default.");
+            Err(e) => {
+                eprintln!("File non trovato. Uso valori di default. errore: {}", e);
                 HashMap::new() // Se il file non esiste, crea una mappa vuota
             }
         };

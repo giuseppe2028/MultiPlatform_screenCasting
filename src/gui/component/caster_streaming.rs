@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::sync::mpsc::Receiver;
 use enigo::Key;
 use iced::widget::{container, image, Image, row};
-use iced::{Color, Subscription};
+use iced::{Color, Command, Subscription};
 use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::Component;
@@ -44,11 +44,16 @@ impl From<MessageUpdate> for app::Message {
             MessageUpdate::TogglerChanged(_) => {app::Message::TogglerChanged(message)}
             MessageUpdate::NewFrame(_) => {
                 app::Message::None
+            },
+            MessageUpdate::KeyPressed(code)=>{
+                println!("{:?}",code);
+                app::Message::KeyShortcut(code)
             }
-            MessageUpdate::StopStreaming => {
-                app::Message::StopStreaming
-            }
-            _ => {app::Message::StopStreaming}
+
+            _ => {
+                println!("ENTRO");
+                println!("{:?}",message);
+                app::Message::Close}
         }
 
     }
@@ -72,14 +77,16 @@ impl<'a> Component<'a> for CasterStreaming {
             MessageUpdate::KeyPressed(key_code) => {
                 if key_code == self.shortcut.get_blanking_screen_shortcut() {
                     //manda messaggio
+                    print!("ciaoooo");
                 }
                 else if key_code == self.shortcut.get_manage_trasmition_shortcut() {
-                    app::Message::StopStreaming;
+                    print!("ciaooooSoooocaaaa");
+
                 }
                 else if key_code == self.shortcut.get_terminate_session_shortcut() {
-                    //manda relativo messaggio
+                    print!("123 ale 123");
+                   app::Message::Close;
                 }
-                
             },
         }
         iced::Command::none()
@@ -212,7 +219,7 @@ impl<'a> Component<'a> for CasterStreaming {
         iced::subscription::events_with(|event, status| match (event, status) {
             // Scorciatoia: Space -> StopStreaming
             (
-                Event::Keyboard(KeyPressed { key_code , .. }), event::Status::Ignored
+                Event::Keyboard(KeyPressed { key_code , .. }),..
             ) => {
                 Some(MessageUpdate::KeyPressed(key_code))
             },
