@@ -29,6 +29,8 @@ use tokio::sync::{
 };
 use xcap::image::RgbaImage;
 use xcap::Monitor;
+use rand::Rng;
+
 
 pub struct App {
     current_page: Page,
@@ -135,7 +137,6 @@ impl Application for App {
                     frame_to_update: Arc::new(Mutex::new(None)),
                     measures: (0, 0),
                     is_loading: true,
-                    shortcut: ShortcutController::new_from_file(),
                     warning_message: false,
                 },
                 windows_part_screen: WindowPartScreen {
@@ -222,10 +223,12 @@ impl Application for App {
                 //creo controller e socket insieme tanto il controller non mi serve prima per il receiver
                 if let Controller::NotDefined = &mut self.controller {
                     let sender = self.sender_receiver.clone();
+                    let mut rng = rand::thread_rng();
+                    let num: u8 = rng.gen_range(0..10); // Genera un numero casuale tra 0 e 9
                     Command::perform(
                         async move {
                             let socket = crate::socket::socket::ReceiverSocket::new(
-                                "127.0.0.1:8001",
+                                &format!("127.0.0.1:800{}", num),
                                 &format!("{}:8000", ip_caster),
                             )
                             .await;
@@ -355,7 +358,9 @@ impl Application for App {
                     caster.close_streaming();
                     self.controller = Controller::NotDefined;
                 } else if let Controller::ReceiverController(receiver) = &mut self.controller {
+                    receiver.unregister();
                     receiver.close_streaming();
+                    *self.receiver_streaming.frame_to_update.blocking_lock() = None;
                     self.controller = Controller::NotDefined;
                 } else {
                     eprintln!("ERRORE NELLA CHIUSURA DELLA CONDIVISIONE SCHERMO");
@@ -468,7 +473,7 @@ impl Application for App {
                                 "x: {} y: {} start_x: {} start_y: {}",
                                 x, y, screen_scaled.0, screen_scaled.1
                             );
-                            caster.listens_for_receivers();
+                            //caster.listens_for_receivers(); non serve più
                             caster.start_sharing_partial_sharing([
                                 start_screen_scaled,
                                 (screen_scaled),
@@ -482,7 +487,7 @@ impl Application for App {
                     Modality::Full => {
                         if let Controller::CasterController(caster) = &mut self.controller {
                             caster.set_socket(caster_socket);
-                            caster.listens_for_receivers();
+                           // caster.listens_for_receivers(); non serve più
                             caster.start_sharing();
                             self.caster_streaming.measures = caster.get_measures();
                             self.current_page = page;

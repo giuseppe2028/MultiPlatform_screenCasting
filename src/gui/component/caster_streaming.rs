@@ -22,7 +22,6 @@ pub struct CasterStreaming {
     pub frame_to_update: Arc<Mutex<Option<RgbaImage>>>,
     pub measures: (u32, u32), // width, height
     pub is_loading: bool,
-    pub shortcut: ShortcutController,
     pub warning_message: bool,
 }
 
@@ -167,7 +166,7 @@ impl<'a> Component<'a> for CasterStreaming {
                 .icon(crate::gui::theme::icon::Icon::Pause)
                 .build(30)
                 .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
+                .on_press(app::Message::StopStreaming),
             CircleButton::new("blank")
                 .style(Style::Primary)
                 .icon(crate::gui::theme::icon::Icon::Blanking)
@@ -230,7 +229,6 @@ impl<'a> Component<'a> for CasterStreaming {
 
     fn subscription(&self) -> Subscription<Self::Message> {
         iced::subscription::events_with(|event, status| match (event, status) {
-            // Scorciatoia: Space -> StopStreaming
             (Event::Keyboard(KeyPressed { key_code, .. }), ..) => {
                 Some(MessageUpdate::KeyPressed(key_code))
             }

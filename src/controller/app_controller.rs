@@ -62,7 +62,7 @@ impl AppController {
         self.set_task(task);
     }
 
-    // Function to listen for receivers using the socket
+    /* Function to listen for receivers using the socket, non più utile
     pub fn listens_for_receivers(&mut self) {
         let sock_lock = self.socket.blocking_lock();
         if let Some(sock) = sock_lock.as_ref() {
@@ -71,7 +71,7 @@ impl AppController {
         } else {
             eprintln!("No socket available to listen for receivers.");
         }
-    }
+    }*/
 
     pub fn start_sharing_partial_sharing(&mut self, dimensions: [(f64, f64); 2]) {
         self.stop_flag.store(false, Ordering::Relaxed);
@@ -117,6 +117,7 @@ impl AppController {
 
         // Distruggi la socket, se presente
         if let Some(socket) = self.socket.blocking_lock().as_mut() {
+            println!("Socket distrutta");
             socket.destroy();
         }
         // Rimuovi il task di streaming

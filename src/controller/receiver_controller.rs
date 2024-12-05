@@ -48,6 +48,13 @@ impl ReceiverController {
         println!("Ho inviato la richiesta di registrazione!");
     }
 
+    pub fn unregister(&self) {
+        let sock_lock = self.socket.blocking_lock();
+        let rt = Runtime::new().unwrap();
+        let _ = rt.block_on(sock_lock.unregister_with_caster());
+        println!("Ho inviato la richiesta di disconessione!");
+    }
+    
     pub fn set_handle(&mut self, handle: Option<task::JoinHandle<()>>) {
         self.streaming_handle = handle;
     }

@@ -1,14 +1,13 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::{net::UdpSocket, sync::RwLock};
+use std::collections::HashMap;
+use tokio::{net::UdpSocket, sync::{watch, RwLock}};
 use xcap::image::RgbaImage;
 
 const MTU: usize = 1500; // Dimensione massima del pacchetto
 const UDP_HEADER_SIZE: usize = 8; // Dimensione dell'header UDP
 const IP_HEADER_SIZE: usize = 20; // Dimensione dell'header IP
 const MAX_PAYLOAD: usize = MTU - UDP_HEADER_SIZE - IP_HEADER_SIZE; // Spazio disponibile per il payload UDP
-
 
 #[derive(Serialize, Deserialize)]
 pub struct SerializableImage {
@@ -44,16 +43,47 @@ pub struct CasterSocket {
     ip_addr: String,
     socket: Arc<Option<UdpSocket>>,
     receiver_sockets: Arc<RwLock<Vec<String>>>,
+    termination_tx: watch::Sender<bool>, // Mittente del segnale di terminazione
+    termination_rx: watch::Receiver<bool>, // Ricevitore del segnale di terminazione
 }
 
 impl CasterSocket {
-    pub async fn new(ip_addr: &str) -> Self {
+    /*  pub async fn new(ip_addr: &str) -> Self {
         let socket = UdpSocket::bind(ip_addr).await.unwrap();
         CasterSocket {
             receiver_sockets: Arc::new(RwLock::new(vec![])),
             ip_addr: ip_addr.to_string(),
             socket: Arc::new(Some(socket)),
         }
+    } */
+
+    pub async fn new(ip_addr: &str) -> Self {
+        let socket = UdpSocket::bind(ip_addr).await.unwrap();
+        let receiver_sockets = Arc::new(RwLock::new(vec![]));
+        let socket_clone = Arc::new(Some(socket));
+
+        let (termination_tx, termination_rx) = watch::channel(false); // Canale per terminazione
+
+
+        let instance = CasterSocket {
+            receiver_sockets: receiver_sockets,
+            ip_addr: ip_addr.to_string(),
+            socket: socket_clone,
+            termination_tx,
+            termination_rx,
+        };
+
+        // Avvia il task per ascoltare le registrazioni
+        let instance_clone = instance.clone();
+        let mut termination_rx = instance_clone.termination_rx.clone();
+
+        tokio::spawn(async move {
+            instance_clone
+                .listen_for_registration_unregistration(&mut termination_rx)
+                .await;
+        });
+
+        instance
     }
 
     pub async fn send_to_receivers(&self, frame: RgbaImage) {
@@ -65,8 +95,7 @@ impl CasterSocket {
             };
 
             let serialized = bincode::serialize(&serializable_image).unwrap();
-            let total_packets =
-                (serialized.len() + MAX_PAYLOAD - 8 - 1) / (MAX_PAYLOAD - 8);
+            let total_packets = (serialized.len() + MAX_PAYLOAD - 8 - 1) / (MAX_PAYLOAD - 8);
 
             // Usa una read-lock per accedere ai destinatari
             let receivers = self.receiver_sockets.read().await;
@@ -95,47 +124,77 @@ impl CasterSocket {
         }
     }
 
-    pub async fn listen_for_registration(&self) {
+    pub async fn listen_for_registration_unregistration(
+        &self,
+        termination_rx: &mut watch::Receiver<bool>,
+    ) {
         let mut buf = vec![0; 1024];
         loop {
-            tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-            println!("aspettando registrazioni..");
-
-            if let Some(socket) = self.socket.as_ref() {
-                match socket.recv_from(&mut buf).await {
-                    Ok((len, src)) => {
-                        if let Ok(message) =
-                            bincode::deserialize::<RegistrationMessage>(&buf[..len])
-                        {
-                            println!("Registrato: {}:{}", message.ip, message.port);
-                            let mut receivers = self.receiver_sockets.write().await;
-                            receivers.push(format!("{}:{}", message.ip, message.port));
-                            break; //esco appena uno si registra
-                        } else {
-                            eprintln!("Ricevuto messaggio non valido da {}", src);
+            tokio::select! {
+                // Ricevi messaggi dal socket
+                result = async {
+                    if let Some(socket) = self.socket.as_ref() {
+                        socket.recv_from(&mut buf).await
+                    } else {
+                        Err(std::io::Error::new(std::io::ErrorKind::Other, "Socket non disponibile"))
+                    }
+                } => {
+                    match result {
+                        Ok((len, src)) => {
+                            if let Ok(message) = bincode::deserialize::<RegistrationMessage>(&buf[..len]) {
+                                match message.action {
+                                    Action::Register => {
+                                        println!("Registrato: {}:{}", message.ip, message.port);
+                                        let mut receivers = self.receiver_sockets.write().await;
+                                        receivers.push(format!("{}:{}", message.ip, message.port));
+                                    }
+                                    Action::Disconnect => {
+                                        println!("Disconnesso: {}:{}", message.ip, message.port);
+                                        let mut receivers = self.receiver_sockets.write().await;
+                                        receivers.retain(|addr| {
+                                            addr != &format!("{}:{}", message.ip, message.port)
+                                        });
+                                    }
+                                }
+                            } else {
+                                eprintln!("Ricevuto messaggio non valido da {}", src);
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Errore durante la ricezione: {}", e);
+                            break;
                         }
                     }
-                    Err(e) => {
-                        eprintln!("Errore durante la ricezione: {}", e);
+                }
+                // Controlla il segnale di terminazione
+                _ = termination_rx.changed() => {
+                    if *termination_rx.borrow() {
+                        println!("Ricevuto segnale di terminazione. Uscita dal ciclo.");
                         break;
                     }
                 }
-            } else {
-                eprintln!("Socket non disponibile.");
-                break;
             }
         }
     }
+
     pub fn destroy(&mut self) {
+        let _ = self.termination_tx.send(true); // Segnala al task di terminare
         self.socket = Arc::new(None);
         println!("Socket Caster distrutta.");
     }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+enum Action {
+    Register,
+    Disconnect,
 }
 
 #[derive(Serialize, Deserialize)]
 struct RegistrationMessage {
     ip: String,
     port: u16,
+    action: Action,
 }
 
 #[derive(Clone, Debug)]
@@ -195,6 +254,7 @@ impl ReceiverSocket {
         let message = RegistrationMessage {
             ip: self.ip_addr.split(':').next().unwrap().to_string(),
             port: self.ip_addr.split(':').nth(1).unwrap().parse().unwrap(),
+            action: Action::Register,
         };
 
         let serialized = bincode::serialize(&message)?;
@@ -205,6 +265,26 @@ impl ReceiverSocket {
             Ok(())
         } else {
             Err("Socket non inizializzato".into())
+        }
+    }
+
+    // Invia un messaggio di disconnessione al caster
+    pub async fn unregister_with_caster(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let message = RegistrationMessage {
+            ip: self.ip_addr.split(':').next().unwrap().to_string(),
+            port: self.ip_addr.split(':').nth(1).unwrap().parse().unwrap(),
+            action: Action::Disconnect,
+        };
+
+        let serialized = bincode::serialize(&message)?;
+
+        if let Some(socket) = self.socket.as_ref() {
+            socket.send_to(&serialized, &self.ip_addr_caster).await?;
+            Ok(())
+        } else {
+            Err("Socket non inizializzata".into())
         }
     }
 

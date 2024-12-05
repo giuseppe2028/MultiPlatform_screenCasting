@@ -79,7 +79,7 @@ impl<'a> Component<'a> for Shortcut{
             .build(20)
             // probabilmente errata la riga succesiva, dovrebbe essere app::Page::Home ma non va...
             // mentre funziona con app::Page::CasterSettings e app::Page::ReceiverStreaming
-            .on_press(app::Message::Back(app::Page::CasterSettings))])
+            .on_press(app::Message::Back(app::Page::Shortcut))])
             .padding([6, 0, 0, 6])
             .align_x(Horizontal::Left)
             .align_y(Vertical::Top);
