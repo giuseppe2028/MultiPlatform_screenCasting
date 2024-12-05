@@ -37,7 +37,6 @@ impl<'a> Component<'a> for ReceiverStreaming {
     fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
             UpdateMessage::StartRecording(new_status) => {
-                self.recording = new_status;
                 Command::none()
             }
             UpdateMessage::NewFrame(frame) => {
