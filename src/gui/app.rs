@@ -23,6 +23,8 @@ use iced::keyboard::KeyCode;
 use iced::time::{self, Duration};
 use iced::{executor, Application, Command, Subscription};
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
+use iced::widget::image;
 use tokio::sync::{
     mpsc::{channel, Sender},
     Mutex,
@@ -297,8 +299,23 @@ impl Application for App {
                 Command::none()
             }
             Message::StartRecording(message) => {
-                let _ = self.receiver_streaming.update(message);
-                Command::none()
+                println!("entro dentro recording");
+                match &self.controller {
+                    Controller::ReceiverController(receiver_controller) => {
+                        if receiver_controller.is_recording.load(Ordering::Relaxed){
+                            receiver_controller.stop_recording();
+                        }
+                        receiver_controller.is_recording.store(!receiver_controller.is_recording.load(Ordering::Relaxed), Ordering::Relaxed);
+                        print!("sono in start recording {}",receiver_controller.is_recording.load(Ordering::Relaxed));
+                        // Se `self.controller` è di tipo `ReceiverController`, fai qualcosa
+                        let _ = self.receiver_streaming.update(message);
+                        Command::none()
+                    },
+                    _ => {
+                        let _ = self.receiver_streaming.update(message);
+                        Command::none()
+                    }
+                }
             }
             Message::TogglerChanged(message) => {
                 let _ = self.caster_streaming.update(message);
@@ -365,7 +382,7 @@ impl Application for App {
             }
             Message::UpdateScreen => {
                 match &self.controller {
-                    Controller::ReceiverController(_) => {
+                    Controller::ReceiverController(controller) => {
                         let frame = {
                             if let Ok(receiver) =
                                 self.receiver_streaming.receiver.blocking_lock().try_recv()
@@ -375,6 +392,7 @@ impl Application for App {
                                 return Command::none();
                             }
                         };
+                            controller.start_recording(frame.clone());
                         let _ = self
                             .receiver_streaming
                             .update(UpdateMessage::NewFrame(frame));
