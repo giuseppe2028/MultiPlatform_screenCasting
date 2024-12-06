@@ -24,10 +24,6 @@ impl ReceiverController {
         }
     }
 
-    pub fn set_socket(&mut self, socket: ReceiverSocket) {
-        self.socket = Arc::new(Mutex::new(socket));
-    }
-
     pub fn start_receiving(&mut self) {
         self.stop_flag.store(false, Ordering::Relaxed);
 

@@ -2,17 +2,16 @@ use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
-use crate::gui::theme::button::Style;
+use crate::gui::theme::button::{MyButton, Style};
 use crate::gui::theme::text::text;
 use crate::gui::theme::widget::Element;
-use crate::model::Shortcut::ShortcutController;
 use iced::widget::{container, image, row, Image};
 use iced::{
     keyboard::{Event::KeyPressed, KeyCode},
     Event,
 };
 use iced::{Command, Subscription};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use tokio::sync::{mpsc::Receiver, Mutex};
 use xcap::image::RgbaImage;
 
@@ -20,9 +19,8 @@ pub struct CasterStreaming {
     pub toggler: bool,
     pub receiver: Arc<Mutex<Receiver<RgbaImage>>>,
     pub frame_to_update: Arc<Mutex<Option<RgbaImage>>>,
-    pub measures: (u32, u32), // width, height
-    pub is_loading: bool,
     pub warning_message: bool,
+    pub viewrs: Arc<RwLock<usize>>,
 }
 
 #[derive(Debug, Clone)]
@@ -41,12 +39,6 @@ impl From<MessageUpdate> for app::Message {
                 println!("{:?}", code);
                 app::Message::KeyShortcut(code)
             }
-
-            _ => {
-                println!("ENTRO");
-                println!("{:?}", message);
-                app::Message::Close
-            }
         }
     }
 }
@@ -62,30 +54,15 @@ impl<'a> Component<'a> for CasterStreaming {
             }
             MessageUpdate::NewFrame(frame) => {
                 //println!("{:?}", frame);
-                self.is_loading = false;
                 *self.frame_to_update.blocking_lock() = Some(frame);
-                self.is_loading = false;
                 Command::none()
             }
-            MessageUpdate::KeyPressed(key_code) => {
-                /*if key_code == self.shortcut.get_blanking_screen_shortcut() {
-                    //manda messaggio
-                    print!("ciaoooo");
-                }
-                else if key_code == self.shortcut.get_manage_trasmition_shortcut() {
-                    print!("ciaooooSoooocaaaa");
-
-                }
-                else if key_code == self.shortcut.get_terminate_session_shortcut() {
-                    print!("123 ale 123");
-                   app::Message::Close;
-                }*/
-                Command::none()
-            }
+            MessageUpdate::KeyPressed(_) => Command::none(),
         }
     }
 
     fn view(&self) -> Element<'_, app::Message> {
+        let viewrs = self.viewrs.read().unwrap();
         // Get the current frame and create an image
         let image = {
             let frame = self.frame_to_update.blocking_lock();
@@ -179,6 +156,12 @@ impl<'a> Component<'a> for CasterStreaming {
                 .build(30)
                 .padding(8)
                 .on_press(app::Message::Close),
+            MyButton::new(&format!("{}", viewrs))
+                .style(Style::Primary)
+                .icon(crate::gui::theme::icon::Icon::Viewers)
+                .build()
+                .padding(8)
+                .on_press(app::Message::Back(app::Page::CasterStreaming)),
         ]
         .align_items(iced::Alignment::Center)
         .padding(8)

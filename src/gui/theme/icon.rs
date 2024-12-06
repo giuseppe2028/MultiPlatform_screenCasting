@@ -20,7 +20,8 @@ pub enum Icon {
     Tools,
     Blanking,
     Phone,
-    Text
+    Text,
+    Viewers
 
 }
 
@@ -46,6 +47,7 @@ impl From<&Icon> for char {
             Icon::Blanking => '\u{F21B}',
             Icon::Phone => '\u{E80A}',
             Icon::Text => '\u{E80C}',
+            Icon::Viewers => '\u{F064}'
         }
     }
 }

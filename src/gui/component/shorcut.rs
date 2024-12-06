@@ -1,7 +1,4 @@
-use std::fmt;
-
 use iced::alignment::{Horizontal, Vertical};
-use iced::keyboard::{self, KeyCode};
 use iced::widget::{container, pick_list, row, Space, text};
 use iced::{Alignment, Command};
 use iced::Length::Fill;
@@ -21,7 +18,7 @@ pub struct Shortcut{
     pub manage_transmission: String,
     pub blancking_screen: String,
     pub terminate_session: String,
-    pub err_key_set:bool,
+    //pub err_key_set:bool,
 }
 
 #[derive(Debug, Clone)]

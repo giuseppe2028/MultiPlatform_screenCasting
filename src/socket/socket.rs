@@ -15,16 +15,8 @@ pub struct SerializableImage {
     height: u32,
     data: Vec<u8>,
 }
-
 impl SerializableImage {
-    pub fn new(width: u32, height: u32, data: Vec<u8>) -> Self {
-        Self {
-            width,
-            height,
-            data,
-        }
-    }
-
+  
     pub fn width(&self) -> u32 {
         self.width
     }
@@ -40,24 +32,18 @@ impl SerializableImage {
 
 #[derive(Clone, Debug)]
 pub struct CasterSocket {
-    ip_addr: String,
+//    ip_addr: String,
     socket: Arc<Option<UdpSocket>>,
     receiver_sockets: Arc<RwLock<Vec<String>>>,
     termination_tx: watch::Sender<bool>, // Mittente del segnale di terminazione
     termination_rx: watch::Receiver<bool>, // Ricevitore del segnale di terminazione
+    notification_tx: watch::Sender<usize>, // Canale per notifiche
+
 }
 
 impl CasterSocket {
-    /*  pub async fn new(ip_addr: &str) -> Self {
-        let socket = UdpSocket::bind(ip_addr).await.unwrap();
-        CasterSocket {
-            receiver_sockets: Arc::new(RwLock::new(vec![])),
-            ip_addr: ip_addr.to_string(),
-            socket: Arc::new(Some(socket)),
-        }
-    } */
 
-    pub async fn new(ip_addr: &str) -> Self {
+    pub async fn new(ip_addr: &str, notification_tx: watch::Sender<usize>) -> Self {
         let socket = UdpSocket::bind(ip_addr).await.unwrap();
         let receiver_sockets = Arc::new(RwLock::new(vec![]));
         let socket_clone = Arc::new(Some(socket));
@@ -66,11 +52,12 @@ impl CasterSocket {
 
 
         let instance = CasterSocket {
-            receiver_sockets: receiver_sockets,
-            ip_addr: ip_addr.to_string(),
+            receiver_sockets,
+            //ip_addr: ip_addr.to_string(), SERVE DAVVERO?? 
             socket: socket_clone,
             termination_tx,
             termination_rx,
+            notification_tx,
         };
 
         // Avvia il task per ascoltare le registrazioni
@@ -131,7 +118,6 @@ impl CasterSocket {
         let mut buf = vec![0; 1024];
         loop {
             tokio::select! {
-                // Ricevi messaggi dal socket
                 result = async {
                     if let Some(socket) = self.socket.as_ref() {
                         socket.recv_from(&mut buf).await
@@ -147,13 +133,15 @@ impl CasterSocket {
                                         println!("Registrato: {}:{}", message.ip, message.port);
                                         let mut receivers = self.receiver_sockets.write().await;
                                         receivers.push(format!("{}:{}", message.ip, message.port));
+                                        let viewer_count = receivers.len();
+                                        let _ = self.notification_tx.send(viewer_count);
                                     }
                                     Action::Disconnect => {
                                         println!("Disconnesso: {}:{}", message.ip, message.port);
                                         let mut receivers = self.receiver_sockets.write().await;
-                                        receivers.retain(|addr| {
-                                            addr != &format!("{}:{}", message.ip, message.port)
-                                        });
+                                        receivers.retain(|addr| addr != &format!("{}:{}", message.ip, message.port));
+                                        let viewer_count = receivers.len();
+                                        let _ = self.notification_tx.send(viewer_count);
                                     }
                                 }
                             } else {
@@ -166,16 +154,16 @@ impl CasterSocket {
                         }
                     }
                 }
-                // Controlla il segnale di terminazione
                 _ = termination_rx.changed() => {
                     if *termination_rx.borrow() {
-                        println!("Ricevuto segnale di terminazione. Uscita dal ciclo.");
+                        println!("Ricevuto segnale di terminazione. Esco dal ciclo.");
                         break;
                     }
                 }
             }
         }
     }
+
 
     pub fn destroy(&mut self) {
         let _ = self.termination_tx.send(true); // Segnala al task di terminare

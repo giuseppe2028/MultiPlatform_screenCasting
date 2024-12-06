@@ -4,7 +4,6 @@ use std::fs::{File, OpenOptions};
 use std::error::Error;
 use std::io::Write;
 use iced::keyboard::KeyCode;
-use std::str::FromStr;
 
 /// La struttura Shortcut
 #[derive(Debug)]
@@ -177,8 +176,8 @@ pub fn from_str_to_key_code(string: &str) -> Result<KeyCode, String> {
     }
 }
 
-pub fn from_key_code_to_string(keyCode:KeyCode)->&'static str{
-    match keyCode {
+pub fn from_key_code_to_string(key_code: KeyCode)->&'static str{
+    match key_code {
         KeyCode::Key1 => "1",
         KeyCode::Key2 => "2",
         KeyCode::Key3 => "3",

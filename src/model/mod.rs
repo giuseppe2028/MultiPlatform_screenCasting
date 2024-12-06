@@ -1,1 +1,1 @@
-pub mod Shortcut;
+pub mod shortcut;
