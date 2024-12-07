@@ -392,7 +392,9 @@ impl Application for App {
                                 return Command::none();
                             }
                         };
+                       // if self.receiver_streaming.recording {
                             controller.start_recording(frame.clone());
+                        //}
                         let _ = self
                             .receiver_streaming
                             .update(UpdateMessage::NewFrame(frame));
