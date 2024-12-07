@@ -19,7 +19,7 @@ use crate::gui::theme::Theme;
 use crate::model::Shortcut::{from_key_code_to_string, ShortcutController};
 use crate::socket::socket::{CasterSocket, ReceiverSocket};
 use crate::utils::utils::get_screen_scaled;
-use iced::keyboard::KeyCode;
+use iced::keyboard::Key;
 use iced::time::{self, Duration};
 use iced::{executor, Application, Command, Subscription};
 use std::sync::Arc;
@@ -82,7 +82,7 @@ pub enum Message {
     Back(Page),
     StartRecording(receiver_streaming::UpdateMessage),
     TogglerChanged(caster_streaming::MessageUpdate),
-    KeyShortcut(KeyCode),
+    KeyShortcut(Key),
     SelectDisplay(Monitor),
     Close,
     UpdateScreen,

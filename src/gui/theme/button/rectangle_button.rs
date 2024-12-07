@@ -1,12 +1,14 @@
 use iced::widget::button::{Appearance, StyleSheet};
 use iced::widget::{button, column, vertical_space};
-use iced::{Background, Color};
+use iced::{Border};
 use std::default::Default;
-
+use iced::Background::Color;
+use iced::border::Radius;
 use crate::gui::theme::button::Style::*;
 use crate::gui::theme::button::{Style, Themed};
 use crate::gui::theme::color::ColorExt;
 use crate::gui::theme::icon::Icon;
+use crate::gui::theme::PaletteColor::Background;
 use crate::gui::theme::text::{text, bold, icon};
 use crate::gui::theme::widget::Button;
 use crate::gui::theme::Theme;
@@ -41,18 +43,20 @@ impl RectangleButton {
         if let Some(_icon) = self.icon.clone() {
             button(
                 column![
-                    vertical_space(12),
+                    vertical_space().height(12),
                     icon(_icon).size(48),  // Icona al centro e grande
-                    vertical_space(14),
+                    vertical_space().height(14.),
                     text(self.text.clone()).size(20)  // Testo sotto
                 ]
-                .align_items(iced::Alignment::Center)  // Allinea il contenuto al centro
+                //TODO @refactor
+                //.align_items(iced::Alignment::Center)  // Allinea il contenuto al centro
             )
         } else {
             button(column![
                 bold(self.text.clone()).size(20)
-            ]
-            .align_items(iced::Alignment::Center))
+            ])
+            //TODO @refactor
+            //.align_items(iced::Alignment::Center))
         }
         .style(Box::new(self) as _)
         .padding([10, 20])  // Aggiungi padding per migliorare l'aspetto
@@ -69,11 +73,15 @@ impl StyleSheet for RectangleButton {
     fn active(&self, style: &Self::Style) -> Appearance {
         let palette = style.palette();
         let partial = Appearance {
-            border_radius: 12.0,
+            border:Border{
+                color: Default::default(),
+                width: 0.0,
+                radius: Radius::from(12.),
+            },
             ..Appearance::default()
         };
         let from = |background: Color, on_background: Color| Appearance {
-            background: background.into(),
+            background: Some(Color(background)),
             text_color: on_background,
             ..partial
         };
@@ -101,6 +109,7 @@ impl StyleSheet for RectangleButton {
         Appearance {
             background: base.background.map(|background| match background {
                 Background::Color(color) => Background::Color(color.mix(state.with_alpha(0.12))),
+                _ => Background
             }),
             ..base
         }
