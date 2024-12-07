@@ -157,7 +157,7 @@ impl<'a> Component<'a> for CasterStreaming {
                 .padding(8)
                 .on_press(app::Message::Close),
             MyButton::new(&format!("{}", viewrs))
-                .style(Style::Primary)
+                .style(Style::Secondary)
                 .icon(crate::gui::theme::icon::Icon::Viewers)
                 .build()
                 .padding(8)
