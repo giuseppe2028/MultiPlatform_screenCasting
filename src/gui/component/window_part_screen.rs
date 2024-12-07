@@ -1,5 +1,5 @@
 use iced::widget::{Image, image, mouse_area, row};
-use iced::{Command, Event, Subscription};
+use iced::{Command, Event, event, Subscription};
 
 use iced::mouse;
 use xcap::image::RgbaImage;
@@ -82,7 +82,7 @@ impl<'a> Component<'a> for WindowPartScreen {
     // Sottoscrizione agli eventi di movimento del mouse
     // Sottoscrizione agli eventi di movimento del mouse
     fn subscription(&self) -> Subscription<MessagePress> {
-        iced::subscription::events_with(|event, _status| {
+        event::listen_with(|event, _status| {
             if let Event::Mouse(mouse::Event::CursorMoved { position }) = event {
                 Some(MessagePress::CursorMoved(position.x, position.y)) // Send message with new position
             } else {

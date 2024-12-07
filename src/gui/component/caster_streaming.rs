@@ -5,16 +5,13 @@ use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::text::text;
 use crate::gui::theme::widget::Element;
-use crate::model::Shortcut::ShortcutController;
 use iced::widget::{container, image, row, Image};
-use iced::{
-    keyboard::{Event::KeyPressed, KeyCode},
-    Event,
-};
+use iced::{keyboard::{Event::KeyPressed}, Event, event};
 use iced::{Command, Subscription};
 use std::sync::Arc;
 use tokio::sync::{mpsc::Receiver, Mutex};
 use xcap::image::RgbaImage;
+use crate::model::Shortcut::ShortcutController;
 
 pub struct CasterStreaming {
     pub toggler: bool,
@@ -30,7 +27,7 @@ pub struct CasterStreaming {
 pub enum MessageUpdate {
     TogglerChanged(bool),
     NewFrame(RgbaImage),
-    KeyPressed(KeyCode),
+    KeyPressed(KeyPressed),
 }
 
 impl From<MessageUpdate> for app::Message {
@@ -229,12 +226,13 @@ impl<'a> Component<'a> for CasterStreaming {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        iced::subscription::events_with(|event, status| match (event, status) {
+        let key = event::listen_with(|event, status| match (event, status) {
             // Scorciatoia: Space -> StopStreaming
-            (Event::Keyboard(KeyPressed { key_code, .. }), ..) => {
-                Some(MessageUpdate::KeyPressed(key_code))
+            (Event::Keyboard(KeyPressed { key, .. }), ..) => {
+                Some(MessageUpdate::KeyPressed(key))
             }
             _ => None,
-        })
+        });
+        key
     }
 }

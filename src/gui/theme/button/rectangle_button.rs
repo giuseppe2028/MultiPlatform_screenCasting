@@ -2,13 +2,13 @@ use iced::widget::button::{Appearance, StyleSheet};
 use iced::widget::{button, column, vertical_space};
 use iced::{Border};
 use std::default::Default;
-use iced::Background::Color;
+use crate::gui::theme::Color;
 use iced::border::Radius;
 use crate::gui::theme::button::Style::*;
 use crate::gui::theme::button::{Style, Themed};
 use crate::gui::theme::color::ColorExt;
 use crate::gui::theme::icon::Icon;
-use crate::gui::theme::PaletteColor::Background;
+use iced::theme::palette::Background;
 use crate::gui::theme::text::{text, bold, icon};
 use crate::gui::theme::widget::Button;
 use crate::gui::theme::Theme;
@@ -80,8 +80,9 @@ impl StyleSheet for RectangleButton {
             },
             ..Appearance::default()
         };
-        let from = |background: Color, on_background: Color| Appearance {
-            background: Some(Color(background)),
+        let from = |background: Color, on_background:Color| Appearance {
+            //TODO fix
+            background: None,
             text_color: on_background,
             ..partial
         };
@@ -109,9 +110,17 @@ impl StyleSheet for RectangleButton {
         Appearance {
             background: base.background.map(|background| match background {
                 Background::Color(color) => Background::Color(color.mix(state.with_alpha(0.12))),
-                _ => Background
+                _ => Background::Color(Default::default())
             }),
             ..base
         }
+    }
+}
+
+impl StyleSheet for button {
+    type Style = ();
+
+    fn active(&self, style: &Self::Style) -> Appearance {
+        todo!()
     }
 }
