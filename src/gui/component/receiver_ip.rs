@@ -17,6 +17,7 @@ use crate::gui::theme::widget::Element;
 
 pub struct ReceiverIp {
     pub indirizzo_ip: String,
+    pub message: String
 }
 
 #[derive(Debug, Clone)]
@@ -43,6 +44,7 @@ impl<'a> Component<'a> for ReceiverIp {
         match message {
             Message::ChangeInput(new_value) => {
                 self.indirizzo_ip = new_value;
+                self.message = "".to_string();
                 Command::none()
             }
             Message::Pressed(_ip) => Command::none(),
@@ -59,6 +61,8 @@ impl<'a> Component<'a> for ReceiverIp {
         .align_x(Horizontal::Left)
         .align_y(Vertical::Top);
 
+        let message = row![crate::gui::theme::text::text(self.message.clone())];
+
         let main_content = container(
             column_iced![
                 row![bold("Insert IP address").size(60)],
@@ -68,6 +72,7 @@ impl<'a> Component<'a> for ReceiverIp {
                     .on_input(|written_ip| {
                         receiver_ip::Message::ChangeInput(written_ip).into()
                     })],
+                    message,
                 row![MyButton::new("Connect")
                     .style(Style::Primary)
                     .build()

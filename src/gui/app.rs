@@ -24,7 +24,6 @@ use iced::time::{self, Duration};
 use iced::{executor, Application, Command, Subscription};
 use rand::Rng;
 use std::sync::{Arc, RwLock};
-use std::thread;
 use tokio::sync::{
     mpsc::{channel, Sender},
     Mutex,
@@ -64,7 +63,6 @@ pub enum Modality {
 #[derive(Debug, Clone)]
 pub enum Page {
     Home,
-    Selection,
     Connection,
     ReceiverIp,
     CasterSettings,
@@ -122,6 +120,7 @@ impl Application for App {
                 },
                 receiver_ip: ReceiverIp {
                     indirizzo_ip: "".to_string(),
+                    message: "".to_string(),
                 },
                 receiver_streaming: ReceiverStreaming {
                     recording: false,
@@ -195,7 +194,7 @@ impl Application for App {
                         Command::none()
                     }
                     Role::Receiver => {
-                        self.current_page = Page::Selection;
+                        self.current_page = Page::ReceiverIp;
                         Command::none()
                     }
                 },
@@ -246,10 +245,17 @@ impl Application for App {
                         },
                     )
                 } else {
-                    self.current_page = Page::ReceiverStreaming;
                     if let Controller::ReceiverController(receiver) = &mut self.controller {
-                        receiver.register();
-                        receiver.start_receiving();
+                        match receiver.register() {
+                            Ok(_) => {
+                                self.current_page = Page::ReceiverStreaming;
+                                receiver.start_receiving();
+                            }
+                            Err(message) => {
+                                self.receiver_ip.message = message;
+                                self.controller = Controller::NotDefined;
+                            }
+                        }
                     }
                     Command::none()
                 }
@@ -257,19 +263,28 @@ impl Application for App {
             Message::ReceiverControllerCreated(socket, sender, page) => {
                 self.controller =
                     Controller::ReceiverController(ReceiverController::new(sender, socket));
-                self.current_page = page;
                 if let Controller::ReceiverController(receiver) = &mut self.controller {
-                    receiver.register();
-                    receiver.start_receiving();
+                    match receiver.register() {
+                        Ok(_) => {
+                            self.current_page = page;
+                            receiver.start_receiving();
+                        }
+                        Err(message) => {
+                            self.receiver_ip.message = message;
+                            self.controller = Controller::NotDefined;
+                        }
+                    }
                 }
                 Command::none()
             }
             Message::Back(page) => {
                 self.current_page = match page {
                     Page::Home => Page::Home,
-                    Page::Selection => Page::Home,
                     Page::Connection => Page::CasterSettings,
-                    Page::ReceiverIp => Page::Home,
+                    Page::ReceiverIp => {
+                        self.receiver_ip.message = "".to_string();
+                        Page::Home
+                    },
                     Page::ReceiverStreaming => Page::Home,
                     Page::CasterSettings => Page::Home,
                     Page::CasterStreaming => Page::Home,
@@ -494,7 +509,10 @@ impl Application for App {
                                         // Ricevi il valore aggiornato
                                         let viewers = *notification_rx.borrow();
                                         *viewrs_clone.write().unwrap() = viewers;
-                                        println!("Numero di visualizzatori aggiornato: {}", viewers);
+                                        println!(
+                                            "Numero di visualizzatori aggiornato: {}",
+                                            viewers
+                                        );
                                     }
                                     println!("TERMINO...");
                                 });
@@ -522,7 +540,10 @@ impl Application for App {
                                         // Ricevi il valore aggiornato
                                         let viewers = *notification_rx.borrow();
                                         *viewrs_clone.write().unwrap() = viewers;
-                                        println!("Numero di visualizzatori aggiornato: {}", viewers);
+                                        println!(
+                                            "Numero di visualizzatori aggiornato: {}",
+                                            viewers
+                                        );
                                     }
                                     println!("TERMINO...");
                                 });
@@ -570,7 +591,6 @@ impl Application for App {
     fn view(&self) -> Element<Message> {
         match self.current_page {
             Page::Home => self.home.view(),
-            Page::Selection => self.receiver_ip.view(),
             Page::Connection => self.connection.view(),
             Page::ReceiverIp => self.receiver_ip.view(),
             Page::ReceiverStreaming => self.receiver_streaming.view(),

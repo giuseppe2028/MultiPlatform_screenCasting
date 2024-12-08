@@ -1,5 +1,5 @@
 use crate::screenshare::screenshare::start_screen_receiving;
-use crate::socket::socket::ReceiverSocket;
+use crate::socket::socket::{ReceiverSocket, RegistrationError};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -37,11 +37,28 @@ impl ReceiverController {
         self.set_handle(Some(handle));
     }
 
-    pub fn register(&self) {
-        let sock_lock = self.socket.blocking_lock();
+    pub fn register(&self) -> Result<String, String> {
+        let mut sock_lock = self.socket.blocking_lock();
         let rt = Runtime::new().unwrap();
-        let _ = rt.block_on(sock_lock.register_with_caster());
-        println!("Ho inviato la richiesta di registrazione!");
+        match rt.block_on(sock_lock.register_with_caster()) {
+            Ok(_) => {
+                println!("Ho inviato la richiesta di registrazione!");
+                Ok("Registrazione completata con successo!".to_string())
+            }
+            Err(e) => {
+                sock_lock.destroy();
+                let user_message = match e {
+                    RegistrationError::InvalidIp => "L'indirizzo IP inserito non è valido.",
+                    RegistrationError::PortParsingError => "La porta specificata non è valida.",
+                    RegistrationError::SocketNotInitialized => "La socket non è stata inizializzata correttamente.",
+                    RegistrationError::ConnectionReset => "Connessione interrotta dal caster.",
+                    RegistrationError::NetworkUnreachable => "La rete non è raggiungibile. Controlla la tua connessione.",
+                    RegistrationError::UnknownError(err) => &format!("{}", err),
+                };
+                println!("Errore durante la registrazione: {}", user_message);
+                Err(user_message.to_string())
+            }
+        }
     }
 
     pub fn unregister(&self) {
@@ -50,7 +67,7 @@ impl ReceiverController {
         let _ = rt.block_on(sock_lock.unregister_with_caster());
         println!("Ho inviato la richiesta di disconessione!");
     }
-    
+
     pub fn set_handle(&mut self, handle: Option<task::JoinHandle<()>>) {
         self.streaming_handle = handle;
     }

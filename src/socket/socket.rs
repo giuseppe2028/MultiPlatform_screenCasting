@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{net::IpAddr, sync::Arc};
 use std::collections::HashMap;
 use tokio::{net::UdpSocket, sync::{watch, RwLock}};
 use xcap::image::RgbaImage;
+use thiserror::Error;
 
 const MTU: usize = 1500; // Dimensione massima del pacchetto
 const UDP_HEADER_SIZE: usize = 8; // Dimensione dell'header UDP
@@ -185,6 +186,23 @@ struct RegistrationMessage {
     action: Action,
 }
 
+#[derive(Error, Debug)]
+pub enum RegistrationError {
+    #[error("IP address is not valid")]
+    InvalidIp,
+    #[error("Port parsing failed")]
+    PortParsingError,
+    #[error("Socket is not initialized")]
+    SocketNotInitialized,
+    #[error("Connection reset by the remote host")]
+    ConnectionReset,
+    #[error("Host unreachable")]
+    NetworkUnreachable,
+    #[error("Unknown error: {0}")]
+    UnknownError(String),
+}
+
+
 #[derive(Clone, Debug)]
 pub struct ReceiverSocket {
     ip_addr_caster: String,
@@ -237,22 +255,53 @@ impl ReceiverSocket {
 
     pub async fn register_with_caster(
         &self,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<(), RegistrationError> {
+        println!("{}", self.ip_addr_caster);
+        // Controlla se l'indirizzo IP del caster è valido
+        let ip_parts: Vec<&str> = self.ip_addr_caster.split(':').collect();
+        if ip_parts.len() != 2 {
+            return Err(RegistrationError::InvalidIp);
+        }
+    
+        // Valida l'IP
+        let ip = ip_parts[0].parse::<IpAddr>();
+        if ip.is_err() {
+            return Err(RegistrationError::InvalidIp);
+        }
+
+        // Valida la porta
+        let port = ip_parts[1].parse::<u16>();
+        if port.is_err() {
+            return Err(RegistrationError::PortParsingError);
+        }
+    
         // Crea il messaggio di registrazione
         let message = RegistrationMessage {
-            ip: self.ip_addr.split(':').next().unwrap().to_string(),
-            port: self.ip_addr.split(':').nth(1).unwrap().parse().unwrap(),
+            ip: ip.unwrap().to_string(),
+            port: port.unwrap(),
             action: Action::Register,
         };
-
-        let serialized = bincode::serialize(&message)?;
-
+    
+        let serialized = match bincode::serialize(&message) {
+            Ok(data) => data,
+            Err(_) => return Err(RegistrationError::UnknownError("Serialization failed".into())),
+        };
+    
         // Controlla se la socket è disponibile
         if let Some(socket) = self.socket.as_ref() {
-            socket.send_to(&serialized, &self.ip_addr_caster).await?;
-            Ok(())
+            // Invia il messaggio di registrazione
+            match socket.send_to(&serialized, &self.ip_addr_caster).await {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    match e.kind() {
+                        tokio::io::ErrorKind::ConnectionReset => Err(RegistrationError::ConnectionReset),
+                        tokio::io::ErrorKind::AddrNotAvailable => Err(RegistrationError::NetworkUnreachable),
+                        _ => Err(RegistrationError::UnknownError(e.to_string())),
+                    }
+                }
+            }
         } else {
-            Err("Socket non inizializzato".into())
+            Err(RegistrationError::SocketNotInitialized)
         }
     }
 
