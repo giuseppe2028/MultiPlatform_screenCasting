@@ -24,6 +24,7 @@ use iced::time::{self, Duration};
 use iced::{executor, Application, Command, Subscription};
 use rand::Rng;
 use std::sync::{Arc, RwLock};
+use std::thread;
 use tokio::sync::{
     mpsc::{channel, Sender},
     Mutex,
@@ -307,6 +308,9 @@ impl Application for App {
                 Command::none()
             }
             Message::TogglerChanged(message) => {
+                /*thread::spawn( move || {
+                    let _ = App::run(iced::Settings::default());
+                });*/
                 let _ = self.caster_streaming.update(message);
                 Command::none()
             }
