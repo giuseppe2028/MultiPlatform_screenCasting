@@ -84,7 +84,7 @@ impl<'a> Component<'a> for CasterSettings {
             Some(self.selected_display.clone()),
             move |message| app::Message::SelectDisplay(message),
         )
-        .font(resource::font::BARLOW)
+
         .width(416);
 
         // Organizzare i pulsanti in una riga o colonna

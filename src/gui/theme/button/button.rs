@@ -1,8 +1,8 @@
 use iced::widget::button::{Appearance, StyleSheet};
 use iced::widget::{button, horizontal_space, row};
-use iced::{Background, Color};
+use iced::{Background, Border, Color};
 use std::default::Default;
-
+use iced::border::Radius;
 use crate::gui::theme::button::Style::*;
 use crate::gui::theme::button::{Style, Themed};
 use crate::gui::theme::color::ColorExt;
@@ -42,7 +42,7 @@ impl MyButton {
             button(
                 row![
                     icon(_icon).size(18),
-                    horizontal_space(8),
+                    horizontal_space().width(8),
                     bold(self.text.clone()).size(20)
                 ]
                 .align_items(iced::Alignment::Center),
@@ -52,7 +52,7 @@ impl MyButton {
             button(row![bold(self.text.clone()).size(20)].align_items(iced::Alignment::Center))
                 .padding([0, 54, 0, 54])
         }
-        .style(Box::new(self) as _)
+            .style(Box::new(self) as Box<dyn Themed>)
         .height(60)
     }
 }
@@ -65,11 +65,15 @@ impl StyleSheet for MyButton {
     fn active(&self, style: &Self::Style) -> Appearance {
         let palette = style.palette();
         let partial = Appearance {
-            border_radius: 32.0,
+            border:Border{
+                color: Default::default(),
+                width: 0.0,
+                radius: Radius::from(32.),
+            },
             ..Appearance::default()
         };
         let from = |background: Color, on_background: Color| Appearance {
-            background: background.into(),
+            background: Some(Background::Color(background)),
             text_color: on_background,
             ..partial
         };
@@ -83,7 +87,7 @@ impl StyleSheet for MyButton {
         }
     }
 
-    fn hovered(&self, style: &Self::Style) -> Appearance {
+  /*  fn hovered(&self, style: &Self::Style) -> Appearance {
         let palette = style.palette();
         let base = self.active(style);
         let state = match self.style {
@@ -97,8 +101,11 @@ impl StyleSheet for MyButton {
         Appearance {
             background: base.background.map(|background| match background {
                 Background::Color(color) => Background::Color(color.mix(state.with_alpha(0.12))),
+                _ => {
+                    Background::Color()
+                }
             }),
             ..base
         }
-    }
+    }*/
 }

@@ -3,7 +3,6 @@ use iced::{Command, Event, Subscription};
 
 use iced::mouse;
 use xcap::image::RgbaImage;
-use crate::column_iced;
 use crate::gui::app;
 use crate::gui::app::Message;
 use crate::gui::component::Component;
@@ -68,13 +67,13 @@ impl<'a> Component<'a> for WindowPartScreen {
             .on_release(MessagePress::SecondPress.into());
 
         // Costruisci la colonna e restituisci l'elemento
-        column_iced![row![mouse_area1],row![
+        column![row![mouse_area1],row![
             MyButton::new("CONNECT")
                     .style(Style::Primary)
                     .build()
                     .on_press(Message::StartPartialSharing(self.screen_dimension.0,self.screen_dimension.1,self.coordinate[0].0 as f64,self.coordinate[0].1 as f64))
         ]
-                .align_items(iced::Alignment::Center)
+
         ].into()
     }
 

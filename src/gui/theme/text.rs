@@ -30,13 +30,13 @@ impl StyleSheet for Theme {
 }
 
 pub fn text<'a>(text: impl ToString) -> Text<'a> {
-    iced::widget::text(text).font(resource::font::BARLOW)
+    iced::widget::text(text)
 }
 
 pub fn bold<'a>(text: impl ToString) -> Text<'a> {
-    iced::widget::text(text).font(resource::font::BARLOW_BOLD)
+    iced::widget::text(text)
 }
 
 pub fn icon<'a>(icon: Icon) -> Text<'a> {
-    text(icon).font(resource::font::ICON)
+    text(icon)
 }

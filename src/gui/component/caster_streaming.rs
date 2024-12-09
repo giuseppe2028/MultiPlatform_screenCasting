@@ -1,12 +1,11 @@
-use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::text::text;
-use crate::gui::theme::widget::Element;
+use crate::gui::theme::widget::{Column, Element};
 use crate::model::Shortcut::ShortcutController;
-use iced::widget::{container, image, row, Image};
+use iced::widget::{container, image, row, Image,column};
 use iced::{
     keyboard::{Event::KeyPressed, KeyCode},
     Event,
@@ -111,7 +110,7 @@ impl<'a> Component<'a> for CasterStreaming {
         };
 
         // Define the annotation buttons
-        let annotation_buttons = column_iced![
+        let annotation_buttons = column![
             CircleButton::new("")
                 .style(Style::Primary)
                 .icon(crate::gui::theme::icon::Icon::Pencil)
@@ -148,9 +147,7 @@ impl<'a> Component<'a> for CasterStreaming {
                 .build(25)
                 .padding(8)
                 .on_press(app::Message::Back(app::Page::CasterStreaming)),
-        ]
-        .padding(8)
-        .spacing(10);
+        ];
 
         // Define the control buttons (e.g., play/pause, tools)
         let menu = row![
@@ -184,45 +181,34 @@ impl<'a> Component<'a> for CasterStreaming {
         .align_items(iced::Alignment::Center)
         .padding(8)
         .spacing(10);
-
         // Define the sidebar and streaming layout
-        let sidebar = column_iced![annotation_buttons]
-            .spacing(8)
-            .align_items(iced::Alignment::Center);
+        let sidebar = column!(annotation_buttons);
 
         let streaming = container(
-            column_iced![image, menu]
-                .spacing(8)
-                .align_items(iced::Alignment::Center),
+            column!(row![image, menu])
         );
 
         let message = row![text("Your screen is blanking")];
         if self.toggler {
             container(
-                column_iced![row![sidebar, streaming]]
-                    .spacing(8)
-                    .align_items(iced::Alignment::Center),
+                column![row![sidebar, streaming]]
             )
             .into()
         } else if self.warning_message {
             container(
-                column_iced![message, row![streaming]]
-                    .spacing(8)
-                    .align_items(iced::Alignment::Center),
+                column!(row![message, row![streaming]])
+
             )
             .into()
         } else if self.toggler && self.warning_message {
             container(
-                column_iced![row![message, sidebar, streaming]]
-                    .spacing(8)
-                    .align_items(iced::Alignment::Center),
+                column!(row![message, sidebar, streaming])
+
             )
             .into()
         } else {
             container(
-                column_iced![row![streaming]]
-                    .spacing(8)
-                    .align_items(iced::Alignment::Center),
+                column![row![streaming]]
             )
             .into()
         }

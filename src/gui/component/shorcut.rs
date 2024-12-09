@@ -6,7 +6,6 @@ use iced::widget::{container, pick_list, row, Space, text};
 use iced::{Alignment, Command};
 use iced::Length::Fill;
 
-use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
@@ -120,8 +119,7 @@ impl<'a> Component<'a> for Shortcut{
         );
 
 
-        container(
-            column_iced![
+        container(column![
                 back_button,
                 container(column_iced![
                              row![bold("Costumize your Shortcuts").size(40)].padding([0,0,0,70]).align_items(Alignment::Center),
@@ -137,19 +135,12 @@ impl<'a> Component<'a> for Shortcut{
                     row![Space::new(20,0),terminate_session_shortcut].padding([0,0,20,0]),
                         ]
                     ].align_items(Alignment::Center),
-                    //bold("scegli le shortcut").size(40)
-
-                    //padding([alto,sx,basso,dx])
-
                 ])
-
                 .width(Fill)
                 .height(Fill)
                 .align_x(Horizontal::Center)
                 .align_y(Vertical::Center)
-            ]
-                .spacing(20),
-        )
+            ].into())
             .into()
     }
 
