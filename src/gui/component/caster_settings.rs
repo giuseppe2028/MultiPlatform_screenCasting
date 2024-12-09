@@ -1,15 +1,14 @@
 use iced::alignment::{Horizontal, Vertical};
-use iced::widget::{container, pick_list, row};
+use iced::widget::{container, pick_list, row, Row};
 use iced::{Command, Length::Fill, Subscription};
 use xcap::Monitor;
 
-use crate::column_iced;
 use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::RectangleButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
-use crate::gui::theme::widget::Element;
+use crate::gui::theme::widget::{Column, Container, Element};
 use crate::gui::{app, resource};
 
 pub struct CasterSettings {
@@ -88,24 +87,27 @@ impl<'a> Component<'a> for CasterSettings {
         .width(416);
 
         // Organizzare i pulsanti in una riga o colonna
-        container(column_iced![
-            back_button,
-            container(
-                column_iced![
-                    row![full_screen_button, window_part_button]
-                        .spacing(16) // Spaziatura tra i pulsanti
-                        .align_items(iced::Alignment::Center),
-                    row![],
-                    row![choose_screen_button].align_items(iced::Alignment::Center)
-                ]
-                .spacing(15)
-            )
-            .width(Fill)
-            .height(Fill)
-            .align_x(Horizontal::Center)
-            .align_y(Vertical::Center)
-        ])
-        .into()
+        container(
+            Column::new()
+                .push(back_button)
+                .push(
+                    Container::new(
+                        Column::new()
+                            .push(
+                                Row::new()
+                                    .push(full_screen_button)
+                                    .push(window_part_button)
+                                    .spacing(16)
+                                    .align_items(iced::Alignment::Center)
+                            )
+                            .push(Row::new().push(choose_screen_button)).align_items(iced::Alignment::Center)
+                            .spacing(16)
+                    )   .width(Fill)
+                        .height(Fill)
+                        .align_x(Horizontal::Center)
+                        .align_y(Vertical::Center)
+                )
+                ).into()
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {

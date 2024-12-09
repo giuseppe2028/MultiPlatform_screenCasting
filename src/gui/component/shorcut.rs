@@ -1,8 +1,8 @@
 use std::fmt;
 
 use iced::alignment::{Horizontal, Vertical};
-use iced::keyboard::{self, KeyCode};
-use iced::widget::{container, pick_list, row, Space, text};
+use iced::keyboard::{self};
+use iced::widget::{container, pick_list, row, Row, Space, text};
 use iced::{Alignment, Command};
 use iced::Length::Fill;
 
@@ -12,7 +12,7 @@ use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
 use crate::gui::theme::text::bold;
-use crate::gui::theme::widget::Element;
+use crate::gui::theme::widget::{Column, Container, Element};
 
 use super::keycodeutils::get_keycode_list;
 
@@ -83,7 +83,7 @@ impl<'a> Component<'a> for Shortcut{
             .align_x(Horizontal::Left)
             .align_y(Vertical::Top);
 
-        let manage_transmission_shortcut = pick_list(
+        /*let manage_transmission_shortcut = pick_list(
             get_keycode_list()
                 .iter()
                 .filter(|key| {
@@ -116,18 +116,48 @@ impl<'a> Component<'a> for Shortcut{
                 .collect::<Vec<String>>(),
             Some(self.blancking_screen.clone()),
             move |key| app::Message::ChosenShortcuts(Shortcuts::BlanckingScreen(key)),
-        );
+        );*/
 
-
-        container(column![
-                back_button,
+        Container::new(
+            Column::new()
+                .push(
+                    back_button
+                )
+                .push(
+                    Column::new().push(
+                        Row::new().push(bold("Costumize your Shortcuts").size(40)).padding([0,0,0,70]).align_items(Alignment::Center),
+                    )
+                        .push(
+                            Row::new().push(
+                                Column::new().push(
+                                    Row::new().push(
+                                        text("Choose a key for pausing/resuming the trasmission").vertical_alignment(Vertical::Center)
+                                    ).push(Space::new(0,20))
+                                ).push(Row::new().push(
+                                    text("Choose a key for blanking the screen").vertical_alignment(Vertical::Center).height(80)
+                                )
+                                ).push(
+                                    Row::new().push(text("Choose a key for terminating the current session").vertical_alignment(Vertical::Center))
+                                        .push(Space::new(0,20))
+                                )
+                            )
+                        )
+                )
+        )
+            .width(Fill)
+            .height(Fill)
+            .align_x(Horizontal::Center)
+            .align_y(Vertical::Center)
+            .into()
+       /* container(column![
+                ,
                 container(column_iced![
-                             row![bold("Costumize your Shortcuts").size(40)].padding([0,0,0,70]).align_items(Alignment::Center),
+                             row![]
                     row![
                         column_iced![
-                            row![text("Choose a key for pausing/resuming the trasmission").vertical_alignment(Vertical::Center),Space::new(0,20),],
-                            row![text("Choose a key for blanking the screen").vertical_alignment(Vertical::Center).height(80),],
-                            row![text("Choose a key for terminating the current session").vertical_alignment(Vertical::Center),Space::new(0,20)]
+                            row![],
+                            row![],
+                            row![,]
                         ],
                         column_iced![
                              row![Space::new(20,0),manage_transmission_shortcut].padding([20,0,20,0]),
@@ -136,12 +166,9 @@ impl<'a> Component<'a> for Shortcut{
                         ]
                     ].align_items(Alignment::Center),
                 ])
-                .width(Fill)
-                .height(Fill)
-                .align_x(Horizontal::Center)
-                .align_y(Vertical::Center)
+
             ].into())
-            .into()
+            .into()*/
     }
 
     type Message = ShortcutMessage;

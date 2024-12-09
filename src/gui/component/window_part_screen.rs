@@ -1,5 +1,5 @@
 use iced::widget::{Image, image, mouse_area, row};
-use iced::{Command, Event, Subscription};
+use iced::{Command, Event, event, Subscription};
 
 use iced::mouse;
 use xcap::image::RgbaImage;
@@ -8,7 +8,7 @@ use crate::gui::app::Message;
 use crate::gui::component::Component;
 use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;
-use crate::gui::theme::widget::Element;
+use crate::gui::theme::widget::{Column, Element, Row};
 use crate::utils::utils:: get_screen_dimension;
 
 pub struct WindowPartScreen {
@@ -67,21 +67,19 @@ impl<'a> Component<'a> for WindowPartScreen {
             .on_release(MessagePress::SecondPress.into());
 
         // Costruisci la colonna e restituisci l'elemento
-        column![row![mouse_area1],row![
-            MyButton::new("CONNECT")
-                    .style(Style::Primary)
-                    .build()
-                    .on_press(Message::StartPartialSharing(self.screen_dimension.0,self.screen_dimension.1,self.coordinate[0].0 as f64,self.coordinate[0].1 as f64))
-        ]
+        let col = Column::new().push(Row::new().push(mouse_area1)).push(Row::new().push(MyButton::new("CONNECT")
+            .style(Style::Primary)
+            .build()
+            .on_press(Message::StartPartialSharing(self.screen_dimension.0,self.screen_dimension.1,self.coordinate[0].0 as f64,self.coordinate[0].1 as f64))));
 
-        ].into()
+        col.into()
     }
 
 
     // Sottoscrizione agli eventi di movimento del mouse
     // Sottoscrizione agli eventi di movimento del mouse
     fn subscription(&self) -> Subscription<MessagePress> {
-        iced::subscription::events_with(|event, _status| {
+        event::listen_with(|event, _status| {
             if let Event::Mouse(mouse::Event::CursorMoved { position }) = event {
                 Some(MessagePress::CursorMoved(position.x, position.y)) // Send message with new position
             } else {

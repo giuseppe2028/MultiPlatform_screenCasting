@@ -3,7 +3,6 @@ use iced::widget::{container, row};
 use iced::{Command, Subscription};
 use iced::Length::Fill;
 
-use crate::column_iced;
 use crate::gui::app;
 use crate::gui::app::Page;
 use crate::gui::component::Component;
@@ -11,7 +10,7 @@ use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
 use crate::gui::theme::text::bold;
-use crate::gui::theme::widget::Element;
+use crate::gui::theme::widget::{Column, Element, Row};
 // use crate::gui::theme::widget::TextInput;
 
 pub struct Home {}
@@ -54,29 +53,28 @@ impl<'a> Component<'a> for Home {
 
     fn view(&self) -> Element<'_, app::Message> {
         container(
-            column_iced![
-                row![bold("MAKE YOUR CHOICE").size(60)],
-                row![
-                    MyButton::new("CASTER")
-                        .style(Style::Primary)
-                        .icon(Icon::CasterHome)
-                        .build()
-                        .on_press(Self::Message::ChosenRole(Role::Caster).into()),
+            Column::new(
+
+            ).push(
+                Row::new().push(bold("MAKE YOUR CHOICE").size(60))
+            ).push(Row::new().push(
+                MyButton::new("CASTER")
+                    .style(Style::Primary)
+                    .icon(Icon::CasterHome)
+                    .build()
+                    .on_press(Self::Message::ChosenRole(Role::Caster).into()))
+                .push(
                     MyButton::new("RECEIVER")
                         .icon(Icon::ReceiverHome)
                         .style(Style::Primary)
                         .build()
                         .on_press(Self::Message::ChosenRole(Role::Receiver).into())
-                ].spacing(10),
-                row![MyButton::new("Shortcut")
-                    .icon(Icon::Tools)
-                    .style(Style::Secondary)
-                    .build()
-                    .on_press(app::Message::Route(Page::Shortcut))]
-                .spacing(20)
-            ]
-            .align_items(iced::Alignment::Center)
-            .spacing(20),
+                ).spacing(10)
+            ).push(Row::new().push(MyButton::new("Shortcut")
+                .icon(Icon::Tools)
+                .style(Style::Secondary)
+                .build()
+                .on_press(app::Message::Route(Page::Shortcut)))).spacing(20).align_items(iced::Alignment::Center)
         )
         .width(Fill)
         .height(Fill)

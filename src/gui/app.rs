@@ -16,14 +16,14 @@ use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
 use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
-use crate::model::Shortcut::{from_key_code_to_string, ShortcutController};
+use crate::model::Shortcut::{from_key_to_string, ShortcutController};
 use crate::socket::socket::{CasterSocket, ReceiverSocket};
 use crate::utils::utils::get_screen_scaled;
-use iced::keyboard::KeyCode;
 use iced::time::{self, Duration};
 use iced::{executor, Application, Command, Subscription};
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
+use iced::keyboard::Key;
 use iced::widget::image;
 use tokio::sync::{
     mpsc::{channel, Sender},
@@ -84,7 +84,7 @@ pub enum Message {
     Back(Page),
     StartRecording(receiver_streaming::UpdateMessage),
     TogglerChanged(caster_streaming::MessageUpdate),
-    KeyShortcut(KeyCode),
+    KeyShortcut(Key),
     SelectDisplay(Monitor),
     Close,
     UpdateScreen,
@@ -153,17 +153,17 @@ impl Application for App {
 
                 shortcut_screen: Shortcut {
                     // @giuseppe2028 metti le funzioni di default
-                    manage_transmission: from_key_code_to_string(
+                    manage_transmission: from_key_to_string(
                         shortcut_controller.get_manage_trasmition_shortcut(),
                     )
                     .to_string(),
                     // @giuseppe2028 metti le funzioni di default
-                    blancking_screen: from_key_code_to_string(
+                    blancking_screen: from_key_to_string(
                         shortcut_controller.get_blanking_screen_shortcut(),
                     )
                     .to_string(),
                     // @giuseppe2028 metti le funzioni di default
-                    terminate_session: from_key_code_to_string(
+                    terminate_session: from_key_to_string(
                         shortcut_controller.get_terminate_session_shortcut(),
                     )
                     .to_string(),
@@ -323,7 +323,7 @@ impl Application for App {
             }
             Message::KeyShortcut(key_code) => {
                 if let Controller::CasterController(caster) = &mut self.controller {
-                    let key_code = from_key_code_to_string(key_code);
+                    let key_code = from_key_to_string(key_code);
                     if self.shortcut_screen.blancking_screen == key_code {
                         self.caster_streaming.warning_message = !self.caster_streaming.warning_message;
                         caster.blanking_streaming();

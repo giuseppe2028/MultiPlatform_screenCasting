@@ -3,15 +3,13 @@ use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::text::text;
-use crate::gui::theme::widget::{Column, Element};
+use crate::gui::theme::widget::{Column, Element, Row};
 use crate::model::Shortcut::ShortcutController;
 use iced::widget::{container, image, row, Image,column};
-use iced::{
-    keyboard::{Event::KeyPressed, KeyCode},
-    Event,
-};
+use iced::{keyboard::{Event::KeyPressed}, Event, event};
 use iced::{Command, Subscription};
 use std::sync::Arc;
+use iced::keyboard::Key;
 use tokio::sync::{mpsc::Receiver, Mutex};
 use xcap::image::RgbaImage;
 
@@ -29,7 +27,7 @@ pub struct CasterStreaming {
 pub enum MessageUpdate {
     TogglerChanged(bool),
     NewFrame(RgbaImage),
-    KeyPressed(KeyCode),
+    KeyPressed(Key),
 }
 
 impl From<MessageUpdate> for app::Message {
@@ -110,47 +108,58 @@ impl<'a> Component<'a> for CasterStreaming {
         };
 
         // Define the annotation buttons
-        let annotation_buttons = column![
+        let annotation_buttons =Column::new().push(
             CircleButton::new("")
                 .style(Style::Primary)
                 .icon(crate::gui::theme::icon::Icon::Pencil)
                 .build(30)
                 .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
-            CircleButton::new("")
-                .style(Style::Primary)
-                .icon(crate::gui::theme::icon::Icon::Rubber)
-                .build(30)
-                .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
-            CircleButton::new("")
-                .style(Style::Primary)
-                .icon(crate::gui::theme::icon::Icon::Triangle)
-                .build(50)
-                .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
-            CircleButton::new("")
-                .style(Style::Primary)
-                .icon(crate::gui::theme::icon::Icon::Square)
-                .build(30)
-                .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
-            CircleButton::new("")
-                .style(Style::Primary)
-                .icon(crate::gui::theme::icon::Icon::Arrow)
-                .build(35)
-                .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
-            CircleButton::new("")
-                .style(Style::Primary)
-                .icon(crate::gui::theme::icon::Icon::Text)
-                .build(25)
-                .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
-        ];
+                .on_press(app::Message::Back(app::Page::CasterStreaming))
+        )
+            .push(
+                CircleButton::new("")
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Rubber)
+                    .build(30)
+                    .padding(8)
+                    .on_press(app::Message::Back(app::Page::CasterStreaming))
+            )
+            .push(
+                CircleButton::new("")
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Triangle)
+                    .build(50)
+                    .padding(8)
+                    .on_press(app::Message::Back(app::Page::CasterStreaming))
+            )
+            .push(
+                CircleButton::new("")
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Square)
+                    .build(30)
+                    .padding(8)
+                    .on_press(app::Message::Back(app::Page::CasterStreaming))
+            )
+            .push(
+                CircleButton::new("")
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Arrow)
+                    .build(35)
+                    .padding(8)
+                    .on_press(app::Message::Back(app::Page::CasterStreaming))
+            )
+            .push(
+                CircleButton::new("")
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Text)
+                    .build(25)
+                    .padding(8)
+                    .on_press(app::Message::Back(app::Page::CasterStreaming))
+            );
+
 
         // Define the control buttons (e.g., play/pause, tools)
-        let menu = row![
+        let menu = Row::new().push(
             CircleButton::new("tools")
                 .style(Style::Primary)
                 .icon(crate::gui::theme::icon::Icon::Tools)
@@ -158,67 +167,81 @@ impl<'a> Component<'a> for CasterStreaming {
                 .padding(8)
                 .on_press(app::Message::TogglerChanged(MessageUpdate::TogglerChanged(
                     !self.toggler
-                ))),
-            CircleButton::new("play/pause")
-                .style(Style::Primary)
-                .icon(crate::gui::theme::icon::Icon::Pause)
-                .build(30)
-                .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
-            CircleButton::new("blank")
-                .style(Style::Primary)
-                .icon(crate::gui::theme::icon::Icon::Blanking)
-                .build(35)
-                .padding(8)
-                .on_press(app::Message::Blanking),
-            CircleButton::new("exit")
-                .style(Style::Danger)
-                .icon(crate::gui::theme::icon::Icon::Phone)
-                .build(30)
-                .padding(8)
-                .on_press(app::Message::Close),
-        ]
+                )))
+        )
+            .push(
+                CircleButton::new("play/pause")
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Pause)
+                    .build(30)
+                    .padding(8)
+                    .on_press(app::Message::Back(app::Page::CasterStreaming))
+            )
+            .push(
+                CircleButton::new("blank")
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Blanking)
+                    .build(35)
+                    .padding(8)
+                    .on_press(app::Message::Blanking)
+            )
+            .push(
+                CircleButton::new("exit")
+                    .style(Style::Danger)
+                    .icon(crate::gui::theme::icon::Icon::Phone)
+                    .build(30)
+                    .padding(8)
+                    .on_press(app::Message::Close)
+            )
         .align_items(iced::Alignment::Center)
         .padding(8)
         .spacing(10);
         // Define the sidebar and streaming layout
-        let sidebar = column!(annotation_buttons);
+        let sidebar = Column::new().push(annotation_buttons);
 
         let streaming = container(
-            column!(row![image, menu])
+            Column::new().push(
+                Row::new().push(image).push(menu)
+            )
         );
 
         let message = row![text("Your screen is blanking")];
         if self.toggler {
             container(
-                column![row![sidebar, streaming]]
+                Column::new().push(
+                    Row::new().push(sidebar).push(streaming)
+                )
             )
             .into()
         } else if self.warning_message {
             container(
-                column!(row![message, row![streaming]])
-
+                Column::new().push(
+                    Row::new().push(message).push(Row::new().push(streaming))
+                )
             )
             .into()
         } else if self.toggler && self.warning_message {
             container(
-                column!(row![message, sidebar, streaming])
-
+                Column::new().push(
+                    Row::new().push(Row::new().push(message).push(sidebar).push(streaming))
+                )
             )
             .into()
         } else {
             container(
-                column![row![streaming]]
+                Column::new().push(
+                    Row::new().push(Row::new().push(streaming))
+                )
             )
             .into()
         }
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        iced::subscription::events_with(|event, status| match (event, status) {
+        event::listen_with(|event, status| match (event, status) {
             // Scorciatoia: Space -> StopStreaming
-            (Event::Keyboard(KeyPressed { key_code, .. }), ..) => {
-                Some(MessageUpdate::KeyPressed(key_code))
+            (Event::Keyboard(KeyPressed { key, .. }), ..) => {
+                Some(MessageUpdate::KeyPressed(key))
             }
             _ => None,
         })

@@ -2,7 +2,6 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{container, row};
 use iced::Length::Fill;
 use iced::Subscription;
-use crate::column_iced;
 use crate::gui::component::Component;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
@@ -11,6 +10,7 @@ use crate::gui::theme::button::circle_button::CircleButton;
 
 use crate::gui::app;
 use crate::gui::theme::button::MyButton;
+use crate::gui::theme::widget::{Column, Row};
 
 pub struct Connection {
     pub ip_address: String,
@@ -47,27 +47,28 @@ impl<'a> Component<'a> for Connection {
         .align_y(Vertical::Top);
 
         let main_content = container(
-            column_iced![
-                row![bold("Your IP address").size(50)].align_items(iced::Alignment::Center),
-                row![text(self.ip_address.clone()).size(30)].align_items(iced::Alignment::Center),
-                row![MyButton::new("CONNECT")
+            Column::new().push(
+                Row::new().push(
+                    bold("Your IP address").size(50)
+                ).align_items(iced::Alignment::Center)
+            )
+                .push(
+                    text(self.ip_address.clone()).size(30)
+                ).align_items(iced::Alignment::Center)
+                .push(MyButton::new("CONNECT")
                     .style(Style::Primary)
                     .build()
-                    .on_press(Message::StartSharing.into())]
-                .align_items(iced::Alignment::Center)
-            ]
-            .align_items(iced::Alignment::Center)
-            .spacing(20),
+                    .on_press(Message::StartSharing.into())).align_items(iced::Alignment::Center).spacing(20)
         )
+
         .width(Fill)
         .height(Fill)
         .align_x(Horizontal::Center)
         .align_y(Vertical::Center);
 
-        container(column_iced![
-            back_button,  // Il pulsante back è al primo posto e separato dal resto
-            main_content  // Contenuto principale
-        ])
+        container(
+            Column::new().push(back_button).push(main_content)
+        )
         .width(Fill)
         .height(Fill)
         .align_x(Horizontal::Center)

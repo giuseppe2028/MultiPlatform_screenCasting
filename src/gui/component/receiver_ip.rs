@@ -1,9 +1,8 @@
 use iced::alignment::{Horizontal, Vertical};
-use iced::widget::{container, row};
+use iced::widget::{container, row, Row};
 use iced::{Command, Subscription};
 use iced::Length::Fill;
 
-use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::receiver_ip;
 use crate::gui::component::Component;
@@ -13,7 +12,7 @@ use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
 use crate::gui::theme::text::bold;
 use crate::gui::theme::textinput::textinput;
-use crate::gui::theme::widget::Element;
+use crate::gui::theme::widget::{Column, Element};
 
 pub struct ReceiverIp {
     pub indirizzo_ip: String,
@@ -60,20 +59,27 @@ impl<'a> Component<'a> for ReceiverIp {
         .align_y(Vertical::Top);
 
         let main_content = container(
-            column_iced![
-                row![bold("Insert IP address").size(60)],
-                row![textinput("192.168.1.1", self.indirizzo_ip.as_str())
-                    .width(300)
-                    .size(27)
-                    .on_input(|written_ip| {
-                        receiver_ip::Message::ChangeInput(written_ip).into()
-                    })],
-                row![MyButton::new("Connect")
-                    .style(Style::Primary)
-                    .build()
-                    .on_press(Message::Pressed(self.indirizzo_ip.clone()).into())]
-                .spacing(20)
-            ]
+
+            Column::new()
+                .push(
+                    Row::new().push(
+                        bold("Insert IP address").size(60)
+                    )
+                )
+                /*.push(
+                    textinput("192.168.1.1", self.indirizzo_ip.as_str())
+                        .width(300)
+                        .size(27)
+                        .on_input(|written_ip| {
+                            receiver_ip::Message::ChangeInput(written_ip).into()
+                        })
+                )*/
+                .push(
+                    MyButton::new("Connect")
+                        .style(Style::Primary)
+                        .build()
+                        .on_press(Message::Pressed(self.indirizzo_ip.clone()).into())
+                ).spacing(20)
             .align_items(iced::Alignment::Center)
             .spacing(20),
         )
@@ -83,10 +89,9 @@ impl<'a> Component<'a> for ReceiverIp {
         .align_y(Vertical::Center);
 
         // Unire il pulsante "Back" con il contenuto principale in un layout a strati
-        container(column_iced![
-            back_button,  // Il pulsante back è al primo posto e separato dal resto
-            main_content  // Contenuto principale
-        ])
+        container(
+            Column::new().push(back_button).push(main_content)
+        )
         .width(Fill)
         .height(Fill)
         .align_x(Horizontal::Center)

@@ -5,7 +5,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 use std::thread::Thread;
-use iced::keyboard::KeyCode::Mute;
 use rand::{Rng, thread_rng};
 use tokio::runtime::Runtime;
 use tokio::sync::{mpsc::Sender, Mutex};

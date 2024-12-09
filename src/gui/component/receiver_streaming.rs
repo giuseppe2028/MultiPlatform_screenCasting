@@ -3,13 +3,12 @@ use iced::{Command, Subscription};
 use std::sync::Arc;
 use tokio::sync::{Mutex, mpsc::Receiver};
 
-use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
-use crate::gui::theme::widget::Element;
+use crate::gui::theme::widget::{Column, Element};
 use xcap::image::RgbaImage;
 
 pub struct ReceiverStreaming {
@@ -103,7 +102,7 @@ impl<'a> Component<'a> for ReceiverStreaming {
         };
         //let screen = column_iced![row![image].spacing(20)];
         container(
-            column_iced![image, buttons]
+            Column::new().push(image).push(buttons)
                 .spacing(8)
                 .align_items(iced::Alignment::Center),
         )
