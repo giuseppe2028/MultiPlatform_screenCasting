@@ -3,12 +3,10 @@ use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::{MyButton, Style};
 use crate::gui::theme::text::text;
-use crate::gui::theme::widget::{Column, Element, Row};
-use crate::model::Shortcut::ShortcutController;
-use iced::widget::{container, image, row, Image,column};
+use crate::gui::theme::widget::Element;
+use iced::widget::{container, image, row, Image};
 use iced::{keyboard::{Event::KeyPressed}, Event, event};
 use iced::{Command, Subscription};
-use std::sync::Arc;
 use iced::keyboard::Key;
 use std::sync::{Arc, RwLock};
 use tokio::sync::{mpsc::Receiver, Mutex};
@@ -143,7 +141,6 @@ impl<'a> Component<'a> for CasterStreaming {
                 .icon(crate::gui::theme::icon::Icon::Pause)
                 .build(30)
                 .padding(8)
-                .on_press(app::Message::StopStreaming),
                 .on_press(app::Message::StopStreaming),
             CircleButton::new("blank")
                 .style(Style::Primary)

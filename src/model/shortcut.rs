@@ -5,8 +5,6 @@ use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::error::Error;
 use std::io::Write;
-use std::str::FromStr;
-/// La struttura Shortcut
 #[derive(Debug)]
 pub struct ShortcutController {
     manage_trasmition: Key,

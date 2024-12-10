@@ -1,6 +1,3 @@
-use iced::alignment;
-use iced::widget::{Text, text};
-
 /// Material Design Icons
 /// https://fonts.google.com/icons
 #[derive(Debug, Clone, Copy)]

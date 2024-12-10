@@ -1,5 +1,5 @@
 use crate::gui::app::App;
-use iced::{Application, Font, Settings};
+use iced::{Application, Settings};
 
 mod gui;
 mod screenshare;

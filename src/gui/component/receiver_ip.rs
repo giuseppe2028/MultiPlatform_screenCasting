@@ -1,5 +1,5 @@
 use iced::alignment::{Horizontal, Vertical};
-use iced::widget::{container, row, Row};
+use iced::widget::{container, row};
 use iced::{Command, Subscription};
 use iced::Length::Fill;
 use crate::column_iced;
@@ -12,7 +12,7 @@ use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
 use crate::gui::theme::text::bold;
 use crate::gui::theme::textinput::textinput;
-use crate::gui::theme::widget::{Column, Element};
+use crate::gui::theme::widget::Element;
 
 pub struct ReceiverIp {
     pub indirizzo_ip: String,
@@ -59,8 +59,6 @@ impl<'a> Component<'a> for ReceiverIp {
             .padding([6, 0, 0, 6])
             .align_x(Horizontal::Left)
             .align_y(Vertical::Top);
-//self.message.clone()
-        let message = row![crate::gui::theme::text::text("ciao")];
 
         let message = row![crate::gui::theme::text::text(self.message.clone())];
 

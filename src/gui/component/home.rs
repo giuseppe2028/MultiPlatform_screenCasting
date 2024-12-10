@@ -1,5 +1,5 @@
 use iced::alignment::{Horizontal, Vertical};
-use iced::widget::{column, container, row};
+use iced::widget::{container, row};
 use iced::{Command, Subscription};
 use iced::Length::Fill;
 use crate::column_iced;
@@ -9,9 +9,8 @@ use crate::gui::component::Component;
 use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
-use crate::gui::theme::text::{bold, text};
-use crate::gui::theme::widget::{Column, Element, Row};
-// use crate::gui::theme::widget::TextInput;
+use crate::gui::theme::text::{bold};
+use crate::gui::theme::widget::Element;
 
 pub struct Home {}
 

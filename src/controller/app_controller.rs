@@ -1,4 +1,3 @@
-use crate::model::Shortcut::ShortcutController;
 use crate::screenshare::screenshare::{start_partial_sharing, start_screen_sharing, take_screenshot,};
 use crate::socket::socket::CasterSocket;
 use std::sync::atomic::{AtomicBool, Ordering};

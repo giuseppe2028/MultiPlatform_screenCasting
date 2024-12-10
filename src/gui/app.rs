@@ -21,18 +21,13 @@ use crate::socket::socket::{CasterSocket, ReceiverSocket};
 use crate::utils::utils::get_screen_scaled;
 use iced::time::{self, Duration};
 use iced::{executor, Application, Command, Subscription, font};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::sync::atomic::Ordering;
 use iced::keyboard::Key;
-use iced::widget::image;
-use tokio::sync::{
-    mpsc::{channel, Sender},
-    Mutex,
-};
+use rand::Rng;
+use tokio::sync::{mpsc::{channel, Sender}, Mutex};
 use xcap::image::RgbaImage;
 use xcap::Monitor;
-use theme::icon::Icon;
-use crate::gui::theme;
 
 pub struct App {
     current_page: Page,

@@ -1,6 +1,5 @@
 use iced::alignment::{Horizontal, Vertical};
-use iced::keyboard::{self};
-use iced::widget::{container, pick_list, row, Row, Space, text};
+use iced::widget::{container, pick_list, row, Space, text};
 use iced::{Alignment, Command};
 use iced::Length::Fill;
 use crate::column_iced;
@@ -10,7 +9,7 @@ use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
 use crate::gui::theme::text::bold;
-use crate::gui::theme::widget::{Column, Container, Element};
+use crate::gui::theme::widget::Element;
 
 use super::keycodeutils::get_keycode_list;
 
@@ -76,7 +75,6 @@ impl<'a> Component<'a> for Shortcut{
             .build(20)
             // probabilmente errata la riga succesiva, dovrebbe essere app::Page::Home ma non va...
             // mentre funziona con app::Page::CasterSettings e app::Page::ReceiverStreaming
-            .on_press(app::Message::Back(app::Page::Shortcut))])
             .on_press(app::Message::Back(app::Page::Shortcut))])
             .padding([6, 0, 0, 6])
             .align_x(Horizontal::Left)

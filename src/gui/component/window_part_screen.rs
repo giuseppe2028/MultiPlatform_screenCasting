@@ -1,4 +1,4 @@
-use iced::widget::{Image, image, mouse_area, row};
+use iced::widget::{Image, image, mouse_area};
 use iced::{Command, Event, event, Subscription};
 
 use iced::mouse;

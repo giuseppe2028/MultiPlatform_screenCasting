@@ -3,7 +3,6 @@ use iced::border::Radius;
 use crate::gui::theme::color::ColorExt;
 use crate::gui::theme::Theme;
 use iced::widget::scrollable::{Scrollbar, Scroller, StyleSheet};
-use iced_aw::menu::Appearance;
 
 impl StyleSheet for Theme {
     type Style = ();

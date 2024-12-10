@@ -5,14 +5,10 @@ use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
-use std::thread::Thread;
-use rand::{Rng, thread_rng};
 use tokio::runtime::Runtime;
 use tokio::sync::{mpsc::Sender, Mutex};
 use tokio::task;
 use xcap::image::RgbaImage;
-use std::fs;
-use std::path::Path;
 
 pub struct ReceiverController {
     pub streaming_handle: Option<task::JoinHandle<()>>,

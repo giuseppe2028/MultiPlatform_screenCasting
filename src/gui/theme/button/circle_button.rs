@@ -1,4 +1,3 @@
-use iced::widget::button;
 use iced::widget::button::{Appearance, StyleSheet};
 use iced::{Background, Border, Color};
 use std::default::Default;
