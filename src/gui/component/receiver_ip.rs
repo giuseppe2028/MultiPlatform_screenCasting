@@ -2,7 +2,7 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{container, row, Row};
 use iced::{Command, Subscription};
 use iced::Length::Fill;
-
+use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::receiver_ip;
 use crate::gui::component::Component;
@@ -54,49 +54,46 @@ impl<'a> Component<'a> for ReceiverIp {
             .icon(Icon::BackLeft)
             .build(20)
             .on_press(app::Message::Back(app::Page::ReceiverIp))])
-        .padding([6, 0, 0, 6])
-        .align_x(Horizontal::Left)
-        .align_y(Vertical::Top);
+            .padding([6, 0, 0, 6])
+            .align_x(Horizontal::Left)
+            .align_y(Vertical::Top);
+//self.message.clone()
+        let message = row![crate::gui::theme::text::text("ciao")];
 
         let main_content = container(
-
-            Column::new()
-                .push(
-                    Row::new().push(
-                        bold("Insert IP address").size(60)
-                    )
-                )
-                /*.push(
-                    textinput("192.168.1.1", self.indirizzo_ip.as_str())
-                        .width(300)
-                        .size(27)
-                        .on_input(|written_ip| {
-                            receiver_ip::Message::ChangeInput(written_ip).into()
-                        })
-                )*/
-                .push(
-                    MyButton::new("Connect")
-                        .style(Style::Primary)
-                        .build()
-                        .on_press(Message::Pressed(self.indirizzo_ip.clone()).into())
-                ).spacing(20)
-            .align_items(iced::Alignment::Center)
-            .spacing(20),
+            column_iced![
+                row![bold("Insert IP address").size(60)],
+                row![textinput("192.168.1.1", self.indirizzo_ip.as_str())
+                    .width(300)
+                    .size(27)
+                    .on_input(|written_ip| {
+                        receiver_ip::Message::ChangeInput(written_ip).into()
+                    })],
+                    message,
+                row![MyButton::new("Connect")
+                    .style(Style::Primary)
+                    .build()
+                    .on_press(Message::Pressed(self.indirizzo_ip.clone()).into())]
+                .spacing(20)
+            ]
+                .align_items(iced::Alignment::Center)
+                .spacing(20),
         )
-        .width(Fill)
-        .height(Fill)
-        .align_x(Horizontal::Center)
-        .align_y(Vertical::Center);
+            .width(Fill)
+            .height(Fill)
+            .align_x(Horizontal::Center)
+            .align_y(Vertical::Center);
 
         // Unire il pulsante "Back" con il contenuto principale in un layout a strati
-        container(
-            Column::new().push(back_button).push(main_content)
-        )
-        .width(Fill)
-        .height(Fill)
-        .align_x(Horizontal::Center)
-        .align_y(Vertical::Center)
-        .into()
+        container(column_iced![
+            back_button,  // Il pulsante back è al primo posto e separato dal resto
+            main_content  // Contenuto principale
+        ])
+            .width(Fill)
+            .height(Fill)
+            .align_x(Horizontal::Center)
+            .align_y(Vertical::Center)
+            .into()
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {

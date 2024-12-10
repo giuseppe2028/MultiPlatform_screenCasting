@@ -8,7 +8,7 @@ use crate::gui::theme::button::{Style, Themed};
 use crate::gui::theme::color::ColorExt;
 use crate::gui::theme::icon::Icon;
 use crate::gui::theme::text::{text, bold, icon};
-use crate::gui::theme::widget::Button;
+use crate::gui::theme::widget::{Button, Column};
 use crate::gui::theme::Theme;
 
 pub struct RectangleButton {
@@ -39,23 +39,27 @@ impl RectangleButton {
 
     pub fn build<'a, Message: 'a>(self) -> Button<'a, Message> {
         if let Some(_icon) = self.icon.clone() {
-            Button::new(column![
-                    vertical_space().height(12),
-                    icon(_icon).size(48),  // Icona al centro e grande
-                    vertical_space().height(14),
-                    text(self.text.clone()).size(20)
-            ])  // Testo sotto)
+            button(
+                Column::new()
+                    .push(vertical_space().width(222))
+                    .push(icon(_icon).size(48))
+                    .push(vertical_space().width(14))
+                    .push(text(self.text.clone()).size(20))
+                    .align_items(iced::Alignment::Center)
+            ) // Allinea il contenuto al centro
         } else {
-            Button::new(column![
+            button(column![
                 bold(self.text.clone()).size(20)
             ])
+
         }
-            .style(Box::new(self) as Box<dyn Themed>)
-        .padding([10, 20])  // Aggiungi padding per migliorare l'aspetto
-        .height(130)
-        .width(200)
+            .style(Box::new(self) as Box<dyn Themed >)
+            .padding([10, 20])  // Aggiungi padding per migliorare l'aspetto
+            .height(130)
+            .width(200)
     }
 }
+
 
 impl Themed for RectangleButton {}
 

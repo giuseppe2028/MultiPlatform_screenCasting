@@ -1,10 +1,10 @@
 use iced::widget::text_input::{Appearance, StyleSheet};
 use iced::{Background, Border, Color};
 use iced::border::Radius;
-use iced::widget::TextInput;
 use crate::gui::app::Message;
 use crate::gui::resource;
 use crate::gui::theme::Theme;
+use crate::gui::theme::widget::TextInput;
 
 #[allow(dead_code)]
 #[derive(Default)]
@@ -71,5 +71,5 @@ impl StyleSheet for Theme {
     }
 }
 pub fn textinput<'a>(placeholder: &str, value: &str) -> TextInput<'a, Message> {
-    iced::widget::text_input(placeholder, value)
+    iced::widget::text_input(placeholder, value).font(resource::font::BARLOW)
 }

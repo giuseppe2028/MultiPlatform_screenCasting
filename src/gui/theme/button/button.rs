@@ -47,10 +47,10 @@ impl MyButton {
                 ]
                 .align_items(iced::Alignment::Center),
             )
-            .padding([0, 49, 0, 44])
+            .padding([16, 49, 0, 44])
         } else {
             button(row![bold(self.text.clone()).size(20)].align_items(iced::Alignment::Center))
-                .padding([0, 54, 0, 54])
+                .padding([16, 54, 0, 54])
         }
             .style(Box::new(self) as Box<dyn Themed>)
         .height(60)

@@ -107,6 +107,7 @@ impl ShortcutController {
 }
 /// Funzione per convertire una stringa in un Key
 pub fn from_str_to_key(string: &str) -> Result<Key, String> {
+    print!("{}",string.to_uppercase().as_str());
     match string.to_uppercase().as_str() {
         "A" => Ok(Key::Character("A".into())),
         "B" => Ok(Key::Character("B".into())),
@@ -205,6 +206,8 @@ pub fn from_key_to_string(key: Key) -> String {
         Key::Named(F10) => "F10".into(),
         Key::Named(F11) => "F11".into(),
         Key::Named(F12) => "F12".into(),
+        Key::Character(letter) => letter.to_uppercase().into(),
+
         _ => "Unknown".into(),
     }
 }

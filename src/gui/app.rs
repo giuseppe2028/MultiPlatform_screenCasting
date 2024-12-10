@@ -20,7 +20,7 @@ use crate::model::Shortcut::{from_key_to_string, ShortcutController};
 use crate::socket::socket::{CasterSocket, ReceiverSocket};
 use crate::utils::utils::get_screen_scaled;
 use iced::time::{self, Duration};
-use iced::{executor, Application, Command, Subscription};
+use iced::{executor, Application, Command, Subscription, font};
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use iced::keyboard::Key;
@@ -31,6 +31,8 @@ use tokio::sync::{
 };
 use xcap::image::RgbaImage;
 use xcap::Monitor;
+use theme::icon::Icon;
+use crate::gui::theme;
 
 pub struct App {
     current_page: Page,
@@ -75,6 +77,7 @@ pub enum Page {
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    FontLoaded(Result<(), font::Error>),
     Route(Page),
     StartSharing,
     RoleChosen(home::Message),
@@ -112,6 +115,7 @@ impl Application for App {
         let (sender_receiver, receiver_receiver) = channel::<RgbaImage>(32); // Define buffer size
         let shortcut_controller = ShortcutController::new_from_file();
         (
+
             Self {
                 current_page: Page::Home,
                 home: Home {},
@@ -171,7 +175,14 @@ impl Application for App {
                 },
                 shortcut_controller,
             },
-            Command::none(),
+            Command::batch(vec![
+                font::load(include_bytes!("../../resources/home-icon.ttf").as_slice())
+                    .map(Message::FontLoaded),
+                font::load(include_bytes!("../../resources/Barlow-Regular.ttf").as_slice())
+                    .map(Message::FontLoaded),
+                font::load(include_bytes!("../../resources/Barlow-Bold.ttf").as_slice())
+                    .map(Message::FontLoaded),
+            ]),
         )
     }
 
@@ -185,6 +196,15 @@ impl Application for App {
 
     fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
         match message {
+            Message::FontLoaded(result)=>{
+                if let Err(error)= result{
+                    println!("{:?}",error);
+                }
+                else{
+                    println!("Font caricato con successo");
+                }
+                Command::none()
+            },
             Message::RoleChosen(role) => match role {
                 home::Message::ChosenRole(role) => match role {
                     Role::Caster => {
@@ -322,8 +342,11 @@ impl Application for App {
                 Command::none()
             }
             Message::KeyShortcut(key_code) => {
+                println!("SOno in in key {:?}",key_code);
                 if let Controller::CasterController(caster) = &mut self.controller {
                     let key_code = from_key_to_string(key_code);
+                    println!(" Key_code {:?}",key_code);
+                    println!("SOno in in self.shorcut {:?}", self.shortcut_screen.blancking_screen);
                     if self.shortcut_screen.blancking_screen == key_code {
                         self.caster_streaming.warning_message = !self.caster_streaming.warning_message;
                         caster.blanking_streaming();
