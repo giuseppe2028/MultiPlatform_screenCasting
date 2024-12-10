@@ -22,8 +22,6 @@ use winapi::um::wingdi::{
 use winapi::um::winuser::{CopyIcon, GetCursorInfo, GetIconInfo, CURSORINFO, ICONINFO};
 #[cfg(target_os = "linux")]
 use x11::xlib;
-// #[cfg(target_os = "linux")]
-// extern crate x11;
 #[cfg(target_os = "linux")]
 use std::ptr;
 #[cfg(target_os = "linux")]

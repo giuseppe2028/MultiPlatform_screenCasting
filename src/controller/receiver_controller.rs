@@ -107,7 +107,7 @@ impl ReceiverController {
             );
             let counter = Arc::clone(&self.counter);
             println!("starto la recording...");
-            let a = thread::spawn(move || {
+            let _ = thread::spawn(move || {
                 let mut counter_guard = counter.blocking_lock(); // Clona il contatore
                 *counter_guard += 1;
                 let path = format!("./target/monitors/monitors-{}.png", *counter_guard);
