@@ -53,9 +53,7 @@ impl<'a> Component<'a> for Home {
 
     fn view(&self) -> Element<'_, app::Message> {
         container(
-            Column::new(
-
-            ).push(
+            Column::new().push(
                 Row::new().push(bold("MAKE YOUR CHOICE").size(60))
             ).push(Row::new().push(
                 MyButton::new("CASTER")
