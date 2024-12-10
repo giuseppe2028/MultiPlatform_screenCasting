@@ -256,7 +256,6 @@ impl ReceiverSocket {
     pub async fn register_with_caster(
         &self,
     ) -> Result<(), RegistrationError> {
-        println!("{}", self.ip_addr_caster);
         // Controlla se l'indirizzo IP del caster è valido
         let ip_parts: Vec<&str> = self.ip_addr_caster.split(':').collect();
         if ip_parts.len() != 2 {
@@ -274,11 +273,16 @@ impl ReceiverSocket {
         if port.is_err() {
             return Err(RegistrationError::PortParsingError);
         }
-    
+
+        let ip_parts_receiver: Vec<&str> = self.ip_addr.split(':').collect();
+        let ip_receiver = ip_parts_receiver[0].parse::<IpAddr>().unwrap();
+        let port_receiver = ip_parts_receiver[1].parse::<u16>().unwrap();
+        println!("Receiver: {} {}", ip_receiver, port_receiver);
+        
         // Crea il messaggio di registrazione
         let message = RegistrationMessage {
-            ip: ip.unwrap().to_string(),
-            port: port.unwrap(),
+            ip: ip_receiver.to_string(),
+            port: port_receiver,
             action: Action::Register,
         };
     

@@ -227,7 +227,7 @@ impl Application for App {
                 if let Controller::NotDefined = &mut self.controller {
                     let sender = self.sender_receiver.clone();
                     let mut rng = rand::thread_rng();
-                    let num: u8 = rng.gen_range(0..10); // Genera un numero casuale tra 0 e 9
+                    let num: u8 = rng.gen_range(1..10); // Genera un numero casuale tra 0 e 9
                     Command::perform(
                         async move {
                             let socket = crate::socket::socket::ReceiverSocket::new(
