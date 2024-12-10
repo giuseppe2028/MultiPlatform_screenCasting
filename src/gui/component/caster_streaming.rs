@@ -5,7 +5,7 @@ use crate::gui::theme::button::{MyButton, Style};
 use crate::gui::theme::text::text;
 use crate::gui::theme::widget::Element;
 use iced::widget::{container, image, row, Image};
-use iced::{keyboard::{Event::KeyPressed}, Event, event};
+use iced::{keyboard::Event::KeyPressed, Event, event};
 use iced::{Command, Subscription};
 use iced::keyboard::Key;
 use std::sync::{Arc, RwLock};

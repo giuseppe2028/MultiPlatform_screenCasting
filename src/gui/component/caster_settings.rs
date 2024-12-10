@@ -8,7 +8,7 @@ use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::RectangleButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
-use crate::gui::theme::widget::{Element};
+use crate::gui::theme::widget::Element;
 use crate::gui::{app, resource};
 
 pub struct CasterSettings {
@@ -84,7 +84,7 @@ impl<'a> Component<'a> for CasterSettings {
             move |message| app::Message::SelectDisplay(message),
         )
             .font(resource::font::BARLOW)
-            .width(416);
+            .width(456);
 
         // Organizzare i pulsanti in una riga o colonna
         container(column_iced![

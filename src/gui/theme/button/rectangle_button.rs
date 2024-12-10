@@ -56,7 +56,7 @@ impl RectangleButton {
             .style(Box::new(self) as Box<dyn Themed >)
             .padding([10, 20])  // Aggiungi padding per migliorare l'aspetto
             .height(130)
-            .width(200)
+            .width(220)
     }
 }
 

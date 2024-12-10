@@ -9,6 +9,8 @@ use tokio::runtime::Runtime;
 use tokio::sync::{mpsc::Sender, Mutex};
 use tokio::task;
 use xcap::image::RgbaImage;
+use std::fs;
+use std::path::Path;
 
 pub struct ReceiverController {
     pub streaming_handle: Option<task::JoinHandle<()>>,
