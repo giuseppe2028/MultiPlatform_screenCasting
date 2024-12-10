@@ -16,7 +16,7 @@ use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
 use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use crate::gui::theme::Theme;
-use crate::model::Shortcut::{from_key_to_string, ShortcutController};
+use crate::model::shortcut::{from_key_to_string, ShortcutController};
 use crate::socket::socket::{CasterSocket, ReceiverSocket};
 use crate::utils::utils::get_screen_scaled;
 use iced::time::{self, Duration};
@@ -48,6 +48,7 @@ pub struct App {
     sender_receiver: Sender<RgbaImage>,
     shortcut_screen: Shortcut,
     shortcut_controller: ShortcutController,
+    notification_rx: Option<tokio::sync::watch::Receiver<usize>>,
 }
 
 enum Controller {
@@ -65,7 +66,6 @@ pub enum Modality {
 #[derive(Debug, Clone)]
 pub enum Page {
     Home,
-    Selection,
     Connection,
     ReceiverIp,
     CasterSettings,
@@ -113,6 +113,7 @@ impl Application for App {
     fn new(_flags: Self::Flags) -> (Self, iced::Command<Self::Message>) {
         let (sender_caster, receiver_caster) = channel::<RgbaImage>(32); // Define buffer size
         let (sender_receiver, receiver_receiver) = channel::<RgbaImage>(32); // Define buffer size
+
         let shortcut_controller = ShortcutController::new_from_file();
         (
 
@@ -124,6 +125,7 @@ impl Application for App {
                 },
                 receiver_ip: ReceiverIp {
                     indirizzo_ip: "".to_string(),
+                    message: "".to_string(),
                 },
                 receiver_streaming: ReceiverStreaming {
                     recording: false,
@@ -139,10 +141,8 @@ impl Application for App {
                     toggler: false,
                     receiver: Arc::new(Mutex::new(receiver_caster)),
                     frame_to_update: Arc::new(Mutex::new(None)),
-                    measures: (0, 0),
-                    is_loading: true,
-                    shortcut: ShortcutController::new_from_file(),
                     warning_message: false,
+                    viewrs: Arc::new(RwLock::new(0)),
                 },
                 windows_part_screen: WindowPartScreen {
                     screenshot: None,
@@ -156,24 +156,21 @@ impl Application for App {
                 sender_receiver,
 
                 shortcut_screen: Shortcut {
-                    // @giuseppe2028 metti le funzioni di default
                     manage_transmission: from_key_to_string(
                         shortcut_controller.get_manage_trasmition_shortcut(),
                     )
                     .to_string(),
-                    // @giuseppe2028 metti le funzioni di default
                     blancking_screen: from_key_to_string(
                         shortcut_controller.get_blanking_screen_shortcut(),
                     )
                     .to_string(),
-                    // @giuseppe2028 metti le funzioni di default
                     terminate_session: from_key_to_string(
                         shortcut_controller.get_terminate_session_shortcut(),
                     )
                     .to_string(),
-                    err_key_set: false,
                 },
                 shortcut_controller,
+                notification_rx: None,
             },
             Command::batch(vec![
                 font::load(include_bytes!("../../resources/home-icon.ttf").as_slice())
@@ -217,7 +214,7 @@ impl Application for App {
                         Command::none()
                     }
                     Role::Receiver => {
-                        self.current_page = Page::Selection;
+                        self.current_page = Page::ReceiverIp;
                         Command::none()
                     }
                 },
@@ -228,11 +225,16 @@ impl Application for App {
             }
             Message::StartSharing => {
                 //devo creare solo la socket
+                let (notification_tx, notification_rx) = tokio::sync::watch::channel(0);
+                self.notification_rx = Some(notification_rx);
                 Command::perform(
                     async move {
                         println!("Creata nuova socket caster");
-                        let socket =
-                            crate::socket::socket::CasterSocket::new("127.0.0.1:8000").await;
+                        let socket = crate::socket::socket::CasterSocket::new(
+                            "127.0.0.1:8000",
+                            notification_tx,
+                        )
+                        .await;
 
                         let page = Page::CasterStreaming;
                         (socket, page)
@@ -244,10 +246,12 @@ impl Application for App {
                 //creo controller e socket insieme tanto il controller non mi serve prima per il receiver
                 if let Controller::NotDefined = &mut self.controller {
                     let sender = self.sender_receiver.clone();
+                    let mut rng = rand::thread_rng();
+                    let num: u8 = rng.gen_range(1..10); // Genera un numero casuale tra 0 e 9
                     Command::perform(
                         async move {
                             let socket = crate::socket::socket::ReceiverSocket::new(
-                                "127.0.0.1:8001",
+                                &format!("127.0.0.1:800{}", num),
                                 &format!("{}:8000", ip_caster),
                             )
                             .await;
@@ -261,10 +265,17 @@ impl Application for App {
                         },
                     )
                 } else {
-                    self.current_page = Page::ReceiverStreaming;
                     if let Controller::ReceiverController(receiver) = &mut self.controller {
-                        receiver.register();
-                        receiver.start_receiving();
+                        match receiver.register() {
+                            Ok(_) => {
+                                self.current_page = Page::ReceiverStreaming;
+                                receiver.start_receiving();
+                            }
+                            Err(message) => {
+                                self.receiver_ip.message = message;
+                                self.controller = Controller::NotDefined;
+                            }
+                        }
                     }
                     Command::none()
                 }
@@ -272,19 +283,28 @@ impl Application for App {
             Message::ReceiverControllerCreated(socket, sender, page) => {
                 self.controller =
                     Controller::ReceiverController(ReceiverController::new(sender, socket));
-                self.current_page = page;
                 if let Controller::ReceiverController(receiver) = &mut self.controller {
-                    receiver.register();
-                    receiver.start_receiving();
+                    match receiver.register() {
+                        Ok(_) => {
+                            self.current_page = page;
+                            receiver.start_receiving();
+                        }
+                        Err(message) => {
+                            self.receiver_ip.message = message;
+                            self.controller = Controller::NotDefined;
+                        }
+                    }
                 }
                 Command::none()
             }
             Message::Back(page) => {
                 self.current_page = match page {
                     Page::Home => Page::Home,
-                    Page::Selection => Page::Home,
                     Page::Connection => Page::CasterSettings,
-                    Page::ReceiverIp => Page::Home,
+                    Page::ReceiverIp => {
+                        self.receiver_ip.message = "".to_string();
+                        Page::Home
+                    },
                     Page::ReceiverStreaming => Page::Home,
                     Page::CasterSettings => Page::Home,
                     Page::CasterStreaming => Page::Home,
@@ -338,6 +358,9 @@ impl Application for App {
                 }
             }
             Message::TogglerChanged(message) => {
+                /*thread::spawn( move || {
+                    let _ = App::run(iced::Settings::default());
+                });*/
                 let _ = self.caster_streaming.update(message);
                 Command::none()
             }
@@ -348,7 +371,8 @@ impl Application for App {
                     println!(" Key_code {:?}",key_code);
                     println!("SOno in in self.shorcut {:?}", self.shortcut_screen.blancking_screen);
                     if self.shortcut_screen.blancking_screen == key_code {
-                        self.caster_streaming.warning_message = !self.caster_streaming.warning_message;
+                        self.caster_streaming.warning_message =
+                            !self.caster_streaming.warning_message;
                         caster.blanking_streaming();
                     } else if self.shortcut_screen.terminate_session == key_code {
                         caster.stop_streaming();
@@ -395,7 +419,9 @@ impl Application for App {
                     caster.close_streaming();
                     self.controller = Controller::NotDefined;
                 } else if let Controller::ReceiverController(receiver) = &mut self.controller {
+                    receiver.unregister();
                     receiver.close_streaming();
+                    *self.receiver_streaming.frame_to_update.blocking_lock() = None;
                     self.controller = Controller::NotDefined;
                 } else {
                     eprintln!("ERRORE NELLA CHIUSURA DELLA CONDIVISIONE SCHERMO");
@@ -415,7 +441,9 @@ impl Application for App {
                                 return Command::none();
                             }
                         };
+                       // if self.receiver_streaming.recording {
                             controller.start_recording(frame.clone());
+                        //}
                         let _ = self
                             .receiver_streaming
                             .update(UpdateMessage::NewFrame(frame));
@@ -438,12 +466,17 @@ impl Application for App {
                 Command::none()
             }
             Message::StartPartialSharing(x, y, start_x, start_y) => {
+                let (notification_tx, notification_rx) = tokio::sync::watch::channel(0);
+                self.notification_rx = Some(notification_rx);
                 //creo la caster socket
                 Command::perform(
                     async move {
                         println!("Creata nuova socket caster");
-                        let socket =
-                            crate::socket::socket::CasterSocket::new("127.0.0.1:8000").await;
+                        let socket = crate::socket::socket::CasterSocket::new(
+                            "127.0.0.1:8000",
+                            notification_tx,
+                        )
+                        .await;
 
                         let page = Page::CasterStreaming;
                         (socket, page)
@@ -509,12 +542,29 @@ impl Application for App {
                                 "x: {} y: {} start_x: {} start_y: {}",
                                 x, y, screen_scaled.0, screen_scaled.1
                             );
-                            caster.listens_for_receivers();
+                            if let Some(notification_rx) = self.notification_rx.clone() {
+                                let viewrs_clone = self.caster_streaming.viewrs.clone();
+                                tokio::spawn(async move {
+                                    let mut notification_rx = notification_rx; // Clona il ricevitore per usarlo nel task
+                                    while notification_rx.changed().await.is_ok() {
+                                        // Ricevi il valore aggiornato
+                                        let viewers = *notification_rx.borrow();
+                                        *viewrs_clone.write().unwrap() = viewers;
+                                        println!(
+                                            "Numero di visualizzatori aggiornato: {}",
+                                            viewers
+                                        );
+                                    }
+                                    println!("TERMINO...");
+                                });
+                            } else {
+                                eprintln!("Errore: notification_rx non è inizializzato!");
+                            }
+                            //caster.listens_for_receivers(); non serve più
                             caster.start_sharing_partial_sharing([
                                 start_screen_scaled,
                                 (screen_scaled),
                             ]);
-                            self.caster_streaming.measures = caster.get_measures();
                             self.current_page = page;
                         } else {
                             eprintln!("ERRORE NEL SETTAGGIO DELLA SOCKET");
@@ -523,9 +573,25 @@ impl Application for App {
                     Modality::Full => {
                         if let Controller::CasterController(caster) = &mut self.controller {
                             caster.set_socket(caster_socket);
-                            caster.listens_for_receivers();
+                            if let Some(notification_rx) = self.notification_rx.clone() {
+                                let viewrs_clone = self.caster_streaming.viewrs.clone();
+                                tokio::spawn(async move {
+                                    let mut notification_rx = notification_rx; // Clona il ricevitore per usarlo nel task
+                                    while notification_rx.changed().await.is_ok() {
+                                        // Ricevi il valore aggiornato
+                                        let viewers = *notification_rx.borrow();
+                                        *viewrs_clone.write().unwrap() = viewers;
+                                        println!(
+                                            "Numero di visualizzatori aggiornato: {}",
+                                            viewers
+                                        );
+                                    }
+                                    println!("TERMINO...");
+                                });
+                            } else {
+                                eprintln!("Errore: notification_rx non è inizializzato!");
+                            }
                             caster.start_sharing();
-                            self.caster_streaming.measures = caster.get_measures();
                             self.current_page = page;
                         } else {
                             eprintln!("ERRORE NEL SETTAGGIO DELLA SOCKET")
@@ -566,7 +632,6 @@ impl Application for App {
     fn view(&self) -> Element<Message> {
         match self.current_page {
             Page::Home => self.home.view(),
-            Page::Selection => self.receiver_ip.view(),
             Page::Connection => self.connection.view(),
             Page::ReceiverIp => self.receiver_ip.view(),
             Page::ReceiverStreaming => self.receiver_streaming.view(),

@@ -1,5 +1,3 @@
-use std::fmt;
-
 use iced::alignment::{Horizontal, Vertical};
 use iced::keyboard::{self};
 use iced::widget::{container, pick_list, row, Row, Space, text};
@@ -20,7 +18,7 @@ pub struct Shortcut{
     pub manage_transmission: String,
     pub blancking_screen: String,
     pub terminate_session: String,
-    pub err_key_set:bool,
+    //pub err_key_set:bool,
 }
 
 #[derive(Debug, Clone)]
@@ -78,6 +76,7 @@ impl<'a> Component<'a> for Shortcut{
             .build(20)
             // probabilmente errata la riga succesiva, dovrebbe essere app::Page::Home ma non va...
             // mentre funziona con app::Page::CasterSettings e app::Page::ReceiverStreaming
+            .on_press(app::Message::Back(app::Page::Shortcut))])
             .on_press(app::Message::Back(app::Page::Shortcut))])
             .padding([6, 0, 0, 6])
             .align_x(Horizontal::Left)

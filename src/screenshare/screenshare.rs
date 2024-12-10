@@ -20,6 +20,16 @@ use winapi::um::wingdi::{
 };
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::{CopyIcon, GetCursorInfo, GetIconInfo, CURSORINFO, ICONINFO};
+#[cfg(target_os = "linux")]
+use x11::xlib;
+#[cfg(target_os = "linux")]
+use std::ptr;
+#[cfg(target_os = "linux")]
+use std::slice;
+#[cfg(target_os = "linux")]
+use x11::xfixes::*;
+#[cfg(target_os = "linux")]
+use x11::xlib::*;
 
 pub async fn start_screen_sharing(
     monitor: Arc<std::sync::Mutex<Monitor>>,
@@ -89,6 +99,14 @@ pub async fn start_screen_sharing(
             }
         }
 
+        // Overlay del cursore per Linux
+        #[cfg(target_os = "linux")]
+        {
+            if let Some(cursor_data) = get_cursor_image() {
+                overlay_cursor_on_frame(&mut raw_data, width, height, &cursor_data);
+            }
+        }
+
         // Validazione della lunghezza del buffer
         if raw_data.len() != (width * height * 4) as usize {
             eprintln!(
@@ -138,6 +156,7 @@ pub async fn start_screen_receiving(
     socket: Arc<Mutex<ReceiverSocket>>,
 ) {
     while !stop_flag.load(Ordering::Relaxed) {
+        // non possiamo metterla four dal while perchè si bugga nela chiusura
         let sock_lock = socket.lock().await;
 
         // Timeout di 1 secondo per la ricezione
@@ -226,6 +245,17 @@ pub async fn start_partial_sharing(
                 {
                     if let Some((cursor_x, cursor_y)) = get_cursor_position() {
                         overlay_cursor_on_frame(&mut raw_data, width, height, cursor_x, cursor_y);
+                    }
+                }
+                #[cfg(target_os = "linux")]
+                {
+                    // if let Some((cursor_x, cursor_y)) = get_cursor_position() {
+                    //     overlay_cursor_on_frame(&mut raw_data, width, height, cursor_x, cursor_y);
+                    // }
+                    if let Some(cursor_data) = get_cursor_image() {
+                        overlay_cursor_on_frame(&mut raw_data, width, height, &cursor_data);
+                    } else {
+                        eprintln!("Impossibile ottenere il cursore.");
                     }
                 }
 
@@ -542,5 +572,165 @@ fn overlay_cursor_on_frame(
                 }
             }
         }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn get_cursor_position() -> Option<(i32, i32)> {
+    unsafe {
+        let display = xlib::XOpenDisplay(std::ptr::null());
+        if display.is_null() {
+            return None;
+        }
+
+        let root = xlib::XDefaultRootWindow(display);
+        let mut root_x: i32 = 0;
+        let mut root_y: i32 = 0;
+        let mut win_x: i32 = 0;
+        let mut win_y: i32 = 0;
+        let mut mask: u32 = 0;
+        let mut child: xlib::Window = 0;
+
+        xlib::XQueryPointer(
+            display,
+            root,
+            &mut child,
+            &mut child,
+            &mut root_x,
+            &mut root_y,
+            &mut win_x,
+            &mut win_y,
+            &mut mask,
+        );
+
+        xlib::XCloseDisplay(display);
+        Some((root_x, root_y))
+    }
+}
+
+// #[cfg(target_os = "linux")]
+// fn overlay_cursor_on_frame(
+//     raw_data: &mut Vec<u8>,
+//     frame_width: u32,
+//     frame_height: u32,
+//     cursor_x: i32,
+//     cursor_y: i32,
+// ) {
+//     // Simple cursor representation (white crosshair)
+//     let cursor_size = 20;
+//     let half_size = cursor_size / 2;
+
+//     // Draw vertical line
+//     for y in -half_size..half_size {
+//         let frame_y = cursor_y + y;
+//         if frame_y >= 0 && frame_y < frame_height as i32 {
+//             let frame_x = cursor_x;
+//             if frame_x >= 0 && frame_x < frame_width as i32 {
+//                 let index = ((frame_y as u32 * frame_width + frame_x as u32) * 4) as usize;
+//                 if index + 3 < raw_data.len() {
+//                     raw_data[index] = 255; // B
+//                     raw_data[index + 1] = 255; // G
+//                     raw_data[index + 2] = 255; // R
+//                     raw_data[index + 3] = 255; // A
+//                 }
+//             }
+//         }
+//     }
+
+//     // Draw horizontal line
+//     for x in -half_size..half_size {
+//         let frame_x = cursor_x + x;
+//         if frame_x >= 0 && frame_x < frame_width as i32 {
+//             let frame_y = cursor_y;
+//             if frame_y >= 0 && frame_y < frame_height as i32 {
+//                 let index = ((frame_y as u32 * frame_width + frame_x as u32) * 4) as usize;
+//                 if index + 3 < raw_data.len() {
+//                     raw_data[index] = 255; // B
+//                     raw_data[index + 1] = 255; // G
+//                     raw_data[index + 2] = 255; // R
+//                     raw_data[index + 3] = 255; // A
+//                 }
+//             }
+//         }
+//     }
+// }
+#[cfg(target_os = "linux")]
+fn overlay_cursor_on_frame(
+    raw_data: &mut Vec<u8>,
+    frame_width: u32,
+    frame_height: u32,
+    cursor_data: &(Vec<u64>, u32, u32, i32, i32),
+) {
+    let (pixels, cursor_width, cursor_height, cursor_x, cursor_y) = cursor_data;
+
+    for cy in 0..*cursor_height as i32 {
+        for cx in 0..*cursor_width as i32 {
+            let frame_x = cursor_x + cx;
+            let frame_y = cursor_y + cy;
+
+            if frame_x >= 0
+                && frame_x < frame_width as i32
+                && frame_y >= 0
+                && frame_y < frame_height as i32
+            {
+                let frame_index = ((frame_y as u32 * frame_width + frame_x as u32) * 4) as usize;
+                let cursor_index = (cy as u32 * *cursor_width + cx as u32) as usize;
+
+                if frame_index + 3 < raw_data.len() && cursor_index < pixels.len() {
+                    let pixel = pixels[cursor_index];
+                    let a = ((pixel >> 24) & 0xFF) as f32 / 255.0;
+                    let r = ((pixel >> 16) & 0xFF) as u8;
+                    let g = ((pixel >> 8) & 0xFF) as u8;
+                    let b = (pixel & 0xFF) as u8;
+
+                    // Alpha blending
+                    raw_data[frame_index] =
+                        (raw_data[frame_index] as f32 * (1.0 - a) + b as f32 * a) as u8;
+                    raw_data[frame_index + 1] =
+                        (raw_data[frame_index + 1] as f32 * (1.0 - a) + g as f32 * a) as u8;
+                    raw_data[frame_index + 2] =
+                        (raw_data[frame_index + 2] as f32 * (1.0 - a) + r as f32 * a) as u8;
+                    raw_data[frame_index + 3] = 255; // Set alpha to full opacity
+                }
+            }
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn get_cursor_image() -> Option<(Vec<u64>, u32, u32, i32, i32)> {
+    unsafe {
+        // Apri una connessione al display X11
+        let display = XOpenDisplay(ptr::null());
+        if display.is_null() {
+            eprintln!("Errore: impossibile aprire il display X11.");
+            return None;
+        }
+
+        // Ottieni l'immagine del cursore
+        let cursor_image = XFixesGetCursorImage(display);
+        if cursor_image.is_null() {
+            eprintln!("Errore: impossibile ottenere l'immagine del cursore.");
+            XCloseDisplay(display);
+            return None;
+        }
+
+        // Estrai i dati dell'immagine
+        let width = (*cursor_image).width;
+        let height = (*cursor_image).height;
+        let x = (*cursor_image).x;
+        let y = (*cursor_image).y;
+
+        // Copia i pixel in un `Vec<u32>`
+        let pixels_ptr = (*cursor_image).pixels;
+        let pixels = slice::from_raw_parts(pixels_ptr, (width * height) as usize);
+        let pixels_vec = pixels.to_vec();
+
+        // Libera la memoria allocata
+        XFree(cursor_image as *mut _);
+        XCloseDisplay(display);
+
+        // Restituisci l'immagine del cursore
+        Some((pixels_vec, width as u32, height as u32, x as i32, y as i32))
     }
 }

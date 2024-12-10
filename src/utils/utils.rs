@@ -1,4 +1,4 @@
-pub fn rgb_to_rgba(rgb_buffer: Vec<u8>) -> Vec<u8> {
+/*pub fn rgb_to_rgba(rgb_buffer: Vec<u8>) -> Vec<u8> {
     let rgb_len = rgb_buffer.len();
     let mut rgba_buffer = Vec::with_capacity((rgb_len / 3) * 4); // Ogni pixel RGB diventa RGBA
 
@@ -11,10 +11,10 @@ pub fn rgb_to_rgba(rgb_buffer: Vec<u8>) -> Vec<u8> {
     }
 
     rgba_buffer
-}
+}*/
 
 // Funzione da BGR0 a RGBA
-pub fn bgr0_to_rgba(bgr0_buffer: Vec<u8>) -> Vec<u8> {
+/*pub fn bgr0_to_rgba(bgr0_buffer: Vec<u8>) -> Vec<u8> {
     let bgr0_len = bgr0_buffer.len();
     let mut rgba_buffer = Vec::with_capacity((bgr0_len / 4) * 4); // Ogni pixel BGR0 diventa RGBA
 
@@ -26,10 +26,10 @@ pub fn bgr0_to_rgba(bgr0_buffer: Vec<u8>) -> Vec<u8> {
     }
 
     rgba_buffer
-}
+}*/
 
 // Funzione da RGBx a RGBA
-pub fn rgbx_to_rgba(rgbx_buffer: Vec<u8>) -> Vec<u8> {
+/*pub fn rgbx_to_rgba(rgbx_buffer: Vec<u8>) -> Vec<u8> {
     let rgbx_len = rgbx_buffer.len();
     let mut rgba_buffer = Vec::with_capacity((rgbx_len / 4) * 4); // Ogni pixel RGBx diventa RGBA
 
@@ -41,10 +41,10 @@ pub fn rgbx_to_rgba(rgbx_buffer: Vec<u8>) -> Vec<u8> {
     }
 
     rgba_buffer
-}
+}*/
 
 // Funzione da XBGR a RGBA
-pub fn xbgr_to_rgba(xbgr_buffer: Vec<u8>) -> Vec<u8> {
+/*pub fn xbgr_to_rgba(xbgr_buffer: Vec<u8>) -> Vec<u8> {
     let xbgr_len = xbgr_buffer.len();
     let mut rgba_buffer = Vec::with_capacity((xbgr_len / 4) * 4); // Ogni pixel XBGR diventa RGBA
 
@@ -56,10 +56,10 @@ pub fn xbgr_to_rgba(xbgr_buffer: Vec<u8>) -> Vec<u8> {
     }
 
     rgba_buffer
-}
+}*/
 
 // Funzione da BGRx a RGBA
-pub fn bgrx_to_rgba(bgrx_buffer: Vec<u8>) -> Vec<u8> {
+/*pub fn bgrx_to_rgba(bgrx_buffer: Vec<u8>) -> Vec<u8> {
     let bgrx_len = bgrx_buffer.len();
     let mut rgba_buffer = Vec::with_capacity((bgrx_len / 4) * 4); // Ogni pixel BGRx diventa RGBA
 
@@ -71,10 +71,10 @@ pub fn bgrx_to_rgba(bgrx_buffer: Vec<u8>) -> Vec<u8> {
     }
 
     rgba_buffer
-}
+}*/
 
 // Funzione da BGRA a RGBA
-pub fn bgra_to_rgba(bgra_buffer: Vec<u8>) -> Vec<u8> {
+/*pub fn bgra_to_rgba(bgra_buffer: Vec<u8>) -> Vec<u8> {
     let bgra_len = bgra_buffer.len();
     let mut rgba_buffer = Vec::with_capacity(bgra_len); // Ogni pixel BGRA diventa RGBA
 
@@ -86,7 +86,7 @@ pub fn bgra_to_rgba(bgra_buffer: Vec<u8>) -> Vec<u8> {
     }
 
     rgba_buffer
-}
+}*/
 
 
 pub fn get_screen_dimension(a:(f32,f32), b:(f32,f32))->(f32,f32){
@@ -110,6 +110,6 @@ pub fn get_screen_scaled(relative_dimension_x:f64,relative_dimension_y:f64,scree
     return (new_x,new_y);
 }
 
-pub fn get_y_scaled(new_x:f32,real_screen_x:f32,real_screen_y:f32)->f32{
+/*pub fn get_y_scaled(new_x:f32,real_screen_x:f32,real_screen_y:f32)->f32{
     return (new_x*real_screen_y)/real_screen_x;
-}
+}*/
