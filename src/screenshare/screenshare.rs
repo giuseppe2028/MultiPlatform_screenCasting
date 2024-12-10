@@ -20,6 +20,8 @@ use winapi::um::wingdi::{
 };
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::{CopyIcon, GetCursorInfo, GetIconInfo, CURSORINFO, ICONINFO};
+#[cfg(target_os = "linux")]
+use x11::xlib;
 
 pub async fn start_screen_sharing(
     monitor: Arc<std::sync::Mutex<Monitor>>,
@@ -83,6 +85,14 @@ pub async fn start_screen_sharing(
 
         // Overlay del cursore per macOS
         #[cfg(target_os = "macos")]
+        {
+            if let Some((cursor_x, cursor_y)) = get_cursor_position() {
+                overlay_cursor_on_frame(&mut raw_data, width, height, cursor_x, cursor_y);
+            }
+        }
+
+        // Overlay del cursore per Linux
+        #[cfg(target_os = "linux")]
         {
             if let Some((cursor_x, cursor_y)) = get_cursor_position() {
                 overlay_cursor_on_frame(&mut raw_data, width, height, cursor_x, cursor_y);
@@ -223,6 +233,12 @@ pub async fn start_partial_sharing(
                     }
                 }
                 #[cfg(target_os = "macos")]
+                {
+                    if let Some((cursor_x, cursor_y)) = get_cursor_position() {
+                        overlay_cursor_on_frame(&mut raw_data, width, height, cursor_x, cursor_y);
+                    }
+                }
+                #[cfg(target_os = "linux")]
                 {
                     if let Some((cursor_x, cursor_y)) = get_cursor_position() {
                         overlay_cursor_on_frame(&mut raw_data, width, height, cursor_x, cursor_y);
@@ -539,6 +555,86 @@ fn overlay_cursor_on_frame(
                     raw_data[frame_index + 1] = 0; // G
                     raw_data[frame_index + 2] = 0; // R
                     raw_data[frame_index + 3] = 255; // A (opaco)
+                }
+            }
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn get_cursor_position() -> Option<(i32, i32)> {
+    unsafe {
+        let display = xlib::XOpenDisplay(std::ptr::null());
+        if display.is_null() {
+            return None;
+        }
+
+        let root = xlib::XDefaultRootWindow(display);
+        let mut root_x: i32 = 0;
+        let mut root_y: i32 = 0;
+        let mut win_x: i32 = 0;
+        let mut win_y: i32 = 0;
+        let mut mask: u32 = 0;
+        let mut child: xlib::Window = 0;
+
+        xlib::XQueryPointer(
+            display,
+            root,
+            &mut child,
+            &mut child,
+            &mut root_x,
+            &mut root_y,
+            &mut win_x,
+            &mut win_y,
+            &mut mask,
+        );
+
+        xlib::XCloseDisplay(display);
+        Some((root_x, root_y))
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn overlay_cursor_on_frame(
+    raw_data: &mut Vec<u8>,
+    frame_width: u32,
+    frame_height: u32,
+    cursor_x: i32,
+    cursor_y: i32,
+) {
+    // Simple cursor representation (white crosshair)
+    let cursor_size = 20;
+    let half_size = cursor_size / 2;
+
+    // Draw vertical line
+    for y in -half_size..half_size {
+        let frame_y = cursor_y + y;
+        if frame_y >= 0 && frame_y < frame_height as i32 {
+            let frame_x = cursor_x;
+            if frame_x >= 0 && frame_x < frame_width as i32 {
+                let index = ((frame_y as u32 * frame_width + frame_x as u32) * 4) as usize;
+                if index + 3 < raw_data.len() {
+                    raw_data[index] = 255; // B
+                    raw_data[index + 1] = 255; // G
+                    raw_data[index + 2] = 255; // R
+                    raw_data[index + 3] = 255; // A
+                }
+            }
+        }
+    }
+
+    // Draw horizontal line
+    for x in -half_size..half_size {
+        let frame_x = cursor_x + x;
+        if frame_x >= 0 && frame_x < frame_width as i32 {
+            let frame_y = cursor_y;
+            if frame_y >= 0 && frame_y < frame_height as i32 {
+                let index = ((frame_y as u32 * frame_width + frame_x as u32) * 4) as usize;
+                if index + 3 < raw_data.len() {
+                    raw_data[index] = 255; // B
+                    raw_data[index + 1] = 255; // G
+                    raw_data[index + 2] = 255; // R
+                    raw_data[index + 3] = 255; // A
                 }
             }
         }
