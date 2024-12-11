@@ -1,4 +1,5 @@
 use super::component::caster_streaming;
+use iced::multi_window::Application;
 use crate::controller::app_controller::AppController;
 use crate::controller::receiver_controller::ReceiverController;
 use crate::gui::component::caster_settings;
@@ -14,16 +15,21 @@ use crate::gui::component::receiver_streaming::{ReceiverStreaming, UpdateMessage
 use crate::gui::component::shorcut::{Shortcut, ShortcutMessage, Shortcuts};
 use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
 use crate::gui::component::{home, Component};
-use crate::gui::theme::widget::Element;
+use crate::gui::theme::widget::{Container, Element};
 use crate::gui::theme::Theme;
 use crate::model::shortcut::{from_key_to_string, ShortcutController};
 use crate::socket::socket::{CasterSocket, ReceiverSocket};
 use crate::utils::utils::get_screen_scaled;
 use iced::time::{self, Duration};
-use iced::{executor, Application, Command, Subscription, font};
+use iced::{executor, Command, Subscription, font, window, Size, Color, Background, Border, Length};
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::Ordering;
+use futures::FutureExt;
 use iced::keyboard::Key;
+use iced::widget::{container, Text};
+use iced::widget::container::Appearance;
+use iced::window::{Level, Position, Settings};
+use iced::window::settings::PlatformSpecific;
 use rand::Rng;
 use tokio::sync::{mpsc::{channel, Sender}, Mutex};
 use xcap::image::RgbaImage;
@@ -44,6 +50,7 @@ pub struct App {
     shortcut_screen: Shortcut,
     shortcut_controller: ShortcutController,
     notification_rx: Option<tokio::sync::watch::Receiver<usize>>,
+    second_window_id: Option<window::Id>,
 }
 
 enum Controller {
@@ -111,7 +118,6 @@ impl Application for App {
 
         let shortcut_controller = ShortcutController::new_from_file();
         (
-
             Self {
                 current_page: Page::Home,
                 home: Home {},
@@ -154,18 +160,19 @@ impl Application for App {
                     manage_transmission: from_key_to_string(
                         shortcut_controller.get_manage_trasmition_shortcut(),
                     )
-                    .to_string(),
+                        .to_string(),
                     blancking_screen: from_key_to_string(
                         shortcut_controller.get_blanking_screen_shortcut(),
                     )
-                    .to_string(),
+                        .to_string(),
                     terminate_session: from_key_to_string(
                         shortcut_controller.get_terminate_session_shortcut(),
                     )
-                    .to_string(),
+                        .to_string(),
                 },
                 shortcut_controller,
                 notification_rx: None,
+                second_window_id: None,
             },
             Command::batch(vec![
                 font::load(include_bytes!("../../resources/home-icon.ttf").as_slice())
@@ -178,25 +185,36 @@ impl Application for App {
         )
     }
 
-    fn title(&self) -> String {
-        String::from("MultiPlatform ScreenSharing")
+    fn title(&self, window_id: window::Id) -> String {
+        if window_id == window::Id::MAIN {
+            String::from("MultiPlatform ScreenSharing")
+        } else if Some(window_id) == self.second_window_id {
+            "Second Window".to_owned()
+        } else {
+            unreachable!("invalid window")
+        }
     }
 
-    fn theme(&self) -> Self::Theme {
-        Theme::Dark
+    fn theme(&self, window_id: window::Id) -> Self::Theme {
+        if window_id == window::Id::MAIN{
+            Theme::Dark
+        }else if Some(window_id) == self.second_window_id {
+            Theme::Transparent
+        }else{
+            unreachable!("invalid window")
+        }
     }
 
     fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
         match message {
-            Message::FontLoaded(result)=>{
-                if let Err(error)= result{
-                    println!("{:?}",error);
-                }
-                else{
+            Message::FontLoaded(result) => {
+                if let Err(error) = result {
+                    println!("{:?}", error);
+                } else {
                     println!("Font caricato con successo");
                 }
                 Command::none()
-            },
+            }
             Message::RoleChosen(role) => match role {
                 home::Message::ChosenRole(role) => match role {
                     Role::Caster => {
@@ -229,7 +247,7 @@ impl Application for App {
                             "127.0.0.1:8000",
                             notification_tx,
                         )
-                        .await;
+                            .await;
 
                         let page = Page::CasterStreaming;
                         (socket, page)
@@ -249,7 +267,7 @@ impl Application for App {
                                 &format!("127.0.0.1:800{}", num),
                                 &format!("{}:8000", ip_caster),
                             )
-                            .await;
+                                .await;
                             let page = Page::ReceiverStreaming;
                             (socket, sender, page)
                         },
@@ -299,7 +317,7 @@ impl Application for App {
                     Page::ReceiverIp => {
                         self.receiver_ip.message = "".to_string();
                         Page::Home
-                    },
+                    }
                     Page::ReceiverStreaming => Page::Home,
                     Page::CasterSettings => Page::Home,
                     Page::CasterStreaming => Page::Home,
@@ -337,15 +355,15 @@ impl Application for App {
                 println!("entro dentro recording");
                 match &self.controller {
                     Controller::ReceiverController(receiver_controller) => {
-                        if receiver_controller.is_recording.load(Ordering::Relaxed){
+                        if receiver_controller.is_recording.load(Ordering::Relaxed) {
                             receiver_controller.stop_recording();
                         }
                         receiver_controller.is_recording.store(!receiver_controller.is_recording.load(Ordering::Relaxed), Ordering::Relaxed);
-                        print!("sono in start recording {}",receiver_controller.is_recording.load(Ordering::Relaxed));
+                        print!("sono in start recording {}", receiver_controller.is_recording.load(Ordering::Relaxed));
                         // Se `self.controller` è di tipo `ReceiverController`, fai qualcosa
                         let _ = self.receiver_streaming.update(message);
                         Command::none()
-                    },
+                    }
                     _ => {
                         let _ = self.receiver_streaming.update(message);
                         Command::none()
@@ -353,17 +371,31 @@ impl Application for App {
                 }
             }
             Message::TogglerChanged(message) => {
-                /*thread::spawn( move || {
-                    let _ = App::run(iced::Settings::default());
-                });*/
+                println!("open");
+                let (second_window_id, command) = window::spawn::<Message>(window::Settings {
+                    size: Size::new(1024.0, 768.0),
+                    position: Position::default(),
+                    min_size: None,
+                    max_size: None,
+                    visible: true,
+                    resizable: true,
+                    decorations: true,
+                    transparent: true,
+                    level: Level::default(),
+                    icon: None,
+                    exit_on_close_request: true,
+                    platform_specific: PlatformSpecific::default(),
+                });
+                self.second_window_id = Some(second_window_id);
+
                 let _ = self.caster_streaming.update(message);
-                Command::none()
+                command
             }
             Message::KeyShortcut(key_code) => {
-                println!("SOno in in key {:?}",key_code);
+                println!("SOno in in key {:?}", key_code);
                 if let Controller::CasterController(caster) = &mut self.controller {
                     let key_code = from_key_to_string(key_code);
-                    println!(" Key_code {:?}",key_code);
+                    println!(" Key_code {:?}", key_code);
                     println!("SOno in in self.shorcut {:?}", self.shortcut_screen.blancking_screen);
                     if self.shortcut_screen.blancking_screen == key_code {
                         self.caster_streaming.warning_message =
@@ -436,8 +468,8 @@ impl Application for App {
                                 return Command::none();
                             }
                         };
-                       // if self.receiver_streaming.recording {
-                            controller.start_recording(frame.clone());
+                        // if self.receiver_streaming.recording {
+                        controller.start_recording(frame.clone());
                         //}
                         let _ = self
                             .receiver_streaming
@@ -471,7 +503,7 @@ impl Application for App {
                             "127.0.0.1:8000",
                             notification_tx,
                         )
-                        .await;
+                            .await;
 
                         let page = Page::CasterStreaming;
                         (socket, page)
@@ -624,16 +656,25 @@ impl Application for App {
         }
     }
 
-    fn view(&self) -> Element<Message> {
-        match self.current_page {
-            Page::Home => self.home.view(),
-            Page::Connection => self.connection.view(),
-            Page::ReceiverIp => self.receiver_ip.view(),
-            Page::ReceiverStreaming => self.receiver_streaming.view(),
-            Page::CasterSettings => self.caster_settings.view(),
-            Page::CasterStreaming => self.caster_streaming.view(),
-            Page::WindowPartScreen => self.windows_part_screen.view(),
-            Page::Shortcut => self.shortcut_screen.view(),
+    fn view(&self, window_id: window::Id) -> Element<Message> {
+        if window_id == window::Id::MAIN {
+            match self.current_page {
+                Page::Home => self.home.view(),
+                Page::Connection => self.connection.view(),
+                Page::ReceiverIp => self.receiver_ip.view(),
+                Page::ReceiverStreaming => self.receiver_streaming.view(),
+                Page::CasterSettings => self.caster_settings.view(),
+                Page::CasterStreaming => self.caster_streaming.view(),
+                Page::WindowPartScreen => self.windows_part_screen.view(),
+                Page::Shortcut => self.shortcut_screen.view(),
+            }
+        }else if Some(window_id) == self.second_window_id{
+            Container::new(Text::new("Contenitore trasparente"))
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .into()
+        }else{
+            unreachable!("invalid window")
         }
     }
     fn subscription(&self) -> Subscription<Self::Message> {

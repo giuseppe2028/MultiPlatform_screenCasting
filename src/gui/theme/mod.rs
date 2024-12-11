@@ -19,6 +19,7 @@ pub enum Theme {
     #[default]
     Light,
     Dark,
+    Transparent
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -115,7 +116,52 @@ impl Palette {
             button_color_default: Color::from_rgb(0.83, 0.83, 0.83),
         }
     }
-
+    pub fn transparent() -> Self {
+        Self {
+            primary: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            primary_container: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            on_primary: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            on_primary_container: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            inverse_primary: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            secondary: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            secondary_container: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            on_secondary: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            on_secondary_container: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            tertiary: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            tertiary_container: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            on_tertiary: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            on_tertiary_container: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            surface: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            surface_dim: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            surface_bright: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            surface_container_lowest: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            surface_container_low: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            surface_container: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            surface_container_high: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            surface_container_highest: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            surface_variant: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            on_surface: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            on_surface_variant: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            inverse_surface: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            inverse_on_surface: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            background: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            on_background: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            error: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            error_container: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            on_error: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            on_error_container: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            success: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            on_success: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            outline: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            outline_variant: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            shadow: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            surface_tint: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            scrim: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            button_color_primary: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            button_color_danger: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            button_color_default: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+        }
+    }
     pub fn dark() -> Self {
         Self {
             primary: Color::from_hex("D0BCFF"),
@@ -214,6 +260,7 @@ impl Theme {
         match self {
             Self::Light => Palette::light(),
             Self::Dark => Palette::dark(),
+            Self::Transparent => Palette::transparent()
         }
     }
 }

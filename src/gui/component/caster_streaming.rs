@@ -1,17 +1,20 @@
 use crate::gui::app;
-use crate::gui::component::Component;
+use crate::gui::component::{Component};
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::{MyButton, Style};
 use crate::gui::theme::text::text;
 use crate::gui::theme::widget::Element;
 use iced::widget::{container, image, row, Image};
-use iced::{keyboard::{Event::KeyPressed}, Event, event};
+use iced::{keyboard::{Event::KeyPressed}, Event, event, window, Size};
 use iced::{Command, Subscription};
 use iced::keyboard::Key;
 use std::sync::{Arc, RwLock};
+use iced::window::{Level, Position};
+use iced::window::settings::PlatformSpecific;
 use tokio::sync::{mpsc::Receiver, Mutex};
 use xcap::image::RgbaImage;
 use crate::column_iced;
+use crate::gui::app::Message;
 
 pub struct CasterStreaming {
     pub toggler: bool,
@@ -48,7 +51,7 @@ impl<'a> Component<'a> for CasterStreaming {
         match message {
             MessageUpdate::TogglerChanged(new_status) => {
                 self.toggler = new_status;
-                iced::Command::none()
+                Command::none()
             }
             MessageUpdate::NewFrame(frame) => {
                 //println!("{:?}", frame);
