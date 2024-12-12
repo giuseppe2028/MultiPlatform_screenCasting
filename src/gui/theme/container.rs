@@ -1,4 +1,4 @@
-use iced::{Background, Border};
+use iced::{Background, Border, Color};
 use iced::border::Radius;
 use iced::widget::container::{Appearance, StyleSheet};
 
@@ -13,6 +13,7 @@ pub enum Style {
     Default,
     OutlinedCard,
     FilledEllipse(PaletteColor),
+    Window
 }
 
 impl StyleSheet for Theme {
@@ -41,6 +42,14 @@ impl StyleSheet for Theme {
                 },
                 ..Appearance::default()
             },
+            Style::Window => Appearance{
+                border:Border{
+                    color: Color::new(0.8235, 0.1216, 0.1059, 1.0),
+                    width: 3.0,
+                    radius: Default::default(),
+                },
+                ..Appearance::default()
+            }
         }
     }
 }

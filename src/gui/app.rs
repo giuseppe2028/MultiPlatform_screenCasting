@@ -15,7 +15,8 @@ use crate::gui::component::receiver_streaming::{ReceiverStreaming, UpdateMessage
 use crate::gui::component::shorcut::{Shortcut, ShortcutMessage, Shortcuts};
 use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
 use crate::gui::component::{home, Component};
-use crate::gui::theme::widget::{Container, Element};
+use crate::gui::theme::widget::Element;
+
 use crate::gui::theme::Theme;
 use crate::model::shortcut::{from_key_to_string, ShortcutController};
 use crate::socket::socket::{CasterSocket, ReceiverSocket};
@@ -28,12 +29,14 @@ use futures::FutureExt;
 use iced::keyboard::Key;
 use iced::widget::{container, Text};
 use iced::widget::container::Appearance;
-use iced::window::{Level, Position, Settings};
+use iced::window::{Level, Position};
 use iced::window::settings::PlatformSpecific;
 use rand::Rng;
 use tokio::sync::{mpsc::{channel, Sender}, Mutex};
 use xcap::image::RgbaImage;
 use xcap::Monitor;
+use crate::gui::component::AnnotationToolsComponent::AnnotationTools;
+use crate::gui::theme::container::Style;
 
 pub struct App {
     current_page: Page,
@@ -51,6 +54,7 @@ pub struct App {
     shortcut_controller: ShortcutController,
     notification_rx: Option<tokio::sync::watch::Receiver<usize>>,
     second_window_id: Option<window::Id>,
+    annotationTools: AnnotationTools
 }
 
 enum Controller {
@@ -173,6 +177,7 @@ impl Application for App {
                 shortcut_controller,
                 notification_rx: None,
                 second_window_id: None,
+                annotationTools: AnnotationTools {},
             },
             Command::batch(vec![
                 font::load(include_bytes!("../../resources/home-icon.ttf").as_slice())
@@ -669,10 +674,13 @@ impl Application for App {
                 Page::Shortcut => self.shortcut_screen.view(),
             }
         }else if Some(window_id) == self.second_window_id{
-            Container::new(Text::new("Contenitore trasparente"))
-                .width(Length::Fill)
-                .height(Length::Fill)
-                .into()
+            println!("{:?}",self.current_page);
+            match self.current_page {
+                Page::CasterStreaming => self.annotationTools.view(),
+                _ => {
+                    unreachable!("To implement")
+                }
+            }
         }else{
             unreachable!("invalid window")
         }
@@ -699,5 +707,26 @@ impl Application for App {
         }
 
         Subscription::batch(subscriptions)
+    }
+}
+
+
+
+struct TransparentStyle;
+
+impl container::StyleSheet for TransparentStyle {
+    type Style = Style;
+
+    fn appearance(&self, style: &Self::Style) -> Appearance {
+        Appearance{
+            text_color: None,
+            background: None,
+            border: Border{
+            color: Color::BLACK,
+            width: 2.0,
+            radius: Default::default(),
+        },
+            shadow: Default::default(),
+        }
     }
 }
