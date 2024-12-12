@@ -1,3 +1,4 @@
+use futures::pending;
 use iced::{Length, mouse, Point, Size};
 use iced::widget::{canvas};
 use iced::{Color, Rectangle, Renderer};
@@ -26,16 +27,28 @@ impl canvas::Program<Message,Theme> for SquareCanva{
             renderer,
             bounds.size(),
             |frame: &mut Frame| {
-                let height = frame.height();
+                /*let height = frame.height();
                 let width = frame.width();
                 let background = Path::rectangle(
                     Point { x: 40.0, y: 40.0 }, // Coordinate dell'angolo superiore sinistro
                     Size::new(width - 80.0, height - 80.0), // Dimensione del rettangolo
                 );
-                frame.fill(&background, Color::from_rgb8(0x12, 0x93, 0xD8));
+                frame.fill(&background, Color::from_rgb8(0x12, 0x93, 0xD8));*/
+                frame.stroke(
+                    &Path::rectangle(Point::ORIGIN, frame.size()),
+                    Stroke::default().with_width(2.0),
+                );
             },
+
         );
-        vec![content]
+        println!("pending:{:?}",state);
+        if let Some(pending) = state {
+            let pending_curve = pending.draw(renderer, bounds, cursor);
+
+            vec![content, pending_curve]
+        } else {
+            vec![content]
+        }
     }
 
     fn update(
