@@ -12,6 +12,7 @@ pub mod widget;
 pub mod picklist;
 pub mod menu;
 pub mod scrollable;
+mod canvas;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Default, Copy)]

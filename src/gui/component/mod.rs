@@ -14,6 +14,7 @@ pub mod window_part_screen;
 pub mod shorcut;
 pub mod keycodeutils;
 pub mod AnnotationToolsComponent;
+pub(crate) mod Annotation;
 
 pub trait Component<'a> {
     type Message: Into<app::Message> + Clone + Debug;

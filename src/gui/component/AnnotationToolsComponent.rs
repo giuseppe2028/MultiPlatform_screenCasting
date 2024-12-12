@@ -1,12 +1,17 @@
+use futures::StreamExt;
 use iced::{Command, Length, Subscription};
 use crate::gui::app;
 use crate::gui::component::Component;
-use crate::gui::theme::widget::Element;
-use iced::widget::{Container as CT, container as ct, Text};
+use crate::gui::theme::widget::{Canvas, Column, Element};
+use iced::widget::{canvas, Container as CT, container as ct, Text};
 use crate::column_iced;
+use crate::gui::component::Annotation::Square::{ SquareCanva};
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::container::Style;
 use crate::gui::theme::button::Style as BT;
+
+
+
 pub struct AnnotationTools {
 
 }
@@ -75,20 +80,22 @@ impl<'a> Component<'a> for AnnotationTools {
             .padding(8)
             .spacing(10);
         // Define the sidebar and streaming layout
-        let sidebar = column_iced![annotation_buttons]
+        let sidebar = column_iced![annotation_buttons,Canvas::new(SquareCanva::new(30.))]
             .spacing(8)
             .align_items(iced::Alignment::Center);
 
 
-
-        CT::new(sidebar)
+      CT::new(sidebar)
             .style(Style::Window)
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
+
+
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
         todo!()
     }
 }
+
