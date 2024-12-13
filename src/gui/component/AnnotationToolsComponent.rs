@@ -1,11 +1,11 @@
 use futures::StreamExt;
-use iced::{Command, Length, Subscription};
+use iced::{Command, Length, Point, Subscription};
 use crate::gui::app;
 use crate::gui::component::Component;
 use crate::gui::theme::widget::{Canvas, Column, Element};
 use iced::widget::{canvas, Container as CT, container as ct, Text};
 use crate::column_iced;
-use crate::gui::component::Annotation::Square::{ SquareCanva};
+use crate::gui::component::Annotation::Square::{CanvasWidget, CircleCanva, RectangleCanva, Shape};
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::container::Style;
 use crate::gui::theme::button::Style as BT;
@@ -13,7 +13,7 @@ use crate::gui::theme::button::Style as BT;
 
 
 pub struct AnnotationTools {
-
+    pub canvas_widget: CanvasWidget
 }
 
 #[derive(Debug, Clone)]
@@ -57,13 +57,18 @@ impl<'a> Component<'a> for AnnotationTools {
                 .icon(crate::gui::theme::icon::Icon::Triangle)
                 .build(30)
                 .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
+                .on_press(app::Message::SelectShape(Shape::Circle(CircleCanva{
+                center:Point::default(),
+                radius:0.0
+            }))),
             CircleButton::new("")
                 .style(BT::Primary)
                 .icon(crate::gui::theme::icon::Icon::Square)
                 .build(30)
                 .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
+                .on_press(app::Message::SelectShape(Shape::Rectangle(RectangleCanva{
+                
+            startPoint: Default::default(),width: 0.0 , height: 0.0 , }))),
             CircleButton::new("")
                 .style(BT::Primary)
                 .icon(crate::gui::theme::icon::Icon::Arrow)
@@ -80,7 +85,7 @@ impl<'a> Component<'a> for AnnotationTools {
             .padding(8)
             .spacing(10);
         // Define the sidebar and streaming layout
-        let sidebar = column_iced![annotation_buttons,Canvas::new(SquareCanva::new(30.))]
+        let sidebar = column_iced![annotation_buttons,Canvas::new(&self.canvas_widget)]
             .spacing(8)
             .align_items(iced::Alignment::Center);
 

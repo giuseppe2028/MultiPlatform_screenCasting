@@ -31,11 +31,12 @@ use iced::widget::{container, Text};
 use iced::widget::container::Appearance;
 use iced::window::{Level, Position};
 use iced::window::settings::PlatformSpecific;
+use iced_aw::Icon::Circle;
 use rand::Rng;
 use tokio::sync::{mpsc::{channel, Sender}, Mutex};
 use xcap::image::RgbaImage;
 use xcap::Monitor;
-use crate::gui::component::Annotation::Square::Pending;
+use crate::gui::component::Annotation::Square::{CanvasWidget, Pending, RectangleCanva, Shape};
 use crate::gui::component::AnnotationToolsComponent::AnnotationTools;
 use crate::gui::theme::container::Style;
 pub struct App {
@@ -55,6 +56,7 @@ pub struct App {
     notification_rx: Option<tokio::sync::watch::Receiver<usize>>,
     second_window_id: Option<window::Id>,
     annotationTools: AnnotationTools,
+
 }
 
 enum Controller {
@@ -108,7 +110,10 @@ pub enum Message {
     ChosenShortcuts(Shortcuts),
     Blanking,
     PendingOne(Pending),
-    PendingTwo(Pending)
+    PendingTwo(Pending),
+    AddShape(Shape),
+    ClearShape,
+    SelectShape(Shape)
 }
 
 impl Application for App {
@@ -179,7 +184,9 @@ impl Application for App {
                 shortcut_controller,
                 notification_rx: None,
                 second_window_id: None,
-                annotationTools: AnnotationTools {},
+                annotationTools: AnnotationTools {
+                    canvas_widget: CanvasWidget::new(),
+                },
             },
             Command::batch(vec![
                 font::load(include_bytes!("../../resources/home-icon.ttf").as_slice())
@@ -214,12 +221,18 @@ impl Application for App {
 
     fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
         match message {
+
             Message::PendingTwo(pending)=>{
                 println!("{:?}",pending);
+                if let Pending::Two { from, to} = pending {
+                    self.annotationTools.canvas_widget.start_point = to;
+                }
                 Command::none()
             },
             Message::PendingOne(pending)=>{
-                println!("{:?}",pending);
+                if let Pending::One { from } = pending {
+                    self.annotationTools.canvas_widget.start_point = from;
+                }
                 Command::none()
             },
 
@@ -669,6 +682,33 @@ impl Application for App {
                 }
                 Command::none()
             }
+            Message::AddShape(shape) => {
+                self.annotationTools.canvas_widget.shapes.push(shape);
+                println!("Add shape {:?}",self.annotationTools.canvas_widget.shapes);
+                self.annotationTools.canvas_widget.cache.clear(); // Forza il ridisegno
+                Command::none()
+            },
+            Message::SelectShape(shape) => {
+                print!("Hai scelto il rettangolo");
+                match shape {
+                    Shape::Rectangle(_) => {
+                        print!("Hai scelto il rettangolo1");
+                        self.annotationTools.canvas_widget.selected_shape = Some(Shape::Rectangle(RectangleCanva {
+                            startPoint: Default::default(),
+                            width: 0.0,
+                            height: 0.0,
+                        }));
+                        Command::none()
+                    }
+                    Shape::Circle(circle) => {
+                        print!("Hai scelto il Cerchio");
+                        self.annotationTools.canvas_widget.selected_shape = Some(Shape::Circle(circle));
+                        Command::none()
+                    }
+                    Shape::Arrow(_) => {Command::none()}
+                }
+            }
+            _ => {Command::none()}
         }
     }
 
