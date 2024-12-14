@@ -1,10 +1,10 @@
 use futures::pending;
-use iced::{Length, mouse, Point, Size};
+use iced::{Length, mouse, Pixels, Point, Size};
 use iced::widget::{canvas};
 use iced::{Color, Rectangle, Renderer};
 use iced::mouse::Cursor;
 
-use iced::widget::canvas::{Cache, Frame, Geometry, Path, Program, Stroke};
+use iced::widget::canvas::{Cache, Frame, Geometry, Path, Program, Stroke, Text};
 use iced::widget::canvas::path::lyon_path::geom::size;
 use crate::gui::app::Message;
 use crate::gui::theme::Theme;
@@ -63,10 +63,18 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
         cursor: Cursor,
     ) -> Vec<canvas::Geometry> {
         let content = self.cache.draw(renderer, bounds.size(), |frame: &mut Frame| {
+            let my_text = Text {
+                content: "Hello, Canvas!".to_string(),
+                position: Point::new(50.0, 50.0), // Posizione del testo
+                color: Color::from_rgb(0.0, 0.0, 0.0), // Colore nero
+                size: Pixels(20.0), // Dimensione del testo
+                ..Default::default()
+            };
             frame.stroke(
                 &Path::rectangle(Point::ORIGIN, frame.size()),
                 Stroke::default().with_width(2.0),
             );
+            frame.fill_text(my_text);
             print!("Sono dentro selection: {:?}",self.shapes);
             for shape in &self.shapes {
                 println!("{:?}",self.shapes);

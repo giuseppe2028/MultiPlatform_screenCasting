@@ -25,3 +25,4 @@ pub type Toggler<'a> = iced::widget::toggler::Toggler<'a, Message, Renderer>;
 pub type Tabs<'a, Message> = iced_aw::native::Tabs<'a, Message, Renderer, Renderer>;
 
 pub type Canvas<P,Curve> = iced::widget::Canvas<P, Curve,Renderer>;
+pub type ColorPicker<'a,Message> = iced_aw::ColorPicker<'a,Message,Renderer>;

@@ -114,6 +114,9 @@ pub enum Message {
     AddShape(Shape),
     ClearShape,
     SelectShape(Shape),
+    ChooseColor,
+    CancelColor,
+    SubmitColor(Color)
 }
 
 impl Application for App {

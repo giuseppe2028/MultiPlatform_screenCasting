@@ -1,9 +1,10 @@
 use futures::StreamExt;
-use iced::{Command, Length, Point, Subscription};
+use iced::{Color, Command, Length, Point, Subscription};
 use crate::gui::app;
 use crate::gui::component::Component;
-use crate::gui::theme::widget::{Canvas, Column, Element};
+use crate::gui::theme::widget::{Button, Canvas, ColorPicker, Column, Element};
 use iced::widget::{canvas, Container as CT, container as ct, Text};
+use iced_aw::color_picker;
 use crate::column_iced;
 use crate::gui::component::Annotation::Square::{CanvasWidget, CircleCanva, RectangleCanva, Shape};
 use crate::gui::theme::button::circle_button::CircleButton;
@@ -37,6 +38,9 @@ impl<'a> Component<'a> for AnnotationTools {
     }
 
     fn view(&self) -> Element<'_, app::Message> {
+        let but = Button::new(Text::new("Set Color")).on_press(app::Message::ChooseColor);
+        let color_submit_callback = |color: Color| app::Message::SubmitColor(color);
+
 
         // Define the annotation buttons
         let annotation_buttons = column_iced![
@@ -81,6 +85,7 @@ impl<'a> Component<'a> for AnnotationTools {
                 .build(25)
                 .padding(8)
                 .on_press(app::Message::Back(app::Page::CasterStreaming)),
+           // ColorPicker::new(true, Default::default(), but.into(),app::Message::CancelColor, |color: Color| app::Message::SubmitColor(color)),
         ]
             .padding(8)
             .spacing(10);
