@@ -51,7 +51,7 @@ impl<'a> Component<'a> for AnnotationTools {
                 .icon(crate::gui::theme::icon::Icon::Rubber)
                 .build(30)
                 .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
+                .on_press(app::Message::ClearShape),
             CircleButton::new("")
                 .style(BT::Primary)
                 .icon(crate::gui::theme::icon::Icon::Triangle)
@@ -85,7 +85,7 @@ impl<'a> Component<'a> for AnnotationTools {
             .padding(8)
             .spacing(10);
         // Define the sidebar and streaming layout
-        let sidebar = column_iced![annotation_buttons,Canvas::new(&self.canvas_widget)]
+        let sidebar = column_iced![annotation_buttons,Canvas::new(&self.canvas_widget).width(Length::Fill).height(Length::Fill)]
             .spacing(8)
             .align_items(iced::Alignment::Center);
 

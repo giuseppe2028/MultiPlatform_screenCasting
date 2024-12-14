@@ -113,7 +113,7 @@ pub enum Message {
     PendingTwo(Pending),
     AddShape(Shape),
     ClearShape,
-    SelectShape(Shape)
+    SelectShape(Shape),
 }
 
 impl Application for App {
@@ -707,6 +707,11 @@ impl Application for App {
                     }
                     Shape::Arrow(_) => {Command::none()}
                 }
+            }
+            Message::ClearShape =>{
+                self.annotationTools.canvas_widget.shapes.clear();
+                self.annotationTools.canvas_widget.cache.clear();
+                Command::none()
             }
             _ => {Command::none()}
         }
