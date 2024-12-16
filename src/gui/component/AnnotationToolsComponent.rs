@@ -45,7 +45,7 @@ impl<'a> Component<'a> for AnnotationTools {
     }
 
     fn view(&self) -> Element<'_, app::Message> {
-        let but = Button::new(Text::new("Set Color")).on_press(app::Message::SetColor);
+        let but = MyButton::new("Set Color").style(BT::Primary).build().on_press(app::Message::SetColor);
         let color_picker = color_picker(self.showColorPicker,self.selected_color,but,app::Message::ChooseColor,app::Message::SubmitColor);
 
 
