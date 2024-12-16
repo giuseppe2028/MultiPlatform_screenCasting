@@ -22,7 +22,7 @@ use crate::model::shortcut::{from_key_to_string, ShortcutController};
 use crate::socket::socket::{CasterSocket, ReceiverSocket};
 use crate::utils::utils::get_screen_scaled;
 use iced::time::{self, Duration};
-use iced::{executor, Command, Subscription, font, window, Size, Color, Background, Border, Length};
+use iced::{executor, Command, Subscription, font, window, Size, Color, Background, Border, Length, Point};
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::Ordering;
 use futures::FutureExt;
@@ -36,7 +36,7 @@ use rand::Rng;
 use tokio::sync::{mpsc::{channel, Sender}, Mutex};
 use xcap::image::RgbaImage;
 use xcap::Monitor;
-use crate::gui::component::Annotation::Square::{CanvasWidget, Pending, RectangleCanva, Shape};
+use crate::gui::component::Annotation::Square::{CanvasWidget, Pending, RectangleCanva, Shape, Status, TextCanva};
 use crate::gui::component::AnnotationToolsComponent::AnnotationTools;
 use crate::gui::theme::container::Style;
 pub struct App {
@@ -56,7 +56,6 @@ pub struct App {
     notification_rx: Option<tokio::sync::watch::Receiver<usize>>,
     second_window_id: Option<window::Id>,
     annotationTools: AnnotationTools,
-
 }
 
 enum Controller {
@@ -116,7 +115,10 @@ pub enum Message {
     SelectShape(Shape),
     ChooseColor,
     CancelColor,
-    SubmitColor(Color)
+    SubmitColor(Color),
+    TextPressed(bool),
+    TextCanvasChanged(String),
+    SaveTextPosition(Point)
 }
 
 impl Application for App {
@@ -189,6 +191,7 @@ impl Application for App {
                 second_window_id: None,
                 annotationTools: AnnotationTools {
                     canvas_widget: CanvasWidget::new(),
+                    setSelectedAnnotation: false,
                 },
             },
             Command::batch(vec![
@@ -208,7 +211,7 @@ impl Application for App {
         } else if Some(window_id) == self.second_window_id {
             "Second Window".to_owned()
         } else {
-            unreachable!("invalid window")
+            "Second Window".to_owned()
         }
     }
 
@@ -226,7 +229,6 @@ impl Application for App {
         match message {
 
             Message::PendingTwo(pending)=>{
-                println!("{:?}",pending);
                 if let Pending::Two { from, to} = pending {
                     self.annotationTools.canvas_widget.start_point = to;
                 }
@@ -403,7 +405,6 @@ impl Application for App {
                 }
             }
             Message::TogglerChanged(message) => {
-                println!("open");
                 let (second_window_id, command) = window::spawn::<Message>(window::Settings {
                     size: Size::new(1024.0, 768.0),
                     position: Position::default(),
@@ -687,11 +688,12 @@ impl Application for App {
             }
             Message::AddShape(shape) => {
                 self.annotationTools.canvas_widget.shapes.push(shape);
-                println!("Add shape {:?}",self.annotationTools.canvas_widget.shapes);
+                println!("SONO O NON SONO IN Add shape {:?}",self.annotationTools.canvas_widget.shapes);
                 self.annotationTools.canvas_widget.cache.clear(); // Forza il ridisegno
                 Command::none()
             },
             Message::SelectShape(shape) => {
+                self.annotationTools.setSelectedAnnotation = !self.annotationTools.setSelectedAnnotation;
                 print!("Hai scelto il rettangolo");
                 match shape {
                     Shape::Rectangle(_) => {
@@ -714,6 +716,25 @@ impl Application for App {
             Message::ClearShape =>{
                 self.annotationTools.canvas_widget.shapes.clear();
                 self.annotationTools.canvas_widget.cache.clear();
+                Command::none()
+            },
+            Message::TextPressed(condition) =>{
+                if !condition {
+                    self.annotationTools.canvas_widget.all_text_selected.push(self.annotationTools.canvas_widget.textSelected.clone());
+                    self.annotationTools.canvas_widget.cache.clear();
+                    self.annotationTools.canvas_widget.text_status = Status::TextAdded;
+                }else {
+                    self.annotationTools.canvas_widget.text_status = Status::TextPressed
+                }
+                Command::none()
+            },
+            Message::TextCanvasChanged(string)=>{
+                self.annotationTools.canvas_widget.textSelected.text = string;
+                Command::none()
+            },
+            Message::SaveTextPosition(cord) =>{
+                self.annotationTools.canvas_widget.text_status = Status::TextPositioned;
+                self.annotationTools.canvas_widget.textSelected.position = cord;
                 Command::none()
             }
             _ => {Command::none()}

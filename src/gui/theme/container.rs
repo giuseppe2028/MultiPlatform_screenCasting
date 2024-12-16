@@ -48,6 +48,7 @@ impl StyleSheet for Theme {
                     width: 3.0,
                     radius: Default::default(),
                 },
+                text_color:Some(Color::BLACK),
                 ..Appearance::default()
             }
         }

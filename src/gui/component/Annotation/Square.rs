@@ -10,6 +10,7 @@ use crate::gui::app::Message;
 use crate::gui::theme::Theme;
 use crate::gui::theme::widget::Canvas;
 use iced::widget::canvas::event::{Event,self};
+use url::Position;
 // First, we define the data we need for drawing
 
 #[derive(Debug)]
@@ -18,7 +19,18 @@ pub struct CanvasWidget {
     pub start_point:Point,
     pub end_point:Point,
     pub cache: canvas::Cache,
-    pub selected_shape: Option<Shape>
+    pub selected_shape: Option<Shape>,
+    pub textSelected:TextCanva,
+    pub all_text_selected:Vec<TextCanva>,
+    pub text_status:Status
+}
+
+#[derive(Debug)]
+pub enum Status{
+    None,
+    TextPressed,
+    TextPositioned,
+    TextAdded
 }
 
 #[derive(Debug, Clone)]
@@ -33,6 +45,12 @@ pub struct RectangleCanva {
     pub(crate) startPoint:Point,
     pub(crate) width: f32,
     pub(crate) height: f32,
+}
+
+#[derive(Clone, Debug)]
+pub struct TextCanva{
+    pub(crate) position:Point,
+    pub(crate) text:String
 }
 
 #[derive(Debug, Clone)]
@@ -63,19 +81,12 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
         cursor: Cursor,
     ) -> Vec<canvas::Geometry> {
         let content = self.cache.draw(renderer, bounds.size(), |frame: &mut Frame| {
-            let my_text = Text {
-                content: "Hello, Canvas!".to_string(),
-                position: Point::new(50.0, 50.0), // Posizione del testo
-                color: Color::from_rgb(0.0, 0.0, 0.0), // Colore nero
-                size: Pixels(20.0), // Dimensione del testo
-                ..Default::default()
-            };
+
             frame.stroke(
                 &Path::rectangle(Point::ORIGIN, frame.size()),
                 Stroke::default().with_width(2.0),
             );
-            frame.fill_text(my_text);
-            print!("Sono dentro selection: {:?}",self.shapes);
+
             for shape in &self.shapes {
                 println!("{:?}",self.shapes);
                 match shape {
@@ -96,6 +107,18 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                         frame.stroke(&arrow_path, Stroke::default());
                     }
                 }
+            }
+            print!("{:?}",self.all_text_selected);
+            for text in &self.all_text_selected{
+                let my_text = Text {
+                    content: text.clone().text,
+                    position:text.position, // Posizione del testo
+                    color: Color::from_rgb(0.0, 0.0, 0.0), // Colore nero
+                    size: Pixels(20.), // Dimensione del testo
+                    ..Default::default()
+                };
+
+                frame.fill_text(my_text)
             }
         });
 
@@ -146,7 +169,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
     }
 
     fn update(
-        &self,
+        & self,
         state: &mut Self::State,
         event: Event,
         bounds: Rectangle,
@@ -157,16 +180,28 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
         };
         match event {
             Event::Mouse(mouse_event) => {
-                let message = match mouse_event {
+                match mouse_event {
                     mouse::Event::ButtonPressed(mouse::Button::Left) => {
                         match *state {
                             None => {
-                                *state = Some(Pending::One {
-                                    from: cursor_position,
-                                });
-                                Some(Message::PendingOne(Pending::One {
-                                    from: cursor_position,
-                                }))
+                                println!("{:?}",self.text_status);
+                                if let Status::TextPressed = self.text_status{
+                                    println!("pressed");
+                                    /*
+                                    self.textSelected.position = cursor_position;*/
+                                    *state =None;
+                                    return (
+                                        event::Status::Captured,
+                                        Some(Message::SaveTextPosition(cursor_position))
+                                    );
+                                }else{
+                                    *state = Some(Pending::One {
+                                        from: cursor_position,
+                                    });
+                                    Some(Message::PendingOne(Pending::One {
+                                        from: cursor_position,
+                                    }))
+                                }
 
                             }
                             Some(Pending::One { from }) => {
@@ -204,7 +239,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                                                    ending_point: cursor_position,
                                                }))),
                                            );
-                                       }
+                                       },
 
                                    }
                                 }else{
@@ -241,15 +276,20 @@ impl CanvasWidget {
             start_point: Default::default(),
             end_point: Default::default(),
             cache: Cache::new(),
-            selected_shape:None
+            selected_shape:None,
+            textSelected:TextCanva{ position: Default::default(), text: "".to_string() },
+            all_text_selected: vec![],
+            text_status: Status::None,
         }
     }
     pub fn update(&mut self, message: Message) {
         match message {
             Message::PendingOne(Pending::One { from }) => {
                 self.start_point = from;
+                println!("almento o qua");
             }
             Message::PendingTwo(Pending::Two { from, to }) => {
+                println!("almento o qua1");
                 self.start_point = from;
                 self.end_point = to;
 
@@ -261,9 +301,13 @@ impl CanvasWidget {
                 self.cache.clear(); // Forza il ridisegno
             }
             Message::AddShape(shape) => {
+                println!(" SONO IN Add shape");
                 self.shapes.push(shape);
                 self.cache.clear(); // Forza il ridisegno
             },
+            Message::SaveTextPosition(cord)=>{
+                println!("almento qua");
+            }
             Message::ClearShape => {
                 self.shapes.clear();
                 self.cache.clear(); // Forza il ridisegno
@@ -299,6 +343,7 @@ impl Curve {
 pub enum Pending {
     One { from: Point },
     Two { from: Point, to: Point },
+    None {position: Point}
 }
 
 impl Pending {
@@ -324,6 +369,7 @@ impl Pending {
 
                     Curve::draw_all(&[curve], &mut frame);
                 }
+                Pending::None{position} => {}
             };
         }
 
