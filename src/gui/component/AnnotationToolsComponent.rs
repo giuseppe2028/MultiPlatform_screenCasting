@@ -6,19 +6,22 @@ use crate::gui::theme::widget::{Button, Canvas, ColorPicker, Column, Element};
 use iced::widget::{button, canvas, Container as CT, container as ct, container, row, Text};
 use iced::widget::container::Appearance;
 use iced_aw::color_picker;
-
 use crate::column_iced;
 use crate::gui::component::Annotation::Square::{ArrowCanva, CanvasWidget, CircleCanva, LineCanva, RectangleCanva, Shape, Status};
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::container::Style;
-use crate::gui::theme::button::Style as BT;
+use crate::gui::theme::button::{MyButton, Style as BT};
+use crate::gui::theme::button::Style::Default;
+
 use crate::gui::theme::PaletteColor;
 use crate::gui::theme::text::text;
 use crate::gui::theme::textinput::textinput;
 
 pub struct AnnotationTools {
     pub canvas_widget: CanvasWidget,
-    pub setSelectedAnnotation: bool
+    pub setSelectedAnnotation: bool,
+    pub selected_color:Color,
+    pub showColorPicker:bool
 }
 
 #[derive(Debug, Clone)]
@@ -29,7 +32,7 @@ pub enum Message {
 impl From<Message> for app::Message {
     fn from(message: Message) -> Self {
         match message {
-            _ => {app::Message::None}
+            _ => { app::Message::None }
         }
     }
 }
@@ -42,26 +45,29 @@ impl<'a> Component<'a> for AnnotationTools {
     }
 
     fn view(&self) -> Element<'_, app::Message> {
-        let but = Button::new(Text::new("Set Color")).on_press(app::Message::ChooseColor);
-        let color_submit_callback = |color: Color| app::Message::SubmitColor(color);
+        let but = Button::new(Text::new("Set Color")).on_press(app::Message::SetColor);
+        let color_picker = color_picker(self.showColorPicker,self.selected_color,but,app::Message::ChooseColor,app::Message::SubmitColor);
+
 
         let textInputForm = container(column_iced![
                 row![text("Insert the text you want to display")].padding([0,0,20,0]),
                 row![textinput("Type something here...", self.canvas_widget.textSelected.text.as_str())
                 .on_input(app::Message::TextCanvasChanged)],
-                row![button("save").on_press(app::Message::TextPressed(false))]
+            row![].height(10),
+                row![MyButton::new("save").style(BT::Primary).build().height(50).on_press(app::Message::TextPressed(false))]
         ]).style(
             Style::Container
-        ).padding([20, 20,20,20]).width(Length::from(300)).height(Length::Fill);
+        ).padding([20, 20, 20, 20]).width(Length::from(300)).height(Length::Fill);
         // Definizione del vettore annotation_buttons
-        let mut annotation_buttons = column_iced![];
+        let mut annotation_buttons = container(column_iced![]);
 
         // Condizione per verificare se textPressed è attivo
         if let Status::TextPositioned = self.canvas_widget.text_status {
-            let text_input_form = column_iced![ textInputForm];
+            let text_input_form = textInputForm;
             annotation_buttons = text_input_form;
         } else {
-            annotation_buttons = column_iced![
+            annotation_buttons = container(column_iced![
+                color_picker,
         CircleButton::new("")
             .style(BT::Primary)
             .icon(crate::gui::theme::icon::Icon::Pencil)
@@ -80,7 +86,7 @@ impl<'a> Component<'a> for AnnotationTools {
             .build(30)
             .padding(8)
             .on_press(app::Message::SelectShape(Shape::Circle(CircleCanva {
-                center: Point::default(),
+                center: Point::new(0.,0.),
                 radius: 0.0,
             }))),
         CircleButton::new("")
@@ -89,7 +95,7 @@ impl<'a> Component<'a> for AnnotationTools {
             .build(30)
             .padding(8)
             .on_press(app::Message::SelectShape(Shape::Rectangle(RectangleCanva {
-                startPoint: Default::default(),
+                startPoint: std::default::Default::default(),
                 width: 0.0,
                 height: 0.0,
             }))),
@@ -99,8 +105,8 @@ impl<'a> Component<'a> for AnnotationTools {
             .build(30)
             .padding(8)
             .on_press(app::Message::SelectShape(Shape::Arrow(ArrowCanva{
-                    starting_point:Default::default(),
-                    ending_point: Default::default()
+                    starting_point:std::default::Default::default(),
+                    ending_point: std::default::Default::default()
                 }))),
                 CircleButton::new("")
             .style(BT::Primary)
@@ -108,8 +114,8 @@ impl<'a> Component<'a> for AnnotationTools {
             .build(30)
             .padding(8)
             .on_press(app::Message::SelectShape(Shape::Line(LineCanva{
-                    starting_point:Default::default(),
-                    ending_point: Default::default()
+                    starting_point:std::default::Default::default(),
+                    ending_point:std::default::Default::default()
                 }))),
         CircleButton::new("")
             .style(BT::Primary)
@@ -119,7 +125,9 @@ impl<'a> Component<'a> for AnnotationTools {
             .on_press(app::Message::TextPressed(true)),
     ]
                 .padding(8)
-                .spacing(10);
+                .spacing(10)).style(
+                Style::Container
+            ).height(Length::FillPortion(1))
         }
 
 
@@ -135,13 +143,11 @@ impl<'a> Component<'a> for AnnotationTools {
             sidebar = sidebar.push(row![text("Press where do you want to put the note")])
         }
 
-      CT::new(sidebar)
+        CT::new(sidebar)
             .style(Style::Window)
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
-
-
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {

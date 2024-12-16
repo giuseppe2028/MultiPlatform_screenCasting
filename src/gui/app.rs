@@ -31,7 +31,6 @@ use iced::widget::{container, Text};
 use iced::widget::container::Appearance;
 use iced::window::{Level, Position};
 use iced::window::settings::PlatformSpecific;
-use iced_aw::Icon::Circle;
 use rand::Rng;
 use tokio::sync::{mpsc::{channel, Sender}, Mutex};
 use xcap::image::RgbaImage;
@@ -118,7 +117,8 @@ pub enum Message {
     SubmitColor(Color),
     TextPressed(bool),
     TextCanvasChanged(String),
-    SaveTextPosition(Point)
+    SaveTextPosition(Point),
+    SetColor
 }
 
 impl Application for App {
@@ -192,6 +192,8 @@ impl Application for App {
                 annotationTools: AnnotationTools {
                     canvas_widget: CanvasWidget::new(),
                     setSelectedAnnotation: false,
+                    showColorPicker:false,
+                    selected_color: Color::from_rgba8(0, 0, 0, 1.0),
                 },
             },
             Command::batch(vec![
@@ -227,7 +229,19 @@ impl Application for App {
 
     fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
         match message {
-
+            Message::SetColor=>{
+                self.annotationTools.showColorPicker = true;
+                Command::none()
+            }
+            Message::ChooseColor=>{
+                println!("sono in choose");
+                Command::none()
+            },
+            Message::SubmitColor(color)=>{
+                self.annotationTools.selected_color = color;
+                self.annotationTools.showColorPicker = false;
+                Command::none()
+            }
             Message::PendingTwo(pending)=>{
                 if let Pending::Two { from, to} = pending {
                     self.annotationTools.canvas_widget.start_point = to;
