@@ -38,6 +38,7 @@ pub enum Shape {
     Rectangle(RectangleCanva),
     Circle(CircleCanva),
     Arrow(ArrowCanva),
+    Line(LineCanva)
 }
 
 #[derive(Debug, Clone)]
@@ -61,9 +62,16 @@ pub struct CircleCanva {
 
 #[derive(Debug, Clone)]
 pub struct ArrowCanva {
-    starting_point: Point,
-    ending_point: Point,
+    pub(crate) starting_point: Point,
+    pub(crate) ending_point: Point,
 }
+
+#[derive(Debug, Clone)]
+pub struct LineCanva {
+    pub(crate) starting_point: Point,
+    pub(crate) ending_point: Point,
+}
+
 
 
 
@@ -90,6 +98,10 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
             for shape in &self.shapes {
                 println!("{:?}",self.shapes);
                 match shape {
+                    Shape::Line(line)=>{
+                        let rect_path = Path::line(line.starting_point,line.ending_point);
+                        frame.stroke(&rect_path, Stroke::default());
+                    }
                     Shape::Rectangle(rect) => {
                         let rect_path = Path::rectangle(
                             rect.startPoint,
@@ -102,8 +114,45 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                         frame.stroke(&circle_path, Stroke::default());
                     }
                     Shape::Arrow(arrow) => {
-                        let arrow_path =
-                            Path::line(arrow.starting_point, arrow.ending_point);
+                        // Definisci i punti della freccia
+                        let starting_point = arrow.starting_point; // Ad esempio, Point::new(50.0, 50.0)
+                        let ending_point = arrow.ending_point;     // Ad esempio, Point::new(150.0, 100.0)
+
+                        // Calcola i punti per la punta della freccia
+                        let arrow_head_length = 10.0;
+                        let arrow_head_width = 5.0;
+
+                        let direction = Point::new(
+                            ending_point.x - starting_point.x,
+                            ending_point.y - starting_point.y,
+                        );
+
+                        let magnitude = (direction.x.powi(2) + direction.y.powi(2)).sqrt();
+                        let unit_direction = Point::new(direction.x / magnitude, direction.y / magnitude);
+
+                        let left_wing = Point::new(
+                            ending_point.x - unit_direction.x * arrow_head_length - unit_direction.y * arrow_head_width,
+                            ending_point.y - unit_direction.y * arrow_head_length + unit_direction.x * arrow_head_width,
+                        );
+
+                        let right_wing = Point::new(
+                            ending_point.x - unit_direction.x * arrow_head_length + unit_direction.y * arrow_head_width,
+                            ending_point.y - unit_direction.y * arrow_head_length - unit_direction.x * arrow_head_width,
+                        );
+
+                        // Crea il percorso della freccia
+                        let mut arrow_path = Path::new(|builder| {
+                            // Linea principale
+                            builder.move_to(starting_point);
+                            builder.line_to(ending_point);
+
+                            // Aggiungi la punta della freccia
+                            builder.move_to(left_wing);
+                            builder.line_to(ending_point);
+                            builder.line_to(right_wing);
+                        });
+
+                        // Disegna la freccia
                         frame.stroke(&arrow_path, Stroke::default());
                     }
                 }
@@ -124,6 +173,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
 
         if let Some(Pending::One { from }) = state {
             if let Some(cursor_position) = cursor.position_in(bounds) {
+                print!("{:?}",cursor_position);
                 // Disegno dell'anteprima in base alla forma selezionata
                 let preview_path = match self.selected_shape {
                     Some(Shape::Rectangle(_)) => {
@@ -131,8 +181,8 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                         Path::rectangle(
                             *from,
                             Size::new(
-                                (cursor_position.x - from.x).abs(),
-                                (cursor_position.y - from.y).abs(),
+                                cursor_position.x - from.x,
+                                cursor_position.y - from.y,
                             ),
                         )
                     }
@@ -146,14 +196,18 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                     Some(Shape::Arrow(_)) => {
                         // Anteprima freccia
                         Path::line(*from, cursor_position)
+                    },
+                    Some(Shape::Line(_)) => {
+                        // Anteprima freccia
+                        Path::line(*from, cursor_position)
                     }
                     _ => {
                         // Forma di default (rettangolo)
                         Path::rectangle(
                             *from,
                             Size::new(
-                                (cursor_position.x - from.x).abs(),
-                                (cursor_position.y - from.y).abs(),
+                                cursor_position.x - from.x,
+                                cursor_position.y - from.y,
                             ),
                         )
                     }
@@ -209,13 +263,22 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                                 *state = None; // Resetta lo stato
                                 if let Some(shape) = &self.selected_shape {
                                    match shape {
+                                       Shape::Line(_)=>{
+                                           return (
+                                               event::Status::Captured,
+                                               Some(Message::AddShape(Shape::Line(LineCanva{
+                                                   starting_point: from,
+                                                   ending_point: cursor_position,
+                                               }))),
+                                           );
+                                       }
                                        Shape::Rectangle(_) => {
                                            return (
                                                event::Status::Captured,
                                                Some(Message::AddShape(Shape::Rectangle(RectangleCanva {
                                                    startPoint: from,
-                                                   width: (cursor_position.x - from.x).abs(),
-                                                   height: (cursor_position.y - from.y).abs(),
+                                                   width: cursor_position.x - from.x,
+                                                   height: cursor_position.y - from.y,
                                                }))),
                                            );
                                        }

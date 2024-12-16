@@ -36,7 +36,7 @@ use rand::Rng;
 use tokio::sync::{mpsc::{channel, Sender}, Mutex};
 use xcap::image::RgbaImage;
 use xcap::Monitor;
-use crate::gui::component::Annotation::Square::{CanvasWidget, Pending, RectangleCanva, Shape, Status, TextCanva};
+use crate::gui::component::Annotation::Square::{CanvasWidget, LineCanva, Pending, RectangleCanva, Shape, Status, TextCanva};
 use crate::gui::component::AnnotationToolsComponent::AnnotationTools;
 use crate::gui::theme::container::Style;
 pub struct App {
@@ -696,6 +696,13 @@ impl Application for App {
                 self.annotationTools.setSelectedAnnotation = !self.annotationTools.setSelectedAnnotation;
                 print!("Hai scelto il rettangolo");
                 match shape {
+                    Shape::Line(_)=>{
+                        self.annotationTools.canvas_widget.selected_shape = Some(Shape::Line(LineCanva{
+                            starting_point: Default::default(),
+                            ending_point: Default::default(),
+                        }));
+                        Command::none()
+                    }
                     Shape::Rectangle(_) => {
                         print!("Hai scelto il rettangolo1");
                         self.annotationTools.canvas_widget.selected_shape = Some(Shape::Rectangle(RectangleCanva {
@@ -710,11 +717,15 @@ impl Application for App {
                         self.annotationTools.canvas_widget.selected_shape = Some(Shape::Circle(circle));
                         Command::none()
                     }
-                    Shape::Arrow(_) => {Command::none()}
+                    Shape::Arrow(arrow) => {
+                        self.annotationTools.canvas_widget.selected_shape = Some(Shape::Arrow(arrow));
+                        Command::none()
+                    }
                 }
             }
             Message::ClearShape =>{
                 self.annotationTools.canvas_widget.shapes.clear();
+                self.annotationTools.canvas_widget.all_text_selected.clear();
                 self.annotationTools.canvas_widget.cache.clear();
                 Command::none()
             },

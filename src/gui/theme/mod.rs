@@ -124,7 +124,7 @@ impl Palette {
             on_primary: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
             on_primary_container: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
             inverse_primary: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
-            secondary: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            secondary: Color::from_rgba(0.0, 0.0, 0.0, 1.0),
             secondary_container: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
             on_secondary: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
             on_secondary_container: Color::from_rgba(0.0, 0.0, 0.0, 0.0),

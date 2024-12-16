@@ -13,7 +13,8 @@ pub enum Style {
     Default,
     OutlinedCard,
     FilledEllipse(PaletteColor),
-    Window
+    Window,
+    Container
 }
 
 impl StyleSheet for Theme {
@@ -23,6 +24,13 @@ impl StyleSheet for Theme {
         let palette = self.palette();
 
         match style {
+            Style::Container =>
+              Appearance{
+                  text_color: Some(Color::new(1.0,1.0,1.0,1.0)),
+                  background: Some(Background::Color(Color::BLACK)),
+                  border: Default::default(),
+                  shadow: Default::default(),
+              },
             Style::Default => Default::default(),
             Style::OutlinedCard => Appearance {
                 background: Some(Background::Color(palette.surface)),

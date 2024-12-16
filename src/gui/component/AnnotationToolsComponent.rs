@@ -4,13 +4,15 @@ use crate::gui::app;
 use crate::gui::component::Component;
 use crate::gui::theme::widget::{Button, Canvas, ColorPicker, Column, Element};
 use iced::widget::{button, canvas, Container as CT, container as ct, container, row, Text};
+use iced::widget::container::Appearance;
 use iced_aw::color_picker;
 
 use crate::column_iced;
-use crate::gui::component::Annotation::Square::{CanvasWidget, CircleCanva, RectangleCanva, Shape, Status};
+use crate::gui::component::Annotation::Square::{ArrowCanva, CanvasWidget, CircleCanva, LineCanva, RectangleCanva, Shape, Status};
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::container::Style;
 use crate::gui::theme::button::Style as BT;
+use crate::gui::theme::PaletteColor;
 use crate::gui::theme::text::text;
 use crate::gui::theme::textinput::textinput;
 
@@ -44,10 +46,13 @@ impl<'a> Component<'a> for AnnotationTools {
         let color_submit_callback = |color: Color| app::Message::SubmitColor(color);
 
         let textInputForm = container(column_iced![
+                row![text("Insert the text you want to display")].padding([0,0,20,0]),
                 row![textinput("Type something here...", self.canvas_widget.textSelected.text.as_str())
                 .on_input(app::Message::TextCanvasChanged)],
                 row![button("save").on_press(app::Message::TextPressed(false))]
-        ]);
+        ]).style(
+            Style::Container
+        ).padding([20, 20,20,20]).width(Length::from(300)).height(Length::Fill);
         // Definizione del vettore annotation_buttons
         let mut annotation_buttons = column_iced![];
 
@@ -93,7 +98,19 @@ impl<'a> Component<'a> for AnnotationTools {
             .icon(crate::gui::theme::icon::Icon::Arrow)
             .build(30)
             .padding(8)
-            .on_press(app::Message::Back(app::Page::CasterStreaming)),
+            .on_press(app::Message::SelectShape(Shape::Arrow(ArrowCanva{
+                    starting_point:Default::default(),
+                    ending_point: Default::default()
+                }))),
+                CircleButton::new("")
+            .style(BT::Primary)
+            .icon(crate::gui::theme::icon::Icon::Triangle)
+            .build(30)
+            .padding(8)
+            .on_press(app::Message::SelectShape(Shape::Line(LineCanva{
+                    starting_point:Default::default(),
+                    ending_point: Default::default()
+                }))),
         CircleButton::new("")
             .style(BT::Primary)
             .icon(crate::gui::theme::icon::Icon::Text)
