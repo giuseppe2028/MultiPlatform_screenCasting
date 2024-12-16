@@ -29,7 +29,7 @@ use futures::FutureExt;
 use iced::keyboard::Key;
 use iced::widget::{container, Text};
 use iced::widget::container::Appearance;
-use iced::window::{Level, Position};
+use iced::window::{Id, Level, Position};
 use iced::window::settings::PlatformSpecific;
 use rand::Rng;
 use tokio::sync::{mpsc::{channel, Sender}, Mutex};
@@ -223,7 +223,7 @@ impl Application for App {
         }else if Some(window_id) == self.second_window_id {
             Theme::Transparent
         }else{
-            unreachable!("invalid window")
+            Theme::Dark
         }
     }
 
@@ -419,24 +419,31 @@ impl Application for App {
                 }
             }
             Message::TogglerChanged(message) => {
-                let (second_window_id, command) = window::spawn::<Message>(window::Settings {
-                    size: Size::new(1024.0, 768.0),
-                    position: Position::default(),
-                    min_size: None,
-                    max_size: None,
-                    visible: true,
-                    resizable: true,
-                    decorations: true,
-                    transparent: true,
-                    level: Level::default(),
-                    icon: None,
-                    exit_on_close_request: true,
-                    platform_specific: PlatformSpecific::default(),
-                });
-                self.second_window_id = Some(second_window_id);
+                match self.second_window_id {
+                    None =>{
+                        let (second_window_id, command) = window::spawn::<Message>(window::Settings {
+                            size: Size::new(1024.0, 768.0),
+                            position: Position::default(),
+                            min_size: None,
+                            max_size: None,
+                            visible: true,
+                            resizable: true,
+                            decorations: true,
+                            transparent: true,
+                            level: Level::default(),
+                            icon: None,
+                            exit_on_close_request: true,
+                            platform_specific: PlatformSpecific::default(),
+                        });
+                        self.second_window_id = Some(second_window_id);
 
-                let _ = self.caster_streaming.update(message);
-                command
+                        let _ = self.caster_streaming.update(message);
+                        command
+                    },
+                    Some(sec)=>{
+                        Command::none()
+                    }
+                }
             }
             Message::KeyShortcut(key_code) => {
                 println!("SOno in in key {:?}", key_code);
