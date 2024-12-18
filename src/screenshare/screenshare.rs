@@ -279,7 +279,7 @@ pub async fn start_partial_sharing(
                     let sock_lock = socket.lock().await;
                     if let Some(sock) = sock_lock.as_ref() {
                         sock.send_to_receivers(new_frame).await;
-                        println!("CASTER SOCKET: frame sent!");
+                        //println!("CASTER SOCKET: frame sent!");
                     } else {
                         eprintln!("No CasterSocket available");
                     }
@@ -289,6 +289,7 @@ pub async fn start_partial_sharing(
             }
             Err(e) => {
                 eprintln!("Errore durante la cattura dello schermo: {:?}", e);
+                continue;
             }
         }
     }

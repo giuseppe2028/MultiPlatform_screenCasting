@@ -13,7 +13,7 @@ pub mod picklist;
 pub mod menu;
 pub mod scrollable;
 mod canvas;
-mod color_picker;
+pub mod color_picker;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Default, Copy)]

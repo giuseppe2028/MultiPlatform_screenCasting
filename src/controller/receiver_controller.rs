@@ -150,20 +150,20 @@ impl ReceiverController {
     }
     #[cfg(target_os = "windows")]
     pub fn clear_images_with_command(directory: &str, _: &str) {
-        let dir_path = Path::new(directory);
+        let dir_path = std::path::Path::new(directory);
     
         if !dir_path.exists() {
             eprintln!("Directory '{}' does not exist!", directory);
             return;
         }
     
-        match fs::read_dir(dir_path) {
+        match std::fs::read_dir(dir_path) {
             Ok(entries) => {
                 for entry in entries {
                     if let Ok(entry) = entry {
                         let path = entry.path();
                         if path.extension().and_then(|ext| ext.to_str()) == Some("png") {
-                            if let Err(e) = fs::remove_file(&path) {
+                            if let Err(e) = std::fs::remove_file(&path) {
                                 eprintln!("Failed to delete file {:?}: {}", path, e);
                             } else {
                                 println!("Deleted file: {:?}", path);

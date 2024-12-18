@@ -1,25 +1,26 @@
-use crate::gui::app;
-use crate::gui::component::{Component};
+use crate::column_iced;
+use crate::gui::app::{self, Modality};
+use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::{MyButton, Style};
 use crate::gui::theme::text::text;
 use crate::gui::theme::widget::Element;
-use iced::widget::{container, image, row, Image};
-use iced::{keyboard::{Event::KeyPressed}, Event, event};
-use iced::{Command, Subscription};
 use iced::keyboard::Key;
+use iced::widget::{container, image, row, Image};
+use iced::{event, keyboard::Event::KeyPressed, Event};
+use iced::{Command, Subscription};
 use std::sync::{Arc, RwLock};
 use tokio::sync::{mpsc::Receiver, Mutex};
 use xcap::image::RgbaImage;
-use crate::column_iced;
-use crate::gui::app::Message;
 
 pub struct CasterStreaming {
     pub toggler: bool,
     pub receiver: Arc<Mutex<Receiver<RgbaImage>>>,
     pub frame_to_update: Arc<Mutex<Option<RgbaImage>>>,
     pub warning_message: bool,
+    pub modality: Modality,
     pub viewrs: Arc<RwLock<usize>>,
+    pub stop: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -79,52 +80,108 @@ impl<'a> Component<'a> for CasterStreaming {
                         frame_data.height(),
                         frame_data.clone().into_raw(),
                     ))
-                        .width(iced::Length::Fill)
-                        .height(iced::Length::Fill)
+                    .width(iced::Length::Fill)
+                    .height(iced::Length::Fill)
                 }
             }
         };
 
-
+        let pause_button = if self.toggler {
+            if self.stop {
+                CircleButton::new("play/pause")
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Play)
+                    .build(30)
+                    .padding(8)
+                //.on_press(app::Message::StopStreaming)
+            } else {
+                CircleButton::new("play/pause")
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Pause)
+                    .build(30)
+                    .padding(8)
+                //.on_press(app::Message::StopStreaming)
+            }
+        } else {
+            if self.stop {
+                CircleButton::new("play/pause")
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Play)
+                    .build(30)
+                    .padding(8)
+                    .on_press(app::Message::StopStreaming)
+            } else {
+                CircleButton::new("play/pause")
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Pause)
+                    .build(30)
+                    .padding(8)
+                    .on_press(app::Message::StopStreaming)
+            }
+        };
 
         // Define the control buttons (e.g., play/pause, tools)
-        let menu = row![
-            CircleButton::new("tools")
+        let menu = if !self.toggler {
+            row![
+                CircleButton::new("tools")
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Tools)
+                    .build(30)
+                    .padding(8)
+                    .on_press(app::Message::TogglerChanged(MessageUpdate::TogglerChanged(
+                        !self.toggler
+                    ))),
+                pause_button,
+                CircleButton::new("blank")
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Blanking)
+                    .build(30)
+                    .padding(8)
+                    .on_press(app::Message::Blanking),
+                CircleButton::new("exit")
+                    .style(Style::Danger)
+                    .icon(crate::gui::theme::icon::Icon::Phone)
+                    .build(30)
+                    .padding(8)
+                    .on_press(app::Message::Close),
+                MyButton::new(&format!("{}", viewrs))
+                    .style(Style::Secondary)
+                    .icon(crate::gui::theme::icon::Icon::Viewers)
+                    .build()
+                    .padding(8)
+                    .on_press(app::Message::Back(app::Page::CasterStreaming)),
+            ]
+            .align_items(iced::Alignment::Center)
+            .padding(8)
+            .spacing(10)
+        } else {
+            row![
+                CircleButton::new("tools")
                 .style(Style::Primary)
                 .icon(crate::gui::theme::icon::Icon::Tools)
                 .build(30)
-                .padding(8)
-                .on_press(app::Message::TogglerChanged(MessageUpdate::TogglerChanged(
-                    !self.toggler
-                ))),
-            CircleButton::new("play/pause")
-                .style(Style::Primary)
-                .icon(crate::gui::theme::icon::Icon::Pause)
-                .build(30)
-                .padding(8)
-                .on_press(app::Message::StopStreaming),
-            CircleButton::new("blank")
-                .style(Style::Primary)
-                .icon(crate::gui::theme::icon::Icon::Blanking)
-                .build(30)
-                .padding(8)
-                .on_press(app::Message::Blanking),
-            CircleButton::new("exit")
-                .style(Style::Danger)
-                .icon(crate::gui::theme::icon::Icon::Phone)
-                .build(30)
-                .padding(8)
-                .on_press(app::Message::Close),
-            MyButton::new(&format!("{}", viewrs))
-                .style(Style::Secondary)
-                .icon(crate::gui::theme::icon::Icon::Viewers)
-                .build()
-                .padding(8)
-                .on_press(app::Message::Back(app::Page::CasterStreaming)),
-        ]
+                .padding(8),
+                pause_button,
+                CircleButton::new("blank")
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Blanking)
+                    .build(30)
+                    .padding(8),
+                CircleButton::new("exit")
+                    .style(Style::Danger)
+                    .icon(crate::gui::theme::icon::Icon::Phone)
+                    .build(30)
+                    .padding(8),
+                MyButton::new(&format!("{}", viewrs))
+                    .style(Style::Secondary)
+                    .icon(crate::gui::theme::icon::Icon::Viewers)
+                    .build()
+                    .padding(8),
+            ]
             .align_items(iced::Alignment::Center)
             .padding(8)
-            .spacing(10);
+            .spacing(10)
+        };
 
         let streaming = container(
             column_iced![image, menu]
@@ -133,29 +190,27 @@ impl<'a> Component<'a> for CasterStreaming {
         );
 
         let message = row![text("Your screen is blanking")];
-         if self.warning_message {
+        if self.warning_message {
             container(
                 column_iced![message, row![streaming]]
                     .spacing(8)
                     .align_items(iced::Alignment::Center),
             )
-                .into()
-        }  else {
+            .into()
+        } else {
             container(
                 column_iced![row![streaming]]
                     .spacing(8)
                     .align_items(iced::Alignment::Center),
             )
-                .into()
+            .into()
         }
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
         event::listen_with(|event, status| match (event, status) {
             // Scorciatoia: Space -> StopStreaming
-            (Event::Keyboard(KeyPressed { key, .. }), ..) => {
-                Some(MessageUpdate::KeyPressed(key))
-            }
+            (Event::Keyboard(KeyPressed { key, .. }), ..) => Some(MessageUpdate::KeyPressed(key)),
             _ => None,
         })
     }
