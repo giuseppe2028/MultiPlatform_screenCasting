@@ -12,6 +12,10 @@ use xcap::Monitor;
 use mouse_position::mouse_position::Mouse;
 #[cfg(target_os = "windows")]
 use std::ptr;
+#[cfg(target_os = "linux")]
+use std::ptr;
+#[cfg(target_os = "linux")]
+use std::slice;
 #[cfg(target_os = "windows")]
 use winapi::shared::windef::HBITMAP;
 #[cfg(target_os = "windows")]
@@ -21,13 +25,9 @@ use winapi::um::wingdi::{
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::{CopyIcon, GetCursorInfo, GetIconInfo, CURSORINFO, ICONINFO};
 #[cfg(target_os = "linux")]
-use x11::xlib;
-#[cfg(target_os = "linux")]
-use std::ptr;
-#[cfg(target_os = "linux")]
-use std::slice;
-#[cfg(target_os = "linux")]
 use x11::xfixes::*;
+#[cfg(target_os = "linux")]
+use x11::xlib;
 #[cfg(target_os = "linux")]
 use x11::xlib::*;
 
@@ -103,7 +103,19 @@ pub async fn start_screen_sharing(
         #[cfg(target_os = "linux")]
         {
             if let Some(cursor_data) = get_cursor_image() {
-                overlay_cursor_on_frame(&mut raw_data, width, height, &cursor_data);
+                let monitor_lock = monitor.lock().unwrap();
+                let cursor_coords =
+                    convert_cursor_coordinates(cursor_data.3, cursor_data.4, &*monitor_lock, None);
+                if let Some((adjusted_x, adjusted_y)) = cursor_coords {
+                    let adjusted_cursor_data = (
+                        cursor_data.0,
+                        cursor_data.1,
+                        cursor_data.2,
+                        adjusted_x,
+                        adjusted_y,
+                    );
+                    overlay_cursor_on_frame(&mut raw_data, width, height, &adjusted_cursor_data);
+                }
             }
         }
 
@@ -249,11 +261,29 @@ pub async fn start_partial_sharing(
                 }
                 #[cfg(target_os = "linux")]
                 {
-                    // if let Some((cursor_x, cursor_y)) = get_cursor_position() {
-                    //     overlay_cursor_on_frame(&mut raw_data, width, height, cursor_x, cursor_y);
-                    // }
                     if let Some(cursor_data) = get_cursor_image() {
-                        overlay_cursor_on_frame(&mut raw_data, width, height, &cursor_data);
+                        let monitor_lock = monitor.lock().unwrap();
+                        let cursor_coords = convert_cursor_coordinates(
+                            cursor_data.3,
+                            cursor_data.4,
+                            &*monitor_lock,
+                            Some(dimensions),
+                        );
+                        if let Some((adjusted_x, adjusted_y)) = cursor_coords {
+                            let adjusted_cursor_data = (
+                                cursor_data.0,
+                                cursor_data.1,
+                                cursor_data.2,
+                                adjusted_x,
+                                adjusted_y,
+                            );
+                            overlay_cursor_on_frame(
+                                &mut raw_data,
+                                width,
+                                height,
+                                &adjusted_cursor_data,
+                            );
+                        }
                     } else {
                         eprintln!("Impossibile ottenere il cursore.");
                     }
@@ -732,5 +762,82 @@ fn get_cursor_image() -> Option<(Vec<u64>, u32, u32, i32, i32)> {
 
         // Restituisci l'immagine del cursore
         Some((pixels_vec, width as u32, height as u32, x as i32, y as i32))
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn convert_cursor_coordinates(
+    global_x: i32,
+    global_y: i32,
+    monitor: &Monitor,
+    dimensions: Option<[(f64, f64); 2]>,
+) -> Option<(i32, i32)> {
+    let monitor_x = monitor.x();
+    let monitor_y = monitor.y();
+    let monitor_width = monitor.width() as f64;
+    let monitor_height = monitor.height() as f64;
+
+    // Coordinate relative al monitor
+    let relative_x = global_x - monitor_x;
+    let relative_y = global_y - monitor_y;
+
+    if let Some(dims) = dimensions {
+        let selected_x = dims[0].0;
+        let selected_y = dims[0].1;
+        let selected_width = dims[1].0 - dims[0].0;
+        let selected_height = dims[1].1 - dims[0].1;
+
+        // Calcola le proporzioni
+        let width_ratio = monitor_width / selected_width;
+        let height_ratio = monitor_height / selected_height;
+
+        // Usa il rapporto più piccolo per mantenere l'aspetto
+        let scale_factor = width_ratio.min(height_ratio);
+
+        // Compensazione aggiuntiva per finestre piccole
+        let size_compensation = if selected_width < monitor_width / 2.0 {
+            let compensation_factor = (monitor_width / selected_width) * 0.15; // Aumentato il fattore di compensazione
+            (compensation_factor, compensation_factor * 1.25) // Maggiore compensazione per l'asse Y
+        } else {
+            (1.0, 1.0)
+        };
+
+        // Calcola la posizione relativa considerando la scala e la compensazione
+        let x_within_selection =
+            (relative_x as f64 - selected_x) * scale_factor * size_compensation.0;
+        let y_within_selection =
+            (relative_y as f64 - selected_y) * scale_factor * size_compensation.1;
+
+        // Calcola gli offset per centrare l'area scalata
+        let scaled_width = selected_width * scale_factor;
+        let scaled_height = selected_height * scale_factor;
+        let x_offset = (monitor_width - scaled_width) / 2.0;
+        let y_offset = (monitor_height - scaled_height) / 2.0;
+
+        // Applica gli offset con compensazione aggiuntiva per l'asse Y
+        let final_x = (x_within_selection + x_offset) as i32;
+        let final_y = ((y_within_selection + y_offset) * 1.1) as i32; // Riduzione del 15% per spostare verso l'alto
+
+        // Verifica che il cursore sia all'interno dell'area scalata
+        if final_x >= 0
+            && final_x < monitor_width as i32
+            && final_y >= 0
+            && final_y < monitor_height as i32
+        {
+            Some((final_x, final_y))
+        } else {
+            None
+        }
+    } else {
+        // Per la cattura a schermo intero
+        if relative_x >= 0
+            && relative_x < monitor_width as i32
+            && relative_y >= 0
+            && relative_y < monitor_height as i32
+        {
+            Some((relative_x, relative_y))
+        } else {
+            None
+        }
     }
 }
