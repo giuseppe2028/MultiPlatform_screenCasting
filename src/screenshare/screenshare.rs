@@ -225,11 +225,14 @@ pub async fn start_partial_sharing(
                 #[cfg(target_os = "windows")]
                 {
                     if let Some((cursor_x, cursor_y, hbm_color)) = get_cursor_data() {
-                        // Converti le coordinate globali del cursore in coordinate relative al monitor
+                        // Converti le coordinate globali del cursore in coordinate relative alla finestra selezionata
                         let monitor_lock = monitor.lock().unwrap();
-                        if let Some((relative_x, relative_y)) =
-                            convert_cursor_coordinates(cursor_x, cursor_y, &*monitor_lock)
-                        {
+                        if let Some((relative_x, relative_y)) = convert_cursor_coordinates_partial(
+                            cursor_x,
+                            cursor_y,
+                            &*monitor_lock,
+                            Some(dimensions),
+                        ) {
                             if hbm_color.is_null() {
                                 // Sovrapponi manualmente un cursore a forma di "I"
                                 overlay_text_cursor(
@@ -250,6 +253,9 @@ pub async fn start_partial_sharing(
                                     hbm_color,
                                 );
                             }
+                        }
+                        else {
+                            println!("finita");
                         }
                     }
                 }
@@ -309,7 +315,7 @@ pub async fn start_partial_sharing(
                     let sock_lock = socket.lock().await;
                     if let Some(sock) = sock_lock.as_ref() {
                         sock.send_to_receivers(new_frame).await;
-                        println!("CASTER SOCKET: frame sent!");
+                       // println!("CASTER SOCKET: frame sent!");
                     } else {
                         eprintln!("No CasterSocket available");
                     }
@@ -343,6 +349,46 @@ pub fn take_screenshot(monitor: Arc<std::sync::Mutex<Monitor>>) -> RgbaImage {
         }
     }
 }
+
+#[cfg(target_os = "windows")]
+fn convert_cursor_coordinates_partial(
+    global_x: i32,
+    global_y: i32,
+    monitor: &Monitor,
+    dimensions: Option<[(f64, f64); 2]>, // Aggiungi le dimensioni opzionali
+) -> Option<(i32, i32)> {
+    // Ottieni la posizione del monitor nell'area desktop
+    let monitor_x = monitor.x();
+    let monitor_y = monitor.y();
+
+    // Ottieni le dimensioni del monitor
+    let monitor_width = monitor.width() as i32;
+    let monitor_height = monitor.height() as i32;
+
+    // Calcola le coordinate relative al monitor selezionato
+    let mut relative_x = global_x - monitor_x;
+    let mut relative_y = global_y - monitor_y;
+
+    // Se stai condividendo una porzione dello schermo, sottrai gli offset
+    if let Some(dim) = dimensions {
+        let offset_x = dim[0].0 as i32;
+        let offset_y = dim[0].1 as i32;
+        relative_x -= offset_x;
+        relative_y -= offset_y;
+    }
+
+    // Controlla se le coordinate relative rientrano nel monitor selezionato o nella porzione
+    if relative_x >= 0
+        && relative_x < monitor_width
+        && relative_y >= 0
+        && relative_y < monitor_height
+    {
+        Some((relative_x, relative_y))
+    } else {
+        None // Il cursore non si trova su questo monitor o porzione
+    }
+}
+
 #[cfg(target_os = "windows")]
 fn overlay_cursor_on_frame(
     raw_data: &mut Vec<u8>,
