@@ -6,12 +6,10 @@ use crate::gui::component::Annotation::Square::{
 use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::{MyButton, Style as BT};
-use crate::gui::theme::color_picker::color_picker;
 use crate::gui::theme::container::Style;
 use crate::gui::theme::text::text;
 use crate::gui::theme::textinput::textinput;
 use crate::gui::theme::widget::{Canvas, Element};
-use crate::gui::theme::Theme;
 use iced::advanced::graphics::core::window;
 use iced::widget::{container, row, Container as CT};
 use iced::{event, Color, Command, Event, Length, Point, Subscription};
@@ -59,10 +57,9 @@ impl<'a> Component<'a> for AnnotationTools {
             )
             .on_input(app::Message::TextCanvasChanged)],
             row![].height(10),
-            row![MyButton::new("save")
+            row![MyButton::new("SAVE")
                 .style(BT::Primary)
                 .build()
-                .height(50)
                 .on_press(app::Message::TextPressed(false))]
         ])
         .style(Style::Container)
@@ -87,7 +84,7 @@ impl<'a> Component<'a> for AnnotationTools {
                         .on_press(app::Message::ClearShape),
                     CircleButton::new("")
                         .style(BT::Primary)
-                        .icon(crate::gui::theme::icon::Icon::Triangle)
+                        .icon(crate::gui::theme::icon::Icon::Circle)
                         .build(30)
                         .padding(8)
                         .on_press(app::Message::SelectShape(Shape::Circle(CircleCanva {
@@ -117,7 +114,7 @@ impl<'a> Component<'a> for AnnotationTools {
                         }))),
                     CircleButton::new("")
                         .style(BT::Primary)
-                        .icon(crate::gui::theme::icon::Icon::Triangle)
+                        .icon(crate::gui::theme::icon::Icon::Line)
                         .build(30)
                         .padding(8)
                         .on_press(app::Message::SelectShape(Shape::Line(LineCanva {
@@ -139,7 +136,7 @@ impl<'a> Component<'a> for AnnotationTools {
         }
 
         // Define the sidebar and streaming layout
-        let mut sidebar = column_iced![row![
+        let sidebar = column_iced![row![
             annotation_buttons,
             Canvas::new(&self.canvas_widget)
                 .width(Length::Fill)
@@ -157,9 +154,9 @@ impl<'a> Component<'a> for AnnotationTools {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        if let Some(id) = self.window_id {
+        if let Some(_) = self.window_id {
             event::listen_with(|event, _status| match event {
-                Event::Window(id, window::Event::Closed) => Some(MessageAnnotation::CloseRequested),
+                Event::Window(_id, window::Event::Closed) => Some(MessageAnnotation::CloseRequested),
                 _ => None,
             })
         } else {

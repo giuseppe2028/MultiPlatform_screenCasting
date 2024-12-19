@@ -96,7 +96,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
             );
 
             for shape in &self.shapes {
-                println!("{:?}",self.shapes);
+               // println!("{:?}",self.shapes);
                 match shape {
                     Shape::Line(line)=>{
                         let rect_path = Path::line(line.starting_point,line.ending_point);
@@ -181,7 +181,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                     }
                 }
             }
-            print!("{:?}",self.all_text_selected);
+            //print!("{:?}",self.all_text_selected);
             for text in &self.all_text_selected{
                 let my_text = Text {
                     content: text.clone().text,
@@ -197,7 +197,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
 
         if let Some(Pending::One { from }) = state {
             if let Some(cursor_position) = cursor.position_in(bounds) {
-                print!("{:?}",cursor_position);
+                //print!("{:?}",cursor_position);
                 // Disegno dell'anteprima in base alla forma selezionata
                 let preview_path = match self.selected_shape {
                     Some(Shape::Rectangle(_)) => {
@@ -262,9 +262,9 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                     mouse::Event::ButtonPressed(mouse::Button::Left) => {
                         match *state {
                             None => {
-                                println!("{:?}",self.text_status);
+                                //println!("{:?}",self.text_status);
                                 if let Status::TextPressed = self.text_status{
-                                    println!("pressed");
+                                    //println!("pressed");
                                     /*
                                     self.textSelected.position = cursor_position;*/
                                     *state =None;
@@ -373,10 +373,10 @@ impl CanvasWidget {
         match message {
             Message::PendingOne(Pending::One { from }) => {
                 self.start_point = from;
-                println!("almento o qua");
+                //println!("almento o qua");
             }
             Message::PendingTwo(Pending::Two { from, to }) => {
-                println!("almento o qua1");
+                //println!("almento o qua1");
                 self.start_point = from;
                 self.end_point = to;
 
@@ -388,12 +388,12 @@ impl CanvasWidget {
                 self.cache.clear(); // Forza il ridisegno
             }
             Message::AddShape(shape) => {
-                println!(" SONO IN Add shape");
+                //println!(" SONO IN Add shape");
                 self.shapes.push(shape);
                 self.cache.clear(); // Forza il ridisegno
             },
             Message::SaveTextPosition(cord)=>{
-                println!("almento qua");
+                //println!("almento qua");
             }
             Message::ClearShape => {
                 self.shapes.clear();

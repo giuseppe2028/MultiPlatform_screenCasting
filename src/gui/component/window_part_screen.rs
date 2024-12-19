@@ -42,7 +42,7 @@ impl<'a> Component<'a> for WindowPartScreen {
     fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
             MessagePress::FirstPress => {
-                print!("First press {:?}", self.cursor_position) ;
+                //print!("First press {:?}", self.cursor_position) ;
                 self.coordinate[0] = self.cursor_position;
             }
             MessagePress::SecondPress=>{

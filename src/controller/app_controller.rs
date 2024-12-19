@@ -90,7 +90,7 @@ impl AppController {
 
         // Distruggi la socket, se presente
         if let Some(socket) = self.socket.blocking_lock().as_mut() {
-            println!("Socket distrutta");
+            //println!("Socket distrutta");
             socket.destroy();
         }
         // Rimuovi il task di streaming
@@ -124,7 +124,7 @@ impl AppController {
         let lock_monitor = self.monitor_chosen.lock().unwrap();
         let x = lock_monitor.width();
         let y = lock_monitor.height();
-        println!("width {}, height {}", x, y);
+        //println!("width {}, height {}", x, y);
         return (x, y);
     }
 }

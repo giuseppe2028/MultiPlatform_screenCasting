@@ -1,8 +1,7 @@
 use iced::{Background, Color};
 use iced_aw::color_picker::{Appearance, StyleSheet};
-use crate::gui::{app::Message, theme::Theme};
+use crate::gui::theme::Theme;
 
-use crate::gui::theme::widget::ColorPicker;
 
 #[derive(Default)]
 pub enum Style {
@@ -62,6 +61,6 @@ impl StyleSheet for Theme {
     }
 }
 
-pub fn color_picker<'a>(show_picker: bool, color: Color,underlay: super::widget::Element<'a, Message>, on_cancel: Message, on_submit: impl Fn(Color) -> Message + 'static) -> ColorPicker<'a, Message>{
+/*pub fn color_picker<'a>(show_picker: bool, color: Color,underlay: super::widget::Element<'a, Message>, on_cancel: Message, on_submit: impl Fn(Color) -> Message + 'static) -> ColorPicker<'a, Message>{
     iced_aw::color_picker(show_picker, color, underlay, on_cancel, on_submit)
-}
+}*/

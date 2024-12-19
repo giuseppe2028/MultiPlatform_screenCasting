@@ -34,7 +34,6 @@ use iced::widget::container::Appearance;
 use iced::window::settings::PlatformSpecific;
 use iced::window::{Level, Position};
 use iced::{executor, font, window, Border, Color, Command, Point, Size, Subscription};
-use rand::Rng;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, RwLock};
 use tokio::sync::{
@@ -241,7 +240,7 @@ impl Application for App {
     fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
         match message {
             Message::CloseRequested => {
-                println!("Chiusa finestra secondaria");
+               // println!("Chiusa finestra secondaria");
                 // Controllo se la finestra è valida prima di chiuderla
                 let result = window::close::<Message>(self.second_window_id.unwrap()); // Chiude la finestra solo se valida
                 result.actions();
@@ -255,17 +254,17 @@ impl Application for App {
             }
             Message::ChooseColor => {
                 self.annotationTools.show_color_picker = true;
-                println!("sono in choose");
+                //println!("sono in choose");
                 Command::none()
             }
             Message::SubmitColor(color) => {
-                println!("Colore: {:?}", color);
+                //println!("Colore: {:?}", color);
                 self.annotationTools.selected_color = color;
                 self.annotationTools.show_color_picker = false;
                 Command::none()
             }
             Message::PendingTwo(pending) => {
-                if let Pending::Two { from, to } = pending {
+                if let Pending::Two { from: _, to } = pending {
                     self.annotationTools.canvas_widget.start_point = to;
                 }
                 Command::none()
@@ -281,7 +280,7 @@ impl Application for App {
                 if let Err(error) = result {
                     println!("{:?}", error);
                 } else {
-                    println!("Font caricato con successo");
+                    //println!("Font caricato con successo");
                 }
                 Command::none()
             }
@@ -435,10 +434,10 @@ impl Application for App {
                             !receiver_controller.is_recording.load(Ordering::Relaxed),
                             Ordering::Relaxed,
                         );
-                        print!(
+                        /*print!(
                             "sono in start recording {}",
                             receiver_controller.is_recording.load(Ordering::Relaxed)
-                        );
+                        );*/
                         // Se `self.controller` è di tipo `ReceiverController`, fai qualcosa
                         let _ = self.receiver_streaming.update(message);
                         Command::none()
@@ -471,7 +470,7 @@ impl Application for App {
                     let _ = self.caster_streaming.update(message);
                     command
                 }
-                Some(sec) => {
+                Some(_) => {
                     panic!("NON DOVREBBE ENTRARE QUI");
                 }
             },
@@ -773,21 +772,21 @@ impl Application for App {
             Message::ChosenShortcuts(shortcuts) => {
                 match shortcuts {
                     Shortcuts::ManageTransmission(key) => {
-                        print!("entro manage");
+                        //print!("entro manage");
                         self.shortcut_controller.set_manage_trasmition(&key);
                         let _ = self
                             .shortcut_screen
                             .update(ShortcutMessage::ManageTransmission(key));
                     }
                     Shortcuts::BlanckingScreen(key) => {
-                        print!("entro blanking");
+                        //print!("entro blanking");
                         self.shortcut_controller.set_blanking_screen(&key);
                         let _ = self
                             .shortcut_screen
                             .update(ShortcutMessage::BlanckingScreen(key));
                     }
                     Shortcuts::TerminateSession(key) => {
-                        print!("entro Trasmission");
+                        //print!("entro Trasmission");
                         self.shortcut_controller.set_terminate_session(&key);
                         let _ = self
                             .shortcut_screen
@@ -798,17 +797,17 @@ impl Application for App {
             }
             Message::AddShape(shape) => {
                 self.annotationTools.canvas_widget.shapes.push(shape);
-                println!(
+               /*  println!(
                     "SONO O NON SONO IN Add shape {:?}",
                     self.annotationTools.canvas_widget.shapes
-                );
+                );*/
                 self.annotationTools.canvas_widget.cache.clear(); // Forza il ridisegno
                 Command::none()
             }
             Message::SelectShape(shape) => {
                 self.annotationTools.set_selected_annotation =
                     !self.annotationTools.set_selected_annotation;
-                print!("Hai scelto il rettangolo");
+                //print!("Hai scelto il rettangolo");
                 match shape {
                     Shape::Line(_) => {
                         self.annotationTools.canvas_widget.selected_shape =
@@ -819,7 +818,7 @@ impl Application for App {
                         Command::none()
                     }
                     Shape::Rectangle(_) => {
-                        print!("Hai scelto il rettangolo1");
+                        //print!("Hai scelto il rettangolo1");
                         self.annotationTools.canvas_widget.selected_shape =
                             Some(Shape::Rectangle(RectangleCanva {
                                 startPoint: Default::default(),
@@ -829,7 +828,7 @@ impl Application for App {
                         Command::none()
                     }
                     Shape::Circle(circle) => {
-                        print!("Hai scelto il Cerchio");
+                        //print!("Hai scelto il Cerchio");
                         self.annotationTools.canvas_widget.selected_shape =
                             Some(Shape::Circle(circle));
                         Command::none()
@@ -870,7 +869,7 @@ impl Application for App {
                 Command::none()
             }
             Message::CancelColor => {
-                println!("Cancella");
+                //println!("Cancella");
                 self.annotationTools.show_color_picker = false;
                 Command::none()
             }
@@ -940,6 +939,7 @@ impl container::StyleSheet for TransparentStyle {
     type Style = Style;
 
     fn appearance(&self, style: &Self::Style) -> Appearance {
+        let _ = style;
         Appearance {
             text_color: None,
             background: None,

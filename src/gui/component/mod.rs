@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use iced::{Command};
+use iced::Command;
 
 use crate::gui::app;
 use crate::gui::theme::widget::Element;
