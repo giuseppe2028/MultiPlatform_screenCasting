@@ -1,6 +1,6 @@
 # Multiplatform Screen Casing
 
-Questa applicazione, scritta intermanete in rust, è un progetto universitario con lo scopo di realizzaare tutte le features elencate nel file [Readme](./README.MD)
+Questa applicazione, scritta intermanete in rust, è un progetto universitario con lo scopo di realizzaare tutte le features elencate nel file [Readme](./README.md)
 
 ## Installazione ed esecuzione su Windows, MacOS e Ubuntu
 
