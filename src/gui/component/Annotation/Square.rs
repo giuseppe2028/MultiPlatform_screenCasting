@@ -4,7 +4,7 @@ use iced::widget::{canvas};
 use iced::{Color, Rectangle, Renderer};
 use iced::mouse::Cursor;
 
-use iced::widget::canvas::{Cache, Frame, Geometry, Path, Program, Stroke, Text};
+use iced::widget::canvas::{Cache, Frame, Geometry, Path, Program, Stroke, Style, Text};
 use iced::widget::canvas::path::lyon_path::geom::size;
 use crate::gui::app::Message;
 use crate::gui::theme::Theme;
@@ -92,7 +92,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
 
             frame.stroke(
                 &Path::rectangle(Point::ORIGIN, frame.size()),
-                Stroke::default().with_width(2.0),
+                Stroke::default().with_width(3.0),
             );
 
             for shape in &self.shapes {
@@ -100,18 +100,36 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                 match shape {
                     Shape::Line(line)=>{
                         let rect_path = Path::line(line.starting_point,line.ending_point);
-                        frame.stroke(&rect_path, Stroke::default());
+                        frame.stroke(&rect_path, Stroke{
+                            style:Style::Solid(Color::BLACK),
+                            width: 3.0,
+                            line_cap: Default::default(),
+                            line_join: Default::default(),
+                            line_dash: Default::default(),
+                        });
                     }
                     Shape::Rectangle(rect) => {
                         let rect_path = Path::rectangle(
                             rect.startPoint,
                             Size::new(rect.width, rect.height),
                         );
-                        frame.stroke(&rect_path, Stroke::default());
+                        frame.stroke(&rect_path, Stroke{
+                            style:Style::Solid(Color::BLACK),
+                            width: 3.0,
+                            line_cap: Default::default(),
+                            line_join: Default::default(),
+                            line_dash: Default::default(),
+                        });
                     }
                     Shape::Circle(circle) => {
                         let circle_path = Path::circle(circle.center, circle.radius);
-                        frame.stroke(&circle_path, Stroke::default());
+                        frame.stroke(&circle_path, Stroke{
+                            style:Style::Solid(Color::BLACK),
+                            width: 3.0,
+                            line_cap: Default::default(),
+                            line_join: Default::default(),
+                            line_dash: Default::default(),
+                        });
                     }
                     Shape::Arrow(arrow) => {
                         // Definisci i punti della freccia
@@ -153,7 +171,13 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                         });
 
                         // Disegna la freccia
-                        frame.stroke(&arrow_path, Stroke::default());
+                        frame.stroke(&arrow_path,Stroke{
+                            style:Style::Solid(Color::BLACK),
+                            width: 3.0,
+                            line_cap: Default::default(),
+                            line_join: Default::default(),
+                            line_dash: Default::default(),
+                        });
                     }
                 }
             }
@@ -214,7 +238,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                 };
 
                 let mut frame = Frame::new(renderer, bounds.size());
-                frame.stroke(&preview_path, Stroke::default().with_color(Color::from_rgba(0.0, 0.5, 0.0, 0.5)));
+                frame.stroke(&preview_path, Stroke::default().with_color(Color::from_rgba(0.0, 0.5, 0.0, 0.5)).with_width(3.0));
                 return vec![content, frame.into_geometry()];
             }
         }
@@ -395,7 +419,7 @@ impl Curve {
             }
         });
 
-        frame.stroke(&curves, Stroke::default().with_width(2.0));
+        frame.stroke(&curves, Stroke::default().with_width(2.0).with_width(3.0));
     }
 }
 
@@ -422,7 +446,7 @@ impl Pending {
             match *self {
                 Pending::One { from } => {
                     let line = Path::line(from, cursor_position);
-                    frame.stroke(&line, Stroke::default().with_width(2.0));
+                    frame.stroke(&line, Stroke::default().with_width(2.0).with_width(3.0));
                 }
                 Pending::Two { from, to } => {
                     let curve = Curve {

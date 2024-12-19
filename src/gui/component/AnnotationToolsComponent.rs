@@ -50,19 +50,6 @@ impl<'a> Component<'a> for AnnotationTools {
     }
 
     fn view(&self) -> Element<'_, app::Message> {
-        //println!("Aggiorno questa pagina");
-        let but = MyButton::new("Set Color")
-            .style(BT::Primary)
-            .build()
-            .on_press(app::Message::ChooseColor);
-        let color_picker = color_picker(
-            self.show_color_picker,
-            self.selected_color,
-            but.into(),
-            app::Message::CancelColor,
-            |color| app::Message::SubmitColor(color),
-        )
-        .style(Theme::Light);
 
         let text_input_form = container(column_iced![
             row![text("Insert the text you want to display")].padding([0, 0, 20, 0]),
@@ -92,13 +79,6 @@ impl<'a> Component<'a> for AnnotationTools {
         } else {
             annotation_buttons = container(
                 column_iced![
-                    color_picker,
-                    CircleButton::new("")
-                        .style(BT::Primary)
-                        .icon(crate::gui::theme::icon::Icon::Pencil)
-                        .build(30)
-                        .padding(8)
-                        .on_press(app::Message::Back(app::Page::CasterStreaming)),
                     CircleButton::new("")
                         .style(BT::Primary)
                         .icon(crate::gui::theme::icon::Icon::Rubber)
@@ -167,9 +147,7 @@ impl<'a> Component<'a> for AnnotationTools {
         ]]
         .spacing(8)
         .align_items(iced::Alignment::Center);
-        if self.set_selected_annotation {
-            sidebar = sidebar.push(row![text("Press where do you want to put the note")])
-        }
+
 
         CT::new(sidebar)
             .style(Style::Window)

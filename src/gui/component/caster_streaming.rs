@@ -11,6 +11,8 @@ use iced::{Command, Subscription};
 use std::sync::{Arc, RwLock};
 use tokio::sync::{mpsc::Receiver, Mutex};
 use xcap::image::RgbaImage;
+use crate::column_iced;
+use crate::gui::app::Modality;
 
 pub struct CasterStreaming {
     pub toggler: bool,
