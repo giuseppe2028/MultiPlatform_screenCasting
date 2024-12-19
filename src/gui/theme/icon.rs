@@ -21,7 +21,10 @@ pub enum Icon {
     Blanking,
     Phone,
     Text,
-    Viewers
+    Viewers,
+    Line,
+    Circle,
+    Minus
 
 }
 
@@ -47,7 +50,10 @@ impl From<&Icon> for char {
             Icon::Blanking => '\u{F21B}',
             Icon::Phone => '\u{E80A}',
             Icon::Text => '\u{E80C}',
-            Icon::Viewers => '\u{F064}'
+            Icon::Viewers => '\u{F064}',
+            Icon::Line => '\u{E80E}',
+            Icon::Minus => '\u{E80F}',
+            Icon::Circle => '\u{F1DB}'
         }
     }
 }

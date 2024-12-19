@@ -312,11 +312,11 @@ impl Application for App {
                 self.notification_rx = Some(notification_rx);
                 Command::perform(
                     async move {
-                        println!("Creata nuova socket caster");
+                        //println!("Creata nuova socket caster");
                         let caster_ip = local_ip().unwrap();
-                        println!("{:?}", caster_ip);
+                        //println!("{:?}", caster_ip);
                         let socket = crate::socket::socket::CasterSocket::new(
-                            &format!("{}:8000", caster_ip),
+                            &format!("{}:7878", caster_ip),
                             notification_tx,
                         )
                         .await;
@@ -334,10 +334,10 @@ impl Application for App {
                     Command::perform(
                         async move {
                             let receiver_ip = local_ip().unwrap();
-                            println!("{:?}", receiver_ip);
+                            //println!("{:?}", receiver_ip);
                             let socket = crate::socket::socket::ReceiverSocket::new(
-                                &format!("{}:8001", receiver_ip),
-                                &format!("{}:8000", ip_caster),
+                                &format!("{}:7878", receiver_ip),
+                                &format!("{}:7878", ip_caster),
                             )
                             .await;
                             let page = Page::ReceiverStreaming;
@@ -411,7 +411,7 @@ impl Application for App {
                     }
                     caster_settings::Window::Area => {
                         if let Controller::CasterController(caster) = &mut self.controller {
-                            println!("CHIAMO LA FUNZIONE DELLO SCREENSHOT");
+                            //println!("CHIAMO LA FUNZIONE DELLO SCREENSHOT");
                             let frame = caster.take_screenshot();
                             self.windows_part_screen.screenshot = Some(frame);
                             self.windows_part_screen.measures = caster.get_measures();
@@ -425,7 +425,7 @@ impl Application for App {
                 Command::none()
             }
             Message::StartRecording(message) => {
-                println!("entro dentro recording");
+                //println!("entro dentro recording");
                 match &self.controller {
                     Controller::ReceiverController(receiver_controller) => {
                         if receiver_controller.is_recording.load(Ordering::Relaxed) {
@@ -476,14 +476,11 @@ impl Application for App {
                 }
             },
             Message::KeyShortcut(key_code) => {
-                println!("SOno in in key {:?}", key_code);
+                //println!("SOno in in key {:?}",key_code);
                 if let Controller::CasterController(caster) = &mut self.controller {
                     let key_code = from_key_to_string(key_code);
-                    println!(" Key_code {:?}", key_code);
-                    println!(
-                        "SOno in in self.shorcut {:?}",
-                        self.shortcut_screen.blancking_screen
-                    );
+                    //println!(" Key_code {:?}",key_code);
+                    //println!("SOno in in self.shorcut {:?}", self.shortcut_screen.blancking_screen);
                     if self.shortcut_screen.blancking_screen == key_code {
                         self.caster_streaming.warning_message =
                             !self.caster_streaming.warning_message;
@@ -613,11 +610,11 @@ impl Application for App {
                 //creo la caster socket
                 Command::perform(
                     async move {
-                        println!("Creata nuova socket caster");
+                        //println!("Creata nuova socket caster");
                         let caster_ip = local_ip().unwrap();
-                        println!("{:?}", caster_ip);
+                        //println!("{:?}", caster_ip);
                         let socket = crate::socket::socket::CasterSocket::new(
-                            &format!("{}:8000", caster_ip),
+                            &format!("{}:7878", caster_ip),
                             notification_tx,
                         )
                         .await;
@@ -711,10 +708,10 @@ impl Application for App {
                                     caster.get_measures().1 as u64,
                                 ),
                             );
-                            println!(
+                           /* println!(
                                 "x: {} y: {} start_x: {} start_y: {}",
                                 x, y, screen_scaled.0, screen_scaled.1
-                            );
+                            );*/
                             if let Some(notification_rx) = self.notification_rx.clone() {
                                 let viewrs_clone = self.caster_streaming.viewrs.clone();
                                 tokio::spawn(async move {
@@ -723,12 +720,12 @@ impl Application for App {
                                         // Ricevi il valore aggiornato
                                         let viewers = *notification_rx.borrow();
                                         *viewrs_clone.write().unwrap() = viewers;
-                                        println!(
+                                        /*println!(
                                             "Numero di visualizzatori aggiornato: {}",
                                             viewers
-                                        );
+                                        );*/
                                     }
-                                    println!("TERMINO...");
+                                    //println!("TERMINO...");
                                 });
                             } else {
                                 eprintln!("Errore: notification_rx non è inizializzato!");
@@ -754,12 +751,12 @@ impl Application for App {
                                         // Ricevi il valore aggiornato
                                         let viewers = *notification_rx.borrow();
                                         *viewrs_clone.write().unwrap() = viewers;
-                                        println!(
+                                        /*println!(
                                             "Numero di visualizzatori aggiornato: {}",
                                             viewers
-                                        );
+                                        );*/
                                     }
-                                    println!("TERMINO...");
+                                    //println!("TERMINO...");
                                 });
                             } else {
                                 eprintln!("Errore: notification_rx non è inizializzato!");

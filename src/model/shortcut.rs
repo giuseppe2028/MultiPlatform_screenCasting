@@ -18,7 +18,7 @@ impl ShortcutController {
 
         // Prova ad aprire il file
         let file = File::open(path);
-        println!("result {:?}",file);
+        //println!("result {:?}",file);
         let shortcuts: HashMap<String, String> = match file {
             Ok(f) => serde_json::from_reader(f).unwrap_or_else(|err| {
                 eprintln!("Errore durante il parsing del JSON: {}. Uso valori di default.", err);

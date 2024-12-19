@@ -37,7 +37,7 @@ impl From<MessageUpdate> for app::Message {
             MessageUpdate::TogglerChanged(_) => app::Message::TogglerChanged(message),
             MessageUpdate::NewFrame(_) => app::Message::None,
             MessageUpdate::KeyPressed(code) => {
-                println!("sono in key pressed {:?}", code);
+                //println!("sono in key pressed {:?}", code);
                 app::Message::KeyShortcut(code)
             }
         }
@@ -69,7 +69,7 @@ impl<'a> Component<'a> for CasterStreaming {
             let frame = self.frame_to_update.blocking_lock();
             match *frame {
                 None => {
-                    println!("Niente da fare");
+                    //println!("Niente da fare");
                     image(format!("./resources/icons/512x512.png"))
                         .width(iced::Length::Fill)
                         .height(iced::Length::Fill)
