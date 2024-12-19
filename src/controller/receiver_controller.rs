@@ -51,7 +51,7 @@ impl ReceiverController {
         let rt = Runtime::new().unwrap();
         match rt.block_on(sock_lock.register_with_caster()) {
             Ok(_) => {
-                println!("Ho inviato la richiesta di registrazione!");
+                //println!("Ho inviato la richiesta di registrazione!");
                 Ok("Registrazione completata con successo!".to_string())
             }
             Err(e) => {
@@ -74,7 +74,7 @@ impl ReceiverController {
         let sock_lock = self.socket.blocking_lock();
         let rt = Runtime::new().unwrap();
         let _ = rt.block_on(sock_lock.unregister_with_caster());
-        println!("Ho inviato la richiesta di disconessione!");
+        //println!("Ho inviato la richiesta di disconessione!");
     }
 
     pub fn set_handle(&mut self, handle: Option<task::JoinHandle<()>>) {
@@ -101,12 +101,12 @@ impl ReceiverController {
 
     pub fn start_recording(&self, image: RgbaImage) {
         if self.is_recording.load(Ordering::Relaxed) {
-            println!(
+            /*println!(
                 "sono dntro start recording {}",
                 self.is_recording.load(Ordering::Relaxed)
-            );
+            );*/
             let counter = Arc::clone(&self.counter);
-            println!("starto la recording...");
+            //println!("starto la recording...");
             let _ = thread::spawn(move || {
                 let mut counter_guard = counter.blocking_lock(); // Clona il contatore
                 *counter_guard += 1;
@@ -114,7 +114,7 @@ impl ReceiverController {
                 if let Err(e) = image.save(&path) {
                     eprintln!("Error saving image: {}", e);
                 } else {
-                    println!("Image saved to {}", path);
+                    //println!("Image saved to {}", path);
                 }
             });
             // a.join().expect("TODO: panic message");
@@ -168,7 +168,7 @@ impl ReceiverController {
                             if let Err(e) = fs::remove_file(&path) {
                                 eprintln!("Failed to delete file {:?}: {}", path, e);
                             } else {
-                                println!("Deleted file: {:?}", path);
+                               // println!("Deleted file: {:?}", path);
                             }
                         }
                     }
@@ -192,7 +192,7 @@ impl ReceiverController {
 
         match status {
             Ok(status) if status.success() => {
-                println!("Successfully deleted all files matching pattern: {}*", pattern);
+                //println!("Successfully deleted all files matching pattern: {}*", pattern);
             }
             Ok(status) => {
                 eprintln!("Command failed with exit code: {}", status);
@@ -215,7 +215,7 @@ impl ReceiverController {
 
         match status {
             Ok(status) if status.success() => {
-                println!("Successfully deleted all files matching pattern: {}*", pattern);
+                //println!("Successfully deleted all files matching pattern: {}*", pattern);
             }
             Ok(status) => {
                 eprintln!("Command failed with exit code: {}", status);

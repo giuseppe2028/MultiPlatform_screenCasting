@@ -141,7 +141,7 @@ pub async fn start_screen_sharing(
             if let Some(sock) = sock_lock.as_ref() {
                 if blanking_flag.load(Ordering::Relaxed) {
                     //frame nero
-                    println!("Mando frame nero");
+                    //println!("Mando frame nero");
                     let black_frame_data = vec![0u8; (width * height * 4) as usize]; // RGBA: 4 byte per pixel
                     if let Some(black_frame) = RgbaImage::from_raw(width, height, black_frame_data)
                     {
@@ -159,7 +159,7 @@ pub async fn start_screen_sharing(
             eprintln!("Error recreating the frame from raw data");
         }
     }
-    println!("Stopped sending frames");
+    //println!("Stopped sending frames");
 }
 
 pub async fn start_screen_receiving(
@@ -202,7 +202,7 @@ pub async fn start_screen_receiving(
             }
         }
     }
-    println!("Stopped receiving frames.");
+    //println!("Stopped receiving frames.");
 }
 
 pub async fn start_partial_sharing(
@@ -339,7 +339,7 @@ pub fn take_screenshot(monitor: Arc<std::sync::Mutex<Monitor>>) -> RgbaImage {
     match frame_result {
         Ok(frame) => {
             // Estrai i dati del buffer in formato raw
-            println!("FATTO SCREENSHOT");
+            //println!("FATTO SCREENSHOT");
             frame
         }
         Err(e) => {
