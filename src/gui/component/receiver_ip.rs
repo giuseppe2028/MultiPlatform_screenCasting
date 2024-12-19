@@ -2,7 +2,6 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{container, row};
 use iced::{Command, Subscription};
 use iced::Length::Fill;
-
 use crate::column_iced;
 use crate::gui::app;
 use crate::gui::component::receiver_ip;
@@ -17,6 +16,7 @@ use crate::gui::theme::widget::Element;
 
 pub struct ReceiverIp {
     pub indirizzo_ip: String,
+    pub message: String
 }
 
 #[derive(Debug, Clone)]
@@ -43,6 +43,7 @@ impl<'a> Component<'a> for ReceiverIp {
         match message {
             Message::ChangeInput(new_value) => {
                 self.indirizzo_ip = new_value;
+                self.message = "".to_string();
                 Command::none()
             }
             Message::Pressed(_ip) => Command::none(),
@@ -55,9 +56,11 @@ impl<'a> Component<'a> for ReceiverIp {
             .icon(Icon::BackLeft)
             .build(20)
             .on_press(app::Message::Back(app::Page::ReceiverIp))])
-        .padding([6, 0, 0, 6])
-        .align_x(Horizontal::Left)
-        .align_y(Vertical::Top);
+            .padding([6, 0, 0, 6])
+            .align_x(Horizontal::Left)
+            .align_y(Vertical::Top);
+
+        let message = row![crate::gui::theme::text::text(self.message.clone())];
 
         let main_content = container(
             column_iced![
@@ -68,30 +71,31 @@ impl<'a> Component<'a> for ReceiverIp {
                     .on_input(|written_ip| {
                         receiver_ip::Message::ChangeInput(written_ip).into()
                     })],
+                    message,
                 row![MyButton::new("Connect")
                     .style(Style::Primary)
                     .build()
                     .on_press(Message::Pressed(self.indirizzo_ip.clone()).into())]
                 .spacing(20)
             ]
-            .align_items(iced::Alignment::Center)
-            .spacing(20),
+                .align_items(iced::Alignment::Center)
+                .spacing(20),
         )
-        .width(Fill)
-        .height(Fill)
-        .align_x(Horizontal::Center)
-        .align_y(Vertical::Center);
+            .width(Fill)
+            .height(Fill)
+            .align_x(Horizontal::Center)
+            .align_y(Vertical::Center);
 
         // Unire il pulsante "Back" con il contenuto principale in un layout a strati
         container(column_iced![
             back_button,  // Il pulsante back è al primo posto e separato dal resto
             main_content  // Contenuto principale
         ])
-        .width(Fill)
-        .height(Fill)
-        .align_x(Horizontal::Center)
-        .align_y(Vertical::Center)
-        .into()
+            .width(Fill)
+            .height(Fill)
+            .align_x(Horizontal::Center)
+            .align_y(Vertical::Center)
+            .into()
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {

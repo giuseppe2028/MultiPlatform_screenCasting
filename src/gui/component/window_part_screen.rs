@@ -1,18 +1,18 @@
-use iced::widget::{Image, image, mouse_area, row};
-use iced::{Command, Event, Subscription};
+use iced::widget::{Image, image, mouse_area};
+use iced::{Command, Event, event, Subscription};
 
 use iced::mouse;
-use crate::column_iced;
+use xcap::image::RgbaImage;
 use crate::gui::app;
 use crate::gui::app::Message;
 use crate::gui::component::Component;
 use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;
-use crate::gui::theme::widget::Element;
+use crate::gui::theme::widget::{Column, Element, Row};
 use crate::utils::utils:: get_screen_dimension;
 
 pub struct WindowPartScreen {
-    pub screenshot: Option<Vec<u8>>,
+    pub screenshot: Option<RgbaImage>,
     pub(crate) coordinate: [(f32, f32); 2],
     pub cursor_position: (f32, f32), // Aggiungi un campo per la posizione del mouse
     pub screen_dimension:(f32,f32),
@@ -42,6 +42,7 @@ impl<'a> Component<'a> for WindowPartScreen {
     fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
             MessagePress::FirstPress => {
+                //print!("First press {:?}", self.cursor_position) ;
                 self.coordinate[0] = self.cursor_position;
             }
             MessagePress::SecondPress=>{
@@ -56,8 +57,9 @@ impl<'a> Component<'a> for WindowPartScreen {
     }
 
     fn view(&self) -> Element<'_, app::Message> {
+        let screenshot = self.screenshot.clone().unwrap();
         let mouse_area1 = mouse_area(
-            Image::new(image::Handle::from_pixels(self.measures.0, self.measures.1, self.screenshot.clone().unwrap()))
+            Image::new(image::Handle::from_pixels(screenshot.width(), screenshot.height(), screenshot.into_raw()))
                 .width(iced::Length::from(1000))
                 .height(iced::Length::from(625))
         )
@@ -65,21 +67,19 @@ impl<'a> Component<'a> for WindowPartScreen {
             .on_release(MessagePress::SecondPress.into());
 
         // Costruisci la colonna e restituisci l'elemento
-        column_iced![row![mouse_area1],row![
-            MyButton::new("CONNECT")
-                    .style(Style::Primary)
-                    .build()
-                    .on_press(Message::StartPartialSharing(self.screen_dimension.0,self.screen_dimension.1,self.coordinate[0].0 as f64,self.coordinate[0].1 as f64))
-        ]
-                .align_items(iced::Alignment::Center)
-        ].into()
+        let col = Column::new().push(Row::new().push(mouse_area1)).push(Row::new().push(MyButton::new("CONNECT")
+            .style(Style::Primary)
+            .build()
+            .on_press(Message::StartPartialSharing(self.screen_dimension.0,self.screen_dimension.1,self.coordinate[0].0 as f64,self.coordinate[0].1 as f64))));
+
+        col.into()
     }
 
 
     // Sottoscrizione agli eventi di movimento del mouse
     // Sottoscrizione agli eventi di movimento del mouse
     fn subscription(&self) -> Subscription<MessagePress> {
-        iced::subscription::events_with(|event, _status| {
+        event::listen_with(|event, _status| {
             if let Event::Mouse(mouse::Event::CursorMoved { position }) = event {
                 Some(MessagePress::CursorMoved(position.x, position.y)) // Send message with new position
             } else {

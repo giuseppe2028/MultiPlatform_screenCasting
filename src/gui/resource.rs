@@ -4,18 +4,11 @@ pub fn get(file: String) -> String {
 }
 
 pub mod font {
-    pub const ICON: iced::Font = iced::Font::External {
-        name: "Icons",
-        bytes: include_bytes!("../../resources/home-icon.ttf"),
-    };
+    use iced::font::Font;
 
-    pub const BARLOW: iced::Font = iced::Font::External {
-        name: "Barlow",
-        bytes: include_bytes!("../../resources/Barlow-Regular.ttf"),
-    };
+    pub const ICON: Font = Font::with_name("home-icon");
 
-    pub const BARLOW_BOLD: iced::Font = iced::Font::External {
-        name: "Barlow-Bold",
-        bytes: include_bytes!("../../resources/Barlow-Bold.ttf"),
-    };
+    pub const BARLOW:Font = Font::with_name("Barlow-Regular");
+
+    pub const BARLOW_BOLD:Font = Font::with_name("Barlow-Bold");
 }

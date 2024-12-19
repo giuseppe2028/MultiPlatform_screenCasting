@@ -1,8 +1,7 @@
-use iced::widget::button;
 use iced::widget::button::{Appearance, StyleSheet};
-use iced::{Background, Color};
+use iced::{Background, Border, Color};
 use std::default::Default;
-
+use iced::border::Radius;
 use crate::gui::theme::button::{Style, Themed};
 use crate::gui::theme::color::ColorExt;
 use crate::gui::theme::icon::Icon;
@@ -47,11 +46,12 @@ impl CircleButton {
         .horizontal_alignment(iced::alignment::Horizontal::Center)
         .vertical_alignment(iced::alignment::Vertical::Center);
 
-        button(content)
-            .style(Box::new(self) as _)
+        Button::new(content)
+            .style(Box::new(self) as Box<dyn Themed>)
             .padding(0) // Rimuove padding aggiuntivo per centrare meglio l'icona
             .width(60)
             .height(60)
+
     }
 }
 
@@ -70,7 +70,11 @@ impl StyleSheet for CircleButton {
 
         Appearance {
             background: Some(Background::Color(appearance)),
-            border_radius: 32.0,
+            border:Border{
+                color: Default::default(),
+                width: 0.0,
+                radius: Radius::from(32.),
+            },
             text_color: Color::WHITE,
             ..Appearance::default()
         }
@@ -93,7 +97,11 @@ impl StyleSheet for CircleButton {
             background: Some(Background::Color(
                 hover_color.mix(Color::WHITE.with_alpha(0.1)),
             )),
-            border_radius: active.border_radius,
+            border:Border{
+                color: Default::default(),
+                width: 0.0,
+                radius: active.border.radius,
+            },
             text_color: hover_text_color,
             ..active
         }

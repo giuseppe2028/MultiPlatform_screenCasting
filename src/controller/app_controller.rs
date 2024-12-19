@@ -1,140 +1,130 @@
-use futures::lock;
+use crate::screenshare::screenshare::{start_partial_sharing, start_screen_sharing, take_screenshot,};
+use crate::socket::socket::CasterSocket;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use xcap::image::RgbaImage;
 use xcap::Monitor;
 
-use crate::screenshare::screenshare::{start_screen_sharing, take_screenshot};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::Sender;
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::thread::JoinHandle;
-use xcap::image::RgbaImage;
-
 pub struct AppController {
-    pub monitor_chosen: Arc<Mutex<Monitor>>,
-    pub streaming_handle: Option<JoinHandle<()>>,
+    pub monitor_chosen: Arc<std::sync::Mutex<Monitor>>,
+    pub streaming_task: Option<tokio::task::JoinHandle<()>>, // Use Tokio's JoinHandle
     stop_flag: Arc<AtomicBool>,
-    sender: Arc<Sender<RgbaImage>>,
+    blanking_flag: Arc<AtomicBool>,
+    sender: Arc<tokio::sync::mpsc::Sender<RgbaImage>>, // Tokio mpsc channel for async communication
     pub is_just_stopped: bool,
+    socket: Arc<Mutex<Option<CasterSocket>>>,
 }
 
 impl AppController {
-    // Costruttore per AppController
-    pub fn new(monitor: Monitor, sender: Sender<RgbaImage>) -> Self {
+    // Constructor for AppController
+    pub fn new(
+        monitor: Monitor,
+        sender: tokio::sync::mpsc::Sender<RgbaImage>,
+        socket: Option<CasterSocket>,
+    ) -> Self {
         AppController {
-            monitor_chosen: Arc::new(Mutex::new(monitor)),
-            streaming_handle: None,
+            monitor_chosen: Arc::new(std::sync::Mutex::new(monitor)),
+            streaming_task: None,
             stop_flag: Arc::new(AtomicBool::new(false)),
             sender: Arc::new(sender),
             is_just_stopped: false,
+            socket: Arc::new(Mutex::new(socket)),
+            blanking_flag: Arc::new(AtomicBool::new(false)),
         }
     }
 
-    // Funzione che avvia la condivisione dello schermo
+    pub fn set_socket(&mut self, socket: CasterSocket) {
+        self.socket = Arc::new(Mutex::new(Some(socket)));
+    }
+
+    // Function to start screen sharing using Tokio async task
     pub fn start_sharing(&mut self) {
         self.stop_flag.store(false, Ordering::Relaxed);
 
-        /*let mut capturer_guard = self.capturer.lock().unwrap();
-        if capturer_guard.is_none() {
-            self.capturer = Arc::new(Mutex::new(Some(Capturer::new(self.option.clone()))));
-        }
-        */
+        let monitor = self.monitor_chosen.clone();
+        let stop_flag = Arc::clone(&self.stop_flag);
+        let sender = self.sender.clone();
+        let socket = self.socket.clone();
+        let blanking_flag = Arc::clone(&self.blanking_flag);
 
+        // Spawn a Tokio async task for screen sharing
+        let task = tokio::spawn(async move {
+            start_screen_sharing(monitor, stop_flag, sender, socket, blanking_flag).await;
+        });
+
+        self.set_task(task);
+    }
+
+    pub fn start_sharing_partial_sharing(&mut self, dimensions: [(f64, f64); 2]) {
+        
+        self.stop_flag.store(false, Ordering::Relaxed);
         let monitor = self.monitor_chosen.clone();
         let stop_flag = Arc::clone(&self.stop_flag);
         let send = self.sender.clone();
+        let socket = self.socket.clone();
         // Crea un nuovo thread per lo screen sharing
-        let handle = Some(thread::spawn(move || {
+        let task = tokio::spawn(async move {
             // Passiamo stdin e altri dati al thread
-            start_screen_sharing(monitor, stop_flag, send);
-        }));
-        self.set_handle(handle.unwrap());
+            start_partial_sharing(monitor, stop_flag, send, dimensions, socket).await;
+        });
+        self.set_task(task);
     }
 
-    /*  pub fn clean_options(&mut self) {
-        self.option.crop_area = None;
-    }*/
-
-    pub fn set_handle(&mut self, handle: JoinHandle<()>) {
-        self.streaming_handle = Some(handle);
+    pub fn set_task(&mut self, task: tokio::task::JoinHandle<()>) {
+        self.streaming_task = Some(task);
     }
 
     pub fn set_display(&mut self, monitor: Monitor) {
         let mut lock_mon = self.monitor_chosen.lock().unwrap();
         *lock_mon = monitor;
     }
-/* 
-    pub fn set_coordinates(&mut self, x: f64, y: f64, start_x: f64, start_y: f64) {
-        self.option.crop_area = Some(Area {
-            origin: Point {
-                x: start_x,
-                y: start_y,
-            },
-            size: Size {
-                width: x,
-                height: y,
-            },
-        });
-    }
 
-    pub fn get_available_displays(&self) -> Vec<scap::targets::Display> {
-        let displays: Vec<scap::targets::Display> = scap::get_all_targets()
-            .into_iter()
-            .filter_map(|target| {
-                if let Target::Display(display) = target {
-                    Some(display) // Return the Display if found
-                } else {
-                    None // Ignore all other types
-                }
-            })
-            .collect();
+    // Stop streaming, async-safe
+    pub fn close_streaming(&mut self) {
+        if self.stop_flag.load(Ordering::Relaxed) {
+            return;
+        }
+        // Set the flag to stop streaming
+        self.stop_flag.store(true, Ordering::Relaxed);
 
-        return displays;
-    }*/
-
-    pub fn get_available_displays(&self) -> Vec<Monitor> {
-        return Monitor::all().unwrap();
+        // Distruggi la socket, se presente
+        if let Some(socket) = self.socket.blocking_lock().as_mut() {
+            //println!("Socket distrutta");
+            socket.destroy();
+        }
+        // Rimuovi il task di streaming
+        self.streaming_task.take(); // Task non viene più aspettato
     }
 
     pub fn stop_streaming(&mut self) {
         if self.stop_flag.load(Ordering::Relaxed) {
             return;
         }
-        // Imposta il flag per fermare il thread
-        self.stop_flag.store(true, Ordering::Relaxed);
+        // Set the flag to stop streaming
+        self.stop_flag.store(true, Ordering::Relaxed)
+    }
 
-        // Aspetta che il thread di streaming termini (se esiste)
-        if let Some(handle) = self.streaming_handle.take() {
-            handle
-                .join()
-                .expect("Errore nella terminazione del thread di streaming");
+    pub fn blanking_streaming(&mut self) {
+        if self.blanking_flag.load(Ordering::Relaxed) {
+            self.blanking_flag.store(false, Ordering::Relaxed)
+        } else {
+            self.blanking_flag.store(true, Ordering::Relaxed)
         }
     }
-    
-    pub fn take_screenshot(&mut self) -> Vec<u8> {
 
+    pub fn take_screenshot(&mut self) -> RgbaImage {
         take_screenshot(self.monitor_chosen.clone())
     }
-    
     pub fn set_is_just_stopped(&mut self, value: bool) {
         self.is_just_stopped = value;
     }
+
     pub fn get_measures(&self) -> (u32, u32) {
         let lock_monitor = self.monitor_chosen.lock().unwrap();
-        let x =  lock_monitor.width();
+        let x = lock_monitor.width();
         let y = lock_monitor.height();
-        println!("width {}, height {}", x, y);
-        return (x,y);
+        //println!("width {}, height {}", x, y);
+        return (x, y);
     }
-    /*
-    pub fn get_measures(&self) -> (u32, u32) {
-        match self.option.output_resolution {
-            scap::capturer::Resolution::_480p => (640, 480), // 480p: 640x480
-            scap::capturer::Resolution::_720p => (1280, 720), // 720p: 1280x720
-            scap::capturer::Resolution::_1080p => (1920, 1080), // 1080p: 1920x1080
-            scap::capturer::Resolution::_1440p => (1440, 900), // 1440p: 2560x1440
-            scap::capturer::Resolution::_2160p => (3840, 2160), // 2160p: 3840x2160
-            scap::capturer::Resolution::_4320p => (7680, 4320), // 4320p: 7680x4320
-            scap::capturer::Resolution::Captured => (1920, 1080),
-        }
-    }*/
 }

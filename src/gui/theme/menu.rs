@@ -1,3 +1,5 @@
+use iced::Border;
+use iced::border::Radius;
 use crate::gui::theme::Theme;
 use iced::overlay::menu::{Appearance, StyleSheet};
 
@@ -8,9 +10,11 @@ impl StyleSheet for Theme {
         Appearance {
             text_color: self.palette().on_surface,
             background: self.palette().surface.into(),
-            border_width: 1.,
-            border_radius: 4.,
-            border_color: self.palette().outline,
+            border:Border{
+                color:  self.palette().outline,
+                width: 1.0,
+                radius: Radius::from(4.),
+            },
             selected_text_color: self.palette().on_primary,
             selected_background: self.palette().primary.into(),
         }

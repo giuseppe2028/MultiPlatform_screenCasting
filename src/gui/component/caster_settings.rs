@@ -2,7 +2,6 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{container, pick_list, row};
 use iced::{Command, Length::Fill, Subscription};
 use xcap::Monitor;
-
 use crate::column_iced;
 use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
@@ -55,15 +54,15 @@ impl<'a> Component<'a> for CasterSettings {
         }
     }
 
-    fn view(&self /*, props: Self::ViewProps*/) -> Element<'_, app::Message> {
+    fn view(&self) -> Element<'_, app::Message> {
         let back_button = container(row![CircleButton::new("")
             .style(Style::Danger)
             .icon(Icon::BackLeft)
             .build(20)
             .on_press(app::Message::Back(app::Page::CasterSettings))])
-        .padding([6, 0, 0, 6])
-        .align_x(Horizontal::Left)
-        .align_y(Vertical::Top);
+            .padding([6, 0, 0, 6])
+            .align_x(Horizontal::Left)
+            .align_y(Vertical::Top);
 
         let full_screen_button = RectangleButton::new("Schermo intero")
             .icon(Icon::CasterHome) // Sostituisci con la tua icona
@@ -84,8 +83,8 @@ impl<'a> Component<'a> for CasterSettings {
             Some(self.selected_display.clone()),
             move |message| app::Message::SelectDisplay(message),
         )
-        .font(resource::font::BARLOW)
-        .width(416);
+            .font(resource::font::BARLOW)
+            .width(456);
 
         // Organizzare i pulsanti in una riga o colonna
         container(column_iced![
@@ -105,7 +104,7 @@ impl<'a> Component<'a> for CasterSettings {
             .align_x(Horizontal::Center)
             .align_y(Vertical::Center)
         ])
-        .into()
+            .into()
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {

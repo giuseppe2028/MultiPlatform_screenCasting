@@ -1,9 +1,10 @@
 use iced::widget::text_input::{Appearance, StyleSheet};
-use iced::{Background, Color};
-
+use iced::{Background, Border, Color};
+use iced::border::Radius;
+use crate::gui::app::Message;
 use crate::gui::resource;
-use crate::gui::theme::widget::TextInput;
 use crate::gui::theme::Theme;
+use crate::gui::theme::widget::TextInput;
 
 #[allow(dead_code)]
 #[derive(Default)]
@@ -20,9 +21,11 @@ impl StyleSheet for Theme {
     fn active(&self, _style: &Self::Style) -> Appearance {
         Appearance {
             background: Background::Color(Color::WHITE),
-            border_radius: 5.0,
-            border_width: 1.0,
-            border_color: Color::from_rgb(0.7, 0.7, 0.7),
+            border:Border{
+                color:  Color::from_rgb(0.7, 0.7, 0.7),
+                width: 1.0,
+                radius: Radius::from(5.)
+            },
             icon_color: Color::from_rgb(0.3, 0.3, 0.3),
         }
     }
@@ -30,9 +33,11 @@ impl StyleSheet for Theme {
     fn focused(&self, _style: &Self::Style) -> Appearance {
         Appearance {
             background: Background::Color(Color::WHITE),
-            border_radius: 5.0,
-            border_width: 2.0,
-            border_color: Color::from_rgb(0.2, 0.6, 0.8),
+            border:Border{
+                color: Color::from_rgb(0.2, 0.6, 0.8),
+                width: 2.0,
+                radius:Radius::from(5.),
+            },
             icon_color: Color::from_rgb(0.2, 0.6, 0.8),
         }
     }
@@ -56,13 +61,15 @@ impl StyleSheet for Theme {
     fn disabled(&self, _style: &Self::Style) -> Appearance {
         Appearance {
             background: Background::Color(Color::from_rgb(0.9, 0.9, 0.9)),
-            border_radius: 5.0,
-            border_width: 1.0,
-            border_color: Color::from_rgb(0.7, 0.7, 0.7),
+            border:Border{
+                color: Color::from_rgb(0.7, 0.7, 0.7),
+                width: 1.0,
+                radius: Radius::from(5.),
+            },
             icon_color: Color::from_rgb(0.7, 0.7, 0.7),
         }
     }
 }
-pub fn textinput<'a>(placeholder: &str, value: &str) -> TextInput<'a> {
+pub fn textinput<'a>(placeholder: &str, value: &str) -> TextInput<'a, Message> {
     iced::widget::text_input(placeholder, value).font(resource::font::BARLOW)
 }

@@ -2,16 +2,15 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{container, row};
 use iced::{Command, Subscription};
 use iced::Length::Fill;
-
 use crate::column_iced;
 use crate::gui::app;
+use crate::gui::app::Page;
 use crate::gui::component::Component;
 use crate::gui::theme::button::MyButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
-use crate::gui::theme::text::bold;
+use crate::gui::theme::text::{bold};
 use crate::gui::theme::widget::Element;
-// use crate::gui::theme::widget::TextInput;
 
 pub struct Home {}
 
@@ -46,10 +45,10 @@ impl<'a> Component<'a> for Home {
                     app::Message::RoleChosen(Message::ChosenRole(Role::Receiver));
                     Command::none()
                 }
+
             },
         }
     }
-
     fn view(&self) -> Element<'_, app::Message> {
         container(
             column_iced![
@@ -65,19 +64,23 @@ impl<'a> Component<'a> for Home {
                         .style(Style::Primary)
                         .build()
                         .on_press(Self::Message::ChosenRole(Role::Receiver).into())
-                ]
+                ].spacing(10),
+                row![MyButton::new("Shortcut")
+                    .icon(Icon::Tools)
+                    .style(Style::Secondary)
+                    .build()
+                    .on_press(app::Message::Route(Page::Shortcut))]
                 .spacing(20)
             ]
-            .align_items(iced::Alignment::Center)
-            .spacing(20),
+                .align_items(iced::Alignment::Center)
+                .spacing(20),
         )
-        .width(Fill)
-        .height(Fill)
-        .align_x(Horizontal::Center)
-        .align_y(Vertical::Center)
-        .into()
+            .width(Fill)
+            .height(Fill)
+            .align_x(Horizontal::Center)
+            .align_y(Vertical::Center)
+            .into()
     }
-
     fn subscription(&self) -> Subscription<Self::Message> {
         todo!()
     }
