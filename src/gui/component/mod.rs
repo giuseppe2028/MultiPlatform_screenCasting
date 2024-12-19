@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use iced::Command;
+use iced::{Command};
 
 use crate::gui::app;
 use crate::gui::theme::widget::Element;
@@ -13,6 +13,8 @@ pub mod caster_streaming;
 pub mod window_part_screen;
 pub mod shorcut;
 pub mod keycodeutils;
+pub mod AnnotationToolsComponent;
+pub(crate) mod Annotation;
 
 pub trait Component<'a> {
     type Message: Into<app::Message> + Clone + Debug;

@@ -12,6 +12,8 @@ pub mod widget;
 pub mod picklist;
 pub mod menu;
 pub mod scrollable;
+mod canvas;
+pub mod color_picker;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Default, Copy)]
@@ -19,6 +21,7 @@ pub enum Theme {
     #[default]
     Light,
     Dark,
+    Transparent
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -115,7 +118,55 @@ impl Palette {
             button_color_default: Color::from_rgb(0.83, 0.83, 0.83),
         }
     }
+    pub fn transparent() -> Self {
+        Self {
+            primary: Color::from_hex("D0BCFF"),
+            primary_container: Color::from_hex("4F378B"),
+            on_primary: Color::from_hex("371E73"),
+            on_primary_container: Color::from_hex("EADDFF"),
+            inverse_primary: Color::from_hex("6750A4"),
+            secondary: Color::from_hex("CCC2DC"),
+            secondary_container: Color::from_hex("4A4458"),
+            on_secondary: Color::from_hex("332D41"),
+            on_secondary_container: Color::from_hex("E8DEF8"),
+            tertiary: Color::from_hex("EFB8C8"),
+            tertiary_container: Color::from_hex("633B48"),
+            on_tertiary: Color::from_hex("492532"),
+            on_tertiary_container: Color::from_hex("FFD8E4"),
+            surface: Color::from_hex("141218"),
+            surface_dim: Color::from_hex("141218"),
+            surface_bright: Color::from_hex("3B383E"),
+            surface_container_lowest: Color::from_hex("0F0D13"),
+            surface_container_low: Color::from_hex("1D1B20"),
+            surface_container: Color::from_hex("211F26"),
+            surface_container_high: Color::from_hex("2B2930"),
+            surface_container_highest: Color::from_hex("36343B"),
+            surface_variant: Color::from_hex("49454F"),
+            on_surface: Color::from_hex("E6E1E5"),
+            on_surface_variant: Color::from_hex("CAC4D0"),
+            inverse_surface: Color::from_hex("E6E1E5"),
+            inverse_on_surface: Color::from_hex("313033"),
 
+            // Rendiamo la finestra trasparente
+            background: Color::from_rgba(0.0, 0.0, 0.0, 0.0),  // Trasparente
+            on_background: Color::from_hex("E6E1E5"),
+
+            error: Color::from_hex("F2B8B5"),
+            error_container: Color::from_hex("8C1D18"),
+            on_error: Color::from_hex("601410"),
+            on_error_container: Color::from_hex("F9DEDC"),
+            success: Color::from_hex("ADD284"),
+            on_success: Color::from_hex("1D3700"),
+            outline: Color::from_hex("938F99"),
+            outline_variant: Color::from_hex("444746"),
+            shadow: Color::from_hex("000000"),
+            surface_tint: Color::from_hex("D0BCFF"),
+            scrim: Color::from_hex("000000"),
+            button_color_primary: Color::from_rgb(0.73, 0.56, 0.76),
+            button_color_danger: Color::from_rgb(255.0, 0.0, 0.0),
+            button_color_default: Color::from_rgb(0.53, 0.53, 0.53),
+        }
+    }
     pub fn dark() -> Self {
         Self {
             primary: Color::from_hex("D0BCFF"),
@@ -214,6 +265,7 @@ impl Theme {
         match self {
             Self::Light => Palette::light(),
             Self::Dark => Palette::dark(),
+            Self::Transparent => Palette::transparent()
         }
     }
 }
