@@ -28,6 +28,7 @@ use rand::Rng;
 use tokio::sync::{mpsc::{channel, Sender}, Mutex};
 use xcap::image::RgbaImage;
 use xcap::Monitor;
+use local_ip_address::local_ip;
 
 pub struct App {
     current_page: Page,
@@ -225,8 +226,10 @@ impl Application for App {
                 Command::perform(
                     async move {
                         println!("Creata nuova socket caster");
+                        let caster_ip = local_ip().unwrap();
+                        println!("{:?}", caster_ip);
                         let socket = crate::socket::socket::CasterSocket::new(
-                            "127.0.0.1:8000",
+                            &format!("{}:8000", caster_ip),
                             notification_tx,
                         )
                         .await;
@@ -241,12 +244,12 @@ impl Application for App {
                 //creo controller e socket insieme tanto il controller non mi serve prima per il receiver
                 if let Controller::NotDefined = &mut self.controller {
                     let sender = self.sender_receiver.clone();
-                    let mut rng = rand::thread_rng();
-                    let num: u8 = rng.gen_range(1..10); // Genera un numero casuale tra 0 e 9
                     Command::perform(
                         async move {
+                            let receiver_ip = local_ip().unwrap();
+                            println!("{:?}", receiver_ip);
                             let socket = crate::socket::socket::ReceiverSocket::new(
-                                &format!("127.0.0.1:800{}", num),
+                                &format!("{}:8001", receiver_ip),
                                 &format!("{}:8000", ip_caster),
                             )
                             .await;
@@ -313,7 +316,8 @@ impl Application for App {
                 Command::none()
             }
             Message::SetSettingsCaster(message) => {
-                self.connection.ip_address = "127.0.0.1".parse().unwrap();
+                let caster_ip = local_ip().unwrap();
+                self.connection.ip_address = caster_ip.to_string();
                 match message {
                     caster_settings::Window::FullScreen => {
                         self.current_page = Page::Connection;
@@ -467,8 +471,10 @@ impl Application for App {
                 Command::perform(
                     async move {
                         println!("Creata nuova socket caster");
+                        let caster_ip = local_ip().unwrap();
+                        println!("{:?}", caster_ip);
                         let socket = crate::socket::socket::CasterSocket::new(
-                            "127.0.0.1:8000",
+                            &format!("{}:8000", caster_ip),
                             notification_tx,
                         )
                         .await;
