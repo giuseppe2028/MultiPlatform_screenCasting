@@ -11,11 +11,11 @@ use crate::gui::theme::icon::Icon;
 use crate::gui::theme::widget::{Column, Element};
 use xcap::image::RgbaImage;
 
+#[derive(Debug, Clone)]
 pub struct ReceiverStreaming {
     pub recording: bool,
     pub receiver: Arc<Mutex<Receiver<RgbaImage>>>,
     pub frame_to_update: Arc<Mutex<Option<RgbaImage>>>,
-    pub is_loading: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -33,7 +33,7 @@ impl From<UpdateMessage> for app::Message {
 impl<'a> Component<'a> for ReceiverStreaming {
     type Message = UpdateMessage;
 
-    fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
+    async fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
             UpdateMessage::StartRecording(status) => {
                 //println!("{}", status);
@@ -41,18 +41,16 @@ impl<'a> Component<'a> for ReceiverStreaming {
                 Command::none()
             }
             UpdateMessage::NewFrame(frame) => {
-                self.is_loading = false;
-                *self.frame_to_update.blocking_lock() = Some(frame);
-                self.is_loading = false;
+                *self.frame_to_update.lock().await = Some(frame);
                 Command::none()
             },
         }
     }
 
-    fn view(&self) -> Element<'_, app::Message> {
+    async fn view(&self) -> Element<'_, app::Message> {
         // Ottieni il frame e crea l'immagine
         let image = {
-            let frame = self.frame_to_update.blocking_lock();
+            let frame = self.frame_to_update.lock().await;
             match *frame {
                 None => {
                     image(format!("./resources/icons/512x512.png"))

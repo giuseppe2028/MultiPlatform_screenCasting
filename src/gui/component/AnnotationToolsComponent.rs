@@ -38,7 +38,7 @@ impl From<MessageAnnotation> for app::Message {
 impl<'a> Component<'a> for AnnotationTools {
     type Message = MessageAnnotation;
 
-    fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
+    async fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
             MessageAnnotation::CloseRequested => {
                 app::Message::CloseRequested;
@@ -47,7 +47,7 @@ impl<'a> Component<'a> for AnnotationTools {
         }
     }
 
-    fn view(&self) -> Element<'_, app::Message> {
+    async fn view(&self) -> Element<'_, app::Message> {
 
         let text_input_form = container(column_iced![
             row![text("Insert the text you want to display")].padding([0, 0, 20, 0]),

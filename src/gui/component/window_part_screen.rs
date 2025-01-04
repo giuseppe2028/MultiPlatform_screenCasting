@@ -39,7 +39,7 @@ impl From<MessagePress> for app::Message {
 impl<'a> Component<'a> for WindowPartScreen {
     type Message = MessagePress;
 
-    fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
+    async fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
             MessagePress::FirstPress => {
                 //print!("First press {:?}", self.cursor_position) ;
@@ -56,7 +56,7 @@ impl<'a> Component<'a> for WindowPartScreen {
         Command::none()
     }
 
-    fn view(&self) -> Element<'_, app::Message> {
+    async fn view(&self) -> Element<'_, app::Message> {
         let screenshot = self.screenshot.clone().unwrap();
         let mouse_area1 = mouse_area(
             Image::new(image::Handle::from_pixels(screenshot.width(), screenshot.height(), screenshot.into_raw()))

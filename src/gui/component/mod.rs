@@ -21,7 +21,7 @@ pub trait Component<'a> {
     //type UpdateProps;
     //type ViewProps;
 
-    fn update(&mut self, message: Self::Message) -> Command<app::Message>;
-    fn view(&self /*, props: Self::ViewProps*/) -> Element<'_, app::Message>;
+    async fn update<'b>(&'b mut self, message: Self::Message) -> Command<app::Message>;
+    async fn view(&self /*, props: Self::ViewProps*/) -> Element<'_, app::Message>;
     fn subscription(&self) -> iced::Subscription<Self::Message>;
 }

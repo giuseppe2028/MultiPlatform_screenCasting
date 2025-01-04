@@ -30,13 +30,13 @@ impl From<Message> for app::Message {
 impl<'a> Component<'a> for Connection {
     type Message = Message;
 
-    fn update(&mut self, message: Self::Message) -> iced::Command<crate::gui::app::Message> {
+    async fn update(&mut self, message: Self::Message) -> iced::Command<crate::gui::app::Message> {
         match message {
             Message::StartSharing => todo!(),
         }
     }
 
-    fn view(&self) -> crate::gui::theme::widget::Element<'_, app::Message> {
+    async fn view(&self) -> crate::gui::theme::widget::Element<'_, app::Message> {
         let back_button = container(row![CircleButton::new("")
             .style(Style::Danger)
             .icon(Icon::BackLeft)

@@ -14,6 +14,7 @@ use crate::gui::theme::text::bold;
 use crate::gui::theme::textinput::textinput;
 use crate::gui::theme::widget::Element;
 
+#[derive(Debug, Clone)]
 pub struct ReceiverIp {
     pub indirizzo_ip: String,
     pub message: String
@@ -39,7 +40,7 @@ impl From<Message> for app::Message {
 impl<'a> Component<'a> for ReceiverIp {
     type Message = Message;
 
-    fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
+    async fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
             Message::ChangeInput(new_value) => {
                 self.indirizzo_ip = new_value;
@@ -50,7 +51,7 @@ impl<'a> Component<'a> for ReceiverIp {
         }
     }
 
-    fn view(&self) -> Element<'_, app::Message> {
+    async fn view(&self) -> Element<'_, app::Message> {
         let back_button = container(row![CircleButton::new("")
             .style(Style::Danger)
             .icon(Icon::BackLeft)

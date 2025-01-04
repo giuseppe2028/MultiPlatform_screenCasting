@@ -6,9 +6,9 @@ use tokio::sync::Mutex;
 use xcap::image::RgbaImage;
 use xcap::Monitor;
 
+#[derive(Debug, Clone)]
 pub struct AppController {
     pub monitor_chosen: Arc<std::sync::Mutex<Monitor>>,
-    pub streaming_task: Option<tokio::task::JoinHandle<()>>, // Use Tokio's JoinHandle
     stop_flag: Arc<AtomicBool>,
     blanking_flag: Arc<AtomicBool>,
     sender: Arc<tokio::sync::mpsc::Sender<RgbaImage>>, // Tokio mpsc channel for async communication
@@ -25,7 +25,6 @@ impl AppController {
     ) -> Self {
         AppController {
             monitor_chosen: Arc::new(std::sync::Mutex::new(monitor)),
-            streaming_task: None,
             stop_flag: Arc::new(AtomicBool::new(false)),
             sender: Arc::new(sender),
             is_just_stopped: false,
@@ -49,11 +48,10 @@ impl AppController {
         let blanking_flag = Arc::clone(&self.blanking_flag);
 
         // Spawn a Tokio async task for screen sharing
-        let task = tokio::spawn(async move {
+        let _ = tokio::spawn(async move {
             start_screen_sharing(monitor, stop_flag, sender, socket, blanking_flag).await;
         });
 
-        self.set_task(task);
     }
 
     pub fn start_sharing_partial_sharing(&mut self, dimensions: [(f64, f64); 2]) {
@@ -63,16 +61,13 @@ impl AppController {
         let stop_flag = Arc::clone(&self.stop_flag);
         let send = self.sender.clone();
         let socket = self.socket.clone();
-        // Crea un nuovo thread per lo screen sharing
-        let task = tokio::spawn(async move {
-            // Passiamo stdin e altri dati al thread
-            start_partial_sharing(monitor, stop_flag, send, dimensions, socket).await;
-        });
-        self.set_task(task);
-    }
+        let blanking_flag = Arc::clone(&self.blanking_flag);
 
-    pub fn set_task(&mut self, task: tokio::task::JoinHandle<()>) {
-        self.streaming_task = Some(task);
+        // Crea un nuovo thread per lo screen sharing
+        let _ = tokio::spawn(async move {
+            // Passiamo stdin e altri dati al thread
+            start_partial_sharing(monitor, stop_flag, send, dimensions, socket, blanking_flag).await;
+        });
     }
 
     pub fn set_display(&mut self, monitor: Monitor) {
@@ -81,7 +76,7 @@ impl AppController {
     }
 
     // Stop streaming, async-safe
-    pub fn close_streaming(&mut self) {
+    pub async fn close_streaming(&mut self) {
         if self.stop_flag.load(Ordering::Relaxed) {
             return;
         }
@@ -89,12 +84,10 @@ impl AppController {
         self.stop_flag.store(true, Ordering::Relaxed);
 
         // Distruggi la socket, se presente
-        if let Some(socket) = self.socket.blocking_lock().as_mut() {
-            //println!("Socket distrutta");
+        if let Some(socket) = self.socket.lock().await.as_mut() {
+            println!("Socket distrutta");
             socket.destroy();
         }
-        // Rimuovi il task di streaming
-        self.streaming_task.take(); // Task non viene più aspettato
     }
 
     pub fn stop_streaming(&mut self) {

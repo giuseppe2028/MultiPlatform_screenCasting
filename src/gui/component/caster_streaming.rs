@@ -1,4 +1,6 @@
+use crate::column_iced;
 use crate::gui::app;
+use crate::gui::app::Modality;
 use crate::gui::component::Component;
 use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::{MyButton, Style};
@@ -11,9 +13,8 @@ use iced::{Command, Subscription};
 use std::sync::{Arc, RwLock};
 use tokio::sync::{mpsc::Receiver, Mutex};
 use xcap::image::RgbaImage;
-use crate::column_iced;
-use crate::gui::app::Modality;
 
+#[derive(Debug, Clone)]
 pub struct CasterStreaming {
     pub toggler: bool,
     pub receiver: Arc<Mutex<Receiver<RgbaImage>>>,
@@ -47,29 +48,28 @@ impl From<MessageUpdate> for app::Message {
 impl<'a> Component<'a> for CasterStreaming {
     type Message = MessageUpdate;
 
-    fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
+    async fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
             MessageUpdate::TogglerChanged(new_status) => {
                 self.toggler = new_status;
                 Command::none()
             }
             MessageUpdate::NewFrame(frame) => {
-                //println!("{:?}", frame);
-                *self.frame_to_update.blocking_lock() = Some(frame);
+                *self.frame_to_update.lock().await = Some(frame);
                 Command::none()
+
             }
             MessageUpdate::KeyPressed(_) => Command::none(),
         }
     }
 
-    fn view(&self) -> Element<'_, app::Message> {
+    async fn view(&self) -> Element<'_, app::Message> {
         let viewrs = self.viewrs.read().unwrap();
         // Get the current frame and create an image
         let image = {
-            let frame = self.frame_to_update.blocking_lock();
+            let frame = self.frame_to_update.lock().await;
             match *frame {
                 None => {
-                    //println!("Niente da fare");
                     image(format!("./resources/icons/512x512.png"))
                         .width(iced::Length::Fill)
                         .height(iced::Length::Fill)
@@ -149,8 +149,7 @@ impl<'a> Component<'a> for CasterStreaming {
                     .style(Style::Secondary)
                     .icon(crate::gui::theme::icon::Icon::Viewers)
                     .build()
-                    .padding(8)
-                    //.on_press(app::Message::Back(app::Page::CasterStreaming)),
+                    .padding(12) //.on_press(app::Message::Back(app::Page::CasterStreaming)),
             ]
             .align_items(iced::Alignment::Center)
             .padding(8)
@@ -158,10 +157,10 @@ impl<'a> Component<'a> for CasterStreaming {
         } else {
             row![
                 CircleButton::new("tools")
-                .style(Style::Primary)
-                .icon(crate::gui::theme::icon::Icon::Tools)
-                .build(30)
-                .padding(8),
+                    .style(Style::Primary)
+                    .icon(crate::gui::theme::icon::Icon::Tools)
+                    .build(30)
+                    .padding(8),
                 pause_button,
                 CircleButton::new("blank")
                     .style(Style::Primary)
@@ -177,7 +176,7 @@ impl<'a> Component<'a> for CasterStreaming {
                     .style(Style::Secondary)
                     .icon(crate::gui::theme::icon::Icon::Viewers)
                     .build()
-                    .padding(8),
+                    .padding(12),
             ]
             .align_items(iced::Alignment::Center)
             .padding(8)

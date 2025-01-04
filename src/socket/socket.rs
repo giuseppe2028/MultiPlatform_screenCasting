@@ -138,10 +138,11 @@ impl CasterSocket {
                                         let _ = self.notification_tx.send(viewer_count);
                                     }
                                     Action::Disconnect => {
-                                        //println!("Disconnesso: {}:{}", message.ip, message.port);
+                                        println!("Disconnesso: {}:{}", message.ip, message.port);
                                         let mut receivers = self.receiver_sockets.write().await;
                                         receivers.retain(|addr| addr != &format!("{}:{}", message.ip, message.port));
                                         let viewer_count = receivers.len();
+                                        println!("{}", viewer_count);
                                         let _ = self.notification_tx.send(viewer_count);
                                     }
                                 }
@@ -157,7 +158,7 @@ impl CasterSocket {
                 }
                 _ = termination_rx.changed() => {
                     if *termination_rx.borrow() {
-                        //println!("Ricevuto segnale di terminazione. Esco dal ciclo.");
+                        println!("Ricevuto segnale di terminazione. Esco dal ciclo.");
                         break;
                     }
                 }
@@ -277,7 +278,7 @@ impl ReceiverSocket {
         let ip_parts_receiver: Vec<&str> = self.ip_addr.split(':').collect();
         let ip_receiver = ip_parts_receiver[0].parse::<IpAddr>().unwrap();
         let port_receiver = ip_parts_receiver[1].parse::<u16>().unwrap();
-        //println!("Receiver: {} {}", ip_receiver, port_receiver);
+        println!("Receiver: {} {}", ip_receiver, port_receiver);
         
         // Crea il messaggio di registrazione
         let message = RegistrationMessage {

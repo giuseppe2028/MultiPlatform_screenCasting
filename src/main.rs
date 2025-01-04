@@ -11,8 +11,8 @@ mod socket;
 mod utils;
 mod model;
 
-
-pub fn main() -> iced::Result {
+#[tokio::main]
+pub async fn main() -> iced::Result {
     App::run(Settings{
         id: None,
         window: window::Settings{

@@ -34,7 +34,7 @@ impl From<Message> for app::Message {
 impl<'a> Component<'a> for Home {
     type Message = Message;
 
-    fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
+    async fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
             Message::ChosenRole(role) => match role {
                 Role::Caster => {
@@ -49,7 +49,8 @@ impl<'a> Component<'a> for Home {
             },
         }
     }
-    fn view(&self) -> Element<'_, app::Message> {
+    
+    async fn view(&self) -> Element<'_, app::Message> {
         container(
             column_iced![
                 row![bold("MAKE YOUR CHOICE").size(60)],

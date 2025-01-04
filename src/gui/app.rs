@@ -17,6 +17,7 @@ use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
 use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::Element;
 use iced::multi_window::Application;
+use rand::{thread_rng, Rng};
 
 use crate::gui::component::Annotation::Square::{
     CanvasWidget, LineCanva, Pending, RectangleCanva, Shape, Status,
@@ -34,6 +35,7 @@ use iced::widget::container::Appearance;
 use iced::window::settings::PlatformSpecific;
 use iced::window::{Level, Position};
 use iced::{executor, font, window, Border, Color, Command, Point, Size, Subscription};
+use local_ip_address::local_ip;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, RwLock};
 use tokio::sync::{
@@ -42,7 +44,6 @@ use tokio::sync::{
 };
 use xcap::image::RgbaImage;
 use xcap::Monitor;
-use local_ip_address::local_ip;
 
 pub struct App {
     current_page: Page,
@@ -109,7 +110,7 @@ pub enum Message {
     CursorMoved(f32, f32),
     StopStreaming,
     None,
-    SetCasterSocket(CasterSocket, Page, Modality),
+    SetCasterSocket(CasterStreaming, CasterSocket, Page, Modality),
     ReceiverControllerCreated(ReceiverSocket, Sender<RgbaImage>, Page),
     ChosenShortcuts(Shortcuts),
     Blanking,
@@ -125,7 +126,13 @@ pub enum Message {
     TextCanvasChanged(String),
     SaveTextPosition(Point),
     SetColor,
-    CloseRequested
+    CloseRequested,
+    ViewTools(CasterStreaming, MessageUpdate),
+    ResetWindow,
+    DoKeyShortcut(CasterStreaming, Key),
+    StopStreamingReal(CasterStreaming),
+    BlankingReal(CasterStreaming),
+    RegistrationResult(Result<String, String>),
 }
 
 impl Application for App {
@@ -155,7 +162,6 @@ impl Application for App {
                     recording: false,
                     receiver: Arc::new(Mutex::new(receiver_receiver)),
                     frame_to_update: Arc::new(Mutex::new(None)),
-                    is_loading: true,
                 },
                 caster_settings: CasterSettings {
                     available_displays: Monitor::all().unwrap(),
@@ -240,12 +246,21 @@ impl Application for App {
     fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
         match message {
             Message::CloseRequested => {
-               // println!("Chiusa finestra secondaria");
+                // println!("Chiusa finestra secondaria");
                 // Controllo se la finestra è valida prima di chiuderla
-                let result = window::close::<Message>(self.second_window_id.unwrap()); // Chiude la finestra solo se valida
-                result.actions();
+                let id = self.second_window_id.unwrap();
+                let mut caster_streaming = self.caster_streaming.clone();
+                Command::perform(
+                    async move {
+                        let result = window::close::<Message>(id); // Chiude la finestra solo se valida
+                        result.actions();
+                        caster_streaming.toggler = false;
+                    },
+                    |_| Message::ResetWindow,
+                )
+            }
+            Message::ResetWindow => {
                 self.second_window_id = None;
-                self.caster_streaming.toggler = false;
                 Command::none()
             }
             Message::SetColor => {
@@ -309,34 +324,39 @@ impl Application for App {
                 //devo creare solo la socket
                 let (notification_tx, notification_rx) = tokio::sync::watch::channel(0);
                 self.notification_rx = Some(notification_rx);
+                let caster_streaming = self.caster_streaming.clone();
                 Command::perform(
                     async move {
-                        //println!("Creata nuova socket caster");
+                        println!("Creata nuova socket caster");
                         let caster_ip = local_ip().unwrap();
                         //println!("{:?}", caster_ip);
                         let socket = crate::socket::socket::CasterSocket::new(
-                            &format!("{}:7878", caster_ip),
+                            &format!("{}:7879", caster_ip),
                             notification_tx,
                         )
                         .await;
 
                         let page = Page::CasterStreaming;
-                        (socket, page)
+                        (caster_streaming.clone(), socket, page)
                     },
-                    move |(socket, page)| Message::SetCasterSocket(socket, page, Modality::Full),
+                    move |(caster, socket, page)| {
+                        Message::SetCasterSocket(caster, socket, page, Modality::Full)
+                    },
                 )
             }
             Message::ReceiverSharing(ip_caster) => {
                 //creo controller e socket insieme tanto il controller non mi serve prima per il receiver
                 if let Controller::NotDefined = &mut self.controller {
                     let sender = self.sender_receiver.clone();
+                    let mut rng = thread_rng();
+                    let random = rng.gen_range(0..10);
                     Command::perform(
                         async move {
                             let receiver_ip = local_ip().unwrap();
                             //println!("{:?}", receiver_ip);
                             let socket = crate::socket::socket::ReceiverSocket::new(
-                                &format!("{}:7878", receiver_ip),
-                                &format!("{}:7878", ip_caster),
+                                &format!("{}:7880", receiver_ip),
+                                &format!("{}:7879", ip_caster),
                             )
                             .await;
                             let page = Page::ReceiverStreaming;
@@ -349,28 +369,21 @@ impl Application for App {
                         },
                     )
                 } else {
-                    if let Controller::ReceiverController(receiver) = &mut self.controller {
-                        match receiver.register() {
-                            Ok(_) => {
-                                self.current_page = Page::ReceiverStreaming;
-                                receiver.start_receiving();
-                            }
-                            Err(message) => {
-                                self.receiver_ip.message = message;
-                                self.controller = Controller::NotDefined;
-                            }
-                        }
+                    if let Controller::ReceiverController(receiver) = &self.controller {
+                        let rec = receiver.clone();
+                        Command::perform(async move { rec.register().await }, |result| {
+                            Message::RegistrationResult(result)
+                        })
+                    } else {
+                        Command::none()
                     }
-                    Command::none()
                 }
             }
-            Message::ReceiverControllerCreated(socket, sender, page) => {
-                self.controller =
-                    Controller::ReceiverController(ReceiverController::new(sender, socket));
+            Message::RegistrationResult(result) => {
                 if let Controller::ReceiverController(receiver) = &mut self.controller {
-                    match receiver.register() {
+                    match result {
                         Ok(_) => {
-                            self.current_page = page;
+                            self.current_page = Page::ReceiverStreaming;
                             receiver.start_receiving();
                         }
                         Err(message) => {
@@ -380,6 +393,20 @@ impl Application for App {
                     }
                 }
                 Command::none()
+            }
+            Message::ReceiverControllerCreated(socket, sender, page) => {
+                println!("dentro");
+                self.controller =
+                    Controller::ReceiverController(ReceiverController::new(sender, socket));
+                if let Controller::ReceiverController(receiver) = &self.controller {
+                    let rec = receiver.clone();
+                    self.current_page = page;
+                    Command::perform(async move { rec.register().await }, |result| {
+                        Message::RegistrationResult(result)
+                    })
+                } else {
+                    Command::none()
+                }
             }
             Message::Back(page) => {
                 self.current_page = match page {
@@ -398,8 +425,11 @@ impl Application for App {
                 Command::none()
             }
             Message::ReceiverInputIp(message) => {
-                let _ = self.receiver_ip.update(message);
+                let _ = tokio::task::block_in_place(move || {
+                    tokio::runtime::Handle::current().block_on(self.receiver_ip.update(message))
+                });
                 Command::none()
+    
             }
             Message::SetSettingsCaster(message) => {
                 let caster_ip = local_ip().unwrap();
@@ -450,47 +480,74 @@ impl Application for App {
             }
             Message::TogglerChanged(message) => match self.second_window_id {
                 None => {
-                    let (second_window_id, command) = window::spawn::<Message>(window::Settings {
-                        size: Size::new(1024.0, 768.0),
-                        position: Position::default(),
-                        min_size: None,
-                        max_size: None,
-                        visible: true,
-                        resizable: true,
-                        decorations: true,
-                        transparent: true,
-                        level: Level::default(),
-                        icon: None,
-                        exit_on_close_request: true,
-                        platform_specific: PlatformSpecific::default(),
-                    });
-                    self.annotationTools.window_id = Some(second_window_id);
-
-                    self.second_window_id = Some(second_window_id);
-                    let _ = self.caster_streaming.update(message);
-                    command
+                    let caster_streaming = self.caster_streaming.clone();
+                    Command::perform(
+                        async move { (caster_streaming, message) },
+                        |(caster_streaming, message)| Message::ViewTools(caster_streaming, message),
+                    )
                 }
                 Some(_) => {
                     panic!("NON DOVREBBE ENTRARE QUI");
                 }
             },
+            Message::ViewTools(mut caster, message) => {
+                let (second_window_id, command) = window::spawn::<Message>(window::Settings {
+                    size: Size::new(1024.0, 768.0),
+                    position: Position::default(),
+                    min_size: None,
+                    max_size: None,
+                    visible: true,
+                    resizable: true,
+                    decorations: true,
+                    transparent: true,
+                    level: Level::default(),
+                    icon: None,
+                    exit_on_close_request: true,
+                    platform_specific: PlatformSpecific::default(),
+                });
+                self.annotationTools.window_id = Some(second_window_id);
+
+                self.second_window_id = Some(second_window_id);
+                let _ = Command::perform(
+                    async move {
+                        caster.update(message).await
+                    },
+                    |_| Message::None,
+                );
+                command
+            }
             Message::KeyShortcut(key_code) => {
                 //println!("SOno in in key {:?}",key_code);
+                let caster_streaming = self.caster_streaming.clone();
+                Command::perform(
+                    async move { (caster_streaming, key_code) },
+                    |(caster_streaming, key_code)| {
+                        Message::DoKeyShortcut(caster_streaming, key_code)
+                    },
+                )
+            }
+            Message::DoKeyShortcut(mut caster_streaming, key_code) => {
                 if let Controller::CasterController(caster) = &mut self.controller {
+                    let mut cast = caster.clone();
                     let key_code = from_key_to_string(key_code);
                     //println!(" Key_code {:?}",key_code);
                     //println!("SOno in in self.shorcut {:?}", self.shortcut_screen.blancking_screen);
                     if self.shortcut_screen.blancking_screen == key_code {
-                        self.caster_streaming.warning_message =
-                            !self.caster_streaming.warning_message;
+                        caster_streaming.warning_message = !caster_streaming.warning_message;
                         caster.blanking_streaming();
+                        Command::none()
                     } else if self.shortcut_screen.terminate_session == key_code {
-                        caster.close_streaming();
-                        //self.controller.clean_options(); DA FARE PER PEPPINO
                         self.current_page = Page::Home;
+                        Command::perform(
+                            async move {
+                                cast.close_streaming().await
+                            },
+                            |_| Message::None,
+                        )
+                        //self.controller.clean_options(); DA FARE PER PEPPINO
                     } else if self.shortcut_screen.manage_transmission == key_code {
                         if caster.is_just_stopped {
-                            match self.caster_streaming.modality {
+                            match caster_streaming.modality {
                                 Modality::Partial(x, y, start_x, start_y) => {
                                     let screen_scaled = get_screen_scaled(
                                         x as f64,
@@ -517,22 +574,32 @@ impl Application for App {
                                     caster.start_sharing();
                                 }
                             }
-                            self.caster_streaming.stop = false;
+                            caster_streaming.stop = false;
                             caster.set_is_just_stopped(false);
                         } else {
                             caster.stop_streaming();
-                            self.caster_streaming.stop = true;
+                            caster_streaming.stop = true;
                             caster.set_is_just_stopped(true);
+
                         }
+                        Command::none()
+                    }
+                    else {
+                        Command::none()
                     }
                 } else {
-                    eprintln!("Dovrebbe essere impossibile arrivare qui SHORTCUT!!");
+                    panic!("Non dovrebbe entrare qui dentro");
                 }
-                Command::none()
             }
             Message::Blanking => {
+                let caster_streaming = self.caster_streaming.clone();
+                Command::perform(async move { caster_streaming }, |caster| {
+                    Message::BlankingReal(caster)
+                })
+            }
+            Message::BlankingReal(mut caster_streaming) => {
                 if let Controller::CasterController(caster) = &mut self.controller {
-                    self.caster_streaming.warning_message = !self.caster_streaming.warning_message;
+                    caster_streaming.warning_message = caster_streaming.warning_message;
                     caster.blanking_streaming();
                 } else {
                     eprintln!("NON DOVREBBE ENTRARE MAI QUI..BLANKING");
@@ -553,82 +620,133 @@ impl Application for App {
                 Command::none()
             }
             Message::Close => {
+                self.current_page = Page::Home;
                 if let Controller::CasterController(caster) = &mut self.controller {
-                    caster.close_streaming();
+                    let mut cast = caster.clone();
                     self.controller = Controller::NotDefined;
+                    Command::perform(
+                        async move {
+                            println!("chiudo");
+                            cast.close_streaming().await
+                        },
+                        |_| Message::None,
+                    )
                 } else if let Controller::ReceiverController(receiver) = &mut self.controller {
-                    receiver.unregister();
-                    receiver.close_streaming();
-                    *self.receiver_streaming.frame_to_update.blocking_lock() = None;
+                    let mut rec = receiver.clone();
+                    let receiver_streaming = self.receiver_streaming.clone();
                     self.controller = Controller::NotDefined;
+                    Command::perform(
+                        async move {
+                            rec.unregister().await;
+                            println!("disconetto");
+                            rec.close_streaming().await;
+                            *receiver_streaming.frame_to_update.lock().await = None;
+                        },
+                        |_| Message::None,
+                    )
                 } else {
                     eprintln!("ERRORE NELLA CHIUSURA DELLA CONDIVISIONE SCHERMO");
+                    Command::none()
                 }
-                self.current_page = Page::Home;
-                Command::none()
             }
             Message::UpdateScreen => {
                 match &self.controller {
                     Controller::ReceiverController(controller) => {
-                        let frame = {
-                            if let Ok(receiver) =
-                                self.receiver_streaming.receiver.blocking_lock().try_recv()
-                            {
-                                receiver
-                            } else {
-                                return Command::none();
-                            }
-                        };
-                        // if self.receiver_streaming.recording {
-                        controller.start_recording(frame.clone());
-                        //}
-                        let _ = self
-                            .receiver_streaming
-                            .update(UpdateMessage::NewFrame(frame));
+                        let controller_cloned: ReceiverController = controller.clone(); //si potrebbe ottimizzare questa clone
+                        let receiver_streaming = self.receiver_streaming.clone();
+                        let mut receiver_streaming2 = self.receiver_streaming.clone();
+                        Command::perform(
+                            async move {
+                                let mut resutl = receiver_streaming.receiver.lock().await;
+                                // Perform async work here, like locking the receiver and handling the frame
+                                if let Ok(receiver) = resutl.try_recv() {
+                                    // Update the caster streaming
+                                    if receiver_streaming.recording {
+                                        controller_cloned.start_recording(receiver.clone());
+                                    }
+                                    let _ = receiver_streaming2
+                                        .update(UpdateMessage::NewFrame(receiver))
+                                        .await;
+                                } else {
+                                    // If the receiver couldn't be locked, handle the case (e.g., return early)
+                                }
+                            },
+                            |_| {
+                                // When the async work completes, you can return an appropriate message
+                                // For example, you might return a message indicating a new frame has been processed.
+                                Message::None // Your message type
+                            },
+                        )
                     }
-
                     Controller::CasterController(_) => {
+                        let caster_streaming = self.caster_streaming.clone();
+                        let mut caster_streaming2 = self.caster_streaming.clone();
+                        Command::perform(
+                            async move {
+                                let mut resutl = caster_streaming.receiver.lock().await;
+                                // Perform async work here, like locking the receiver and handling the frame
+                                if let Ok(receiver) = resutl.try_recv() {
+                                    // Update the caster streaming
+                                    let _ = caster_streaming2
+                                        .update(MessageUpdate::NewFrame(receiver))
+                                        .await;
+                                } else {
+                                    // If the receiver couldn't be locked, handle the case (e.g., return early)
+                                }
+                            },
+                            |_| {
+                                // When the async work completes, you can return an appropriate message
+                                // For example, you might return a message indicating a new frame has been processed.
+                                Message::None // Your message type
+                            },
+                        )
+                        /*
                         let frame = {
                             if let Ok(receiver) =
-                                self.caster_streaming.receiver.blocking_lock().try_recv()
+                                self.caster_streaming.receiver.lock().await
                             {
                                 receiver
                             } else {
                                 return Command::none();
                             }
                         };
-                        let _ = self.caster_streaming.update(MessageUpdate::NewFrame(frame));
+                        let _ = self.caster_streaming.update(MessageUpdate::NewFrame(frame));*/
                     }
-                    _ => {}
+                    _ => Command::none(),
                 }
-                Command::none()
             }
             Message::StartPartialSharing(x, y, start_x, start_y) => {
                 let (notification_tx, notification_rx) = tokio::sync::watch::channel(0);
                 self.notification_rx = Some(notification_rx);
                 //creo la caster socket
-                Command::perform(
-                    async move {
-                        //println!("Creata nuova socket caster");
-                        let caster_ip = local_ip().unwrap();
-                        //println!("{:?}", caster_ip);
-                        let socket = crate::socket::socket::CasterSocket::new(
-                            &format!("{}:7878", caster_ip),
-                            notification_tx,
-                        )
-                        .await;
-
-                        let page = Page::CasterStreaming;
-                        (socket, page)
-                    },
-                    move |(socket, page)| {
-                        Message::SetCasterSocket(
-                            socket,
-                            page,
-                            Modality::Partial(x, y, start_x, start_y),
-                        )
-                    },
-                )
+                if let Controller::CasterController(_) = &mut self.controller {
+                    let caster_streaming = self.caster_streaming.clone();
+                    let _ = Command::perform(
+                        async move {
+                            //println!("Creata nuova socket caster");
+                            let caster_ip = local_ip().unwrap();
+                            //println!("{:?}", caster_ip);
+                            let socket = crate::socket::socket::CasterSocket::new(
+                                &format!("{}:7879", caster_ip),
+                                notification_tx,
+                            )
+                            .await;
+                            let page = Page::CasterStreaming;
+                            (caster_streaming, socket, page)
+                        },
+                        move |(caster, socket, page)| {
+                            Message::SetCasterSocket(
+                                caster,
+                                socket,
+                                page,
+                                Modality::Partial(x, y, start_x, start_y),
+                            )
+                        },
+                    );
+                } else {
+                    eprintln!("Non dovrebbe entrare qua");
+                }
+                Command::none()
             }
             Message::AreaSelectedFirst => {
                 let _ = self.windows_part_screen.update(MessagePress::FirstPress);
@@ -645,9 +763,15 @@ impl Application for App {
                 Command::none()
             }
             Message::StopStreaming => {
+                let caster_streaming = self.caster_streaming.clone();
+                Command::perform(async move { caster_streaming }, |caster| {
+                    Message::StopStreamingReal(caster)
+                })
+            }
+            Message::StopStreamingReal(mut caster_streaming) => {
                 if let Controller::CasterController(caster) = &mut self.controller {
                     if caster.is_just_stopped {
-                        match self.caster_streaming.modality {
+                        match caster_streaming.modality {
                             Modality::Partial(x, y, start_x, start_y) => {
                                 let screen_scaled = get_screen_scaled(
                                     x as f64,
@@ -674,10 +798,10 @@ impl Application for App {
                                 caster.start_sharing();
                             }
                         }
-                        self.caster_streaming.stop = false;
+                        caster_streaming.stop = false;
                         caster.set_is_just_stopped(false);
                     } else {
-                        self.caster_streaming.stop = true;
+                        caster_streaming.stop = true;
                         caster.stop_streaming();
                         caster.set_is_just_stopped(true);
                     }
@@ -685,8 +809,8 @@ impl Application for App {
                 Command::none()
             }
             Message::None => Command::none(),
-            Message::SetCasterSocket(caster_socket, page, modality) => {
-                self.caster_streaming.modality = modality.clone();
+            Message::SetCasterSocket(mut caster_streaming, caster_socket, page, modality) => {
+                caster_streaming.modality = modality.clone();
                 match modality {
                     Modality::Partial(x, y, start_x, start_y) => {
                         if let Controller::CasterController(caster) = &mut self.controller {
@@ -707,12 +831,12 @@ impl Application for App {
                                     caster.get_measures().1 as u64,
                                 ),
                             );
-                           /* println!(
+                            /* println!(
                                 "x: {} y: {} start_x: {} start_y: {}",
                                 x, y, screen_scaled.0, screen_scaled.1
                             );*/
                             if let Some(notification_rx) = self.notification_rx.clone() {
-                                let viewrs_clone = self.caster_streaming.viewrs.clone();
+                                let viewrs_clone = caster_streaming.viewrs.clone();
                                 tokio::spawn(async move {
                                     let mut notification_rx = notification_rx; // Clona il ricevitore per usarlo nel task
                                     while notification_rx.changed().await.is_ok() {
@@ -743,7 +867,7 @@ impl Application for App {
                         if let Controller::CasterController(caster) = &mut self.controller {
                             caster.set_socket(caster_socket);
                             if let Some(notification_rx) = self.notification_rx.clone() {
-                                let viewrs_clone = self.caster_streaming.viewrs.clone();
+                                let viewrs_clone = caster_streaming.viewrs.clone();
                                 tokio::spawn(async move {
                                     let mut notification_rx = notification_rx; // Clona il ricevitore per usarlo nel task
                                     while notification_rx.changed().await.is_ok() {
@@ -797,7 +921,7 @@ impl Application for App {
             }
             Message::AddShape(shape) => {
                 self.annotationTools.canvas_widget.shapes.push(shape);
-               /*  println!(
+                /*  println!(
                     "SONO O NON SONO IN Add shape {:?}",
                     self.annotationTools.canvas_widget.shapes
                 );*/
@@ -880,20 +1004,38 @@ impl Application for App {
     fn view(&self, window_id: window::Id) -> Element<Message> {
         if window_id == window::Id::MAIN {
             match self.current_page {
-                Page::Home => self.home.view(),
-                Page::Connection => self.connection.view(),
-                Page::ReceiverIp => self.receiver_ip.view(),
-                Page::ReceiverStreaming => self.receiver_streaming.view(),
-                Page::CasterSettings => self.caster_settings.view(),
-                Page::CasterStreaming => self.caster_streaming.view(),
-                Page::WindowPartScreen => self.windows_part_screen.view(),
-                Page::Shortcut => self.shortcut_screen.view(),
+                Page::Home => tokio::task::block_in_place(move || {
+                    tokio::runtime::Handle::current().block_on(self.home.view())
+                }),
+                Page::Connection => tokio::task::block_in_place(move || {
+                    tokio::runtime::Handle::current().block_on(self.connection.view())
+                }),
+                Page::ReceiverIp => tokio::task::block_in_place(move || {
+                    tokio::runtime::Handle::current().block_on(self.receiver_ip.view())
+                }),
+                Page::ReceiverStreaming => tokio::task::block_in_place(move || {
+                    tokio::runtime::Handle::current().block_on(self.receiver_streaming.view())
+                }),
+                Page::CasterSettings => tokio::task::block_in_place(move || {
+                    tokio::runtime::Handle::current().block_on(self.caster_settings.view())
+                }),
+                Page::CasterStreaming => tokio::task::block_in_place(move || {
+                    tokio::runtime::Handle::current().block_on(self.caster_streaming.view())
+                }),
+                Page::WindowPartScreen => tokio::task::block_in_place(move || {
+                    tokio::runtime::Handle::current().block_on(self.windows_part_screen.view())
+                }),
+                Page::Shortcut => tokio::task::block_in_place(move || {
+                    tokio::runtime::Handle::current().block_on(self.shortcut_screen.view())
+                }),
             }
         } else if Some(window_id) == self.second_window_id {
             match self.current_page {
                 Page::CasterStreaming => {
                     //println!("devo aggiornare");
-                    self.annotationTools.view()
+                    tokio::task::block_in_place(move || {
+                        tokio::runtime::Handle::current().block_on(self.annotationTools.view())
+                    })
                 }
                 _ => {
                     panic!("NON DOVREBBE MAI ENTRARE")
@@ -904,6 +1046,7 @@ impl Application for App {
             panic!("NON DOVREBBE MAI ENTRARE")
         }
     }
+
     fn subscription(&self) -> Subscription<Self::Message> {
         // Always refresh the screen
         let mut subscriptions =
@@ -924,8 +1067,9 @@ impl Application for App {
                     .map(MessageUpdate::into),
             );
             subscriptions.push(
-                self.annotationTools.subscription()
-                .map(MessageAnnotation::into)
+                self.annotationTools
+                    .subscription()
+                    .map(MessageAnnotation::into),
             )
         }
 

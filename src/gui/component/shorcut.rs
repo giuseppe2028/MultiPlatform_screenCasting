@@ -51,7 +51,7 @@ impl From<ShortcutMessage> for app::Message {
 }
 
 impl<'a> Component<'a> for Shortcut{
-    fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
+    async fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
             ShortcutMessage::ManageTransmission(key) => {
                 self.manage_transmission = key;
@@ -68,7 +68,7 @@ impl<'a> Component<'a> for Shortcut{
         }
     }
 
-    fn view(&self) -> Element<'_, app::Message> {
+    async fn view(&self) -> Element<'_, app::Message> {
         let back_button = container(row![CircleButton::new("")
             .style(Style::Danger)
             .icon(Icon::BackLeft)

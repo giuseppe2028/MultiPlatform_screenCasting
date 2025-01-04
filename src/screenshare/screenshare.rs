@@ -139,18 +139,24 @@ pub async fn start_screen_sharing(
             // Invia il frame ai socket dei peer
             let sock_lock = socket.lock().await;
             if let Some(sock) = sock_lock.as_ref() {
+                let sock_clone = sock.clone(); // Clone the Arc
+
                 if blanking_flag.load(Ordering::Relaxed) {
                     //frame nero
                     //println!("Mando frame nero");
                     let black_frame_data = vec![0u8; (width * height * 4) as usize]; // RGBA: 4 byte per pixel
                     if let Some(black_frame) = RgbaImage::from_raw(width, height, black_frame_data)
                     {
-                        sock.send_to_receivers(black_frame).await;
+                        tokio::spawn(async move {
+                            sock_clone.send_to_receivers(black_frame).await;
+                        });
                     } else {
                         eprintln!("Error creating black frame");
                     }
                 } else {
-                    sock.send_to_receivers(new_frame).await;
+                    tokio::spawn(async move {
+                        sock_clone.send_to_receivers(new_frame).await;
+                    });
                 }
             } else {
                 eprintln!("No CasterSocket available");
@@ -159,7 +165,7 @@ pub async fn start_screen_sharing(
             eprintln!("Error recreating the frame from raw data");
         }
     }
-    //println!("Stopped sending frames");
+    println!("Stopped sending frames");
 }
 
 pub async fn start_screen_receiving(
@@ -167,23 +173,24 @@ pub async fn start_screen_receiving(
     sender: Arc<Sender<RgbaImage>>,
     socket: Arc<Mutex<ReceiverSocket>>,
 ) {
+    println!("inizio a ricevere");
     while !stop_flag.load(Ordering::Relaxed) {
         // non possiamo metterla four dal while perchè si bugga nela chiusura
         let sock_lock = socket.lock().await;
 
         // Timeout di 1 secondo per la ricezione
-        match timeout(Duration::from_secs(1), sock_lock.receive_from()).await {
+        match timeout(Duration::from_secs(100), sock_lock.receive_from()).await {
             Ok(Ok(serialized_image)) => {
                 if let Some(image) = RgbaImage::from_raw(
                     serialized_image.width(),
                     serialized_image.height(),
                     serialized_image.data().to_vec(),
                 ) {
-                    /*println!(
+                     println!(
                         "Received a frame of size {}x{}",
                         image.width(),
                         image.height()
-                    );*/
+                    );
                     if let Err(send_err) = sender.send(image).await {
                         eprintln!("Error sending frame data: {:?}", send_err);
                     }
@@ -192,9 +199,10 @@ pub async fn start_screen_receiving(
                 }
             }
             Ok(Err(e)) => {
-                eprintln!("Error receiving frame: {:?}", e);
+                eprintln!("Error receiving frame {}", e);
             }
             Err(_) => {
+               // println!("timeout");
                 // Timeout scaduto, controlla lo stop_flag
                 if stop_flag.load(Ordering::Relaxed) {
                     break;
@@ -202,7 +210,7 @@ pub async fn start_screen_receiving(
             }
         }
     }
-    //println!("Stopped receiving frames.");
+    println!("Stopped receiving frames.");
 }
 
 pub async fn start_partial_sharing(
@@ -211,6 +219,7 @@ pub async fn start_partial_sharing(
     sender: Arc<Sender<RgbaImage>>,
     dimensions: [(f64, f64); 2],
     socket: Arc<tokio::sync::Mutex<Option<CasterSocket>>>,
+    blanking_flag: Arc<AtomicBool>,
 ) {
     while !stop_flag.load(Ordering::Relaxed) {
         let frame_result = {
@@ -253,8 +262,7 @@ pub async fn start_partial_sharing(
                                     hbm_color,
                                 );
                             }
-                        }
-                        else {
+                        } else {
                             println!("finita");
                         }
                     }
@@ -314,8 +322,26 @@ pub async fn start_partial_sharing(
 
                     let sock_lock = socket.lock().await;
                     if let Some(sock) = sock_lock.as_ref() {
-                        sock.send_to_receivers(new_frame).await;
-                       // println!("CASTER SOCKET: frame sent!");
+                        let sock_clone = sock.clone(); // Clone the Arc
+
+                        if blanking_flag.load(Ordering::Relaxed) {
+                            //frame nero
+                            //println!("Mando frame nero");
+                            let black_frame_data = vec![0u8; (width * height * 4) as usize]; // RGBA: 4 byte per pixel
+                            if let Some(black_frame) =
+                                RgbaImage::from_raw(width, height, black_frame_data)
+                            {
+                                tokio::spawn(async move {
+                                    sock_clone.send_to_receivers(black_frame).await;
+                                });
+                            } else {
+                                eprintln!("Error creating black frame");
+                            }
+                        } else {
+                            tokio::spawn(async move {
+                                sock_clone.send_to_receivers(new_frame).await;
+                            });
+                        }
                     } else {
                         eprintln!("No CasterSocket available");
                     }
