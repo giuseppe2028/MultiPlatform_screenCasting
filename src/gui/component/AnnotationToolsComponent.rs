@@ -9,10 +9,11 @@ use crate::gui::theme::button::{MyButton, Style as BT};
 use crate::gui::theme::container::Style;
 use crate::gui::theme::text::text;
 use crate::gui::theme::textinput::textinput;
-use crate::gui::theme::widget::{Canvas, Element};
+use crate::gui::theme::widget::{Button, Canvas, Element, Text};
 use iced::advanced::graphics::core::window;
 use iced::widget::{container, row, Container as CT};
 use iced::{event, Color, Command, Event, Length, Point, Subscription};
+use iced_aw::color_picker;
 
 pub struct AnnotationTools {
     pub canvas_widget: CanvasWidget,
@@ -76,6 +77,12 @@ impl<'a> Component<'a> for AnnotationTools {
         } else {
             annotation_buttons = container(
                 column_iced![
+                         CircleButton::new("")
+                        .style(BT::Primary)
+                        .icon(crate::gui::theme::icon::Icon::Rubber)
+                        .build(30)
+                        .padding(8)
+                        .on_press(app::Message::SetColor),
                     CircleButton::new("")
                         .style(BT::Primary)
                         .icon(crate::gui::theme::icon::Icon::Rubber)
@@ -90,6 +97,7 @@ impl<'a> Component<'a> for AnnotationTools {
                         .on_press(app::Message::SelectShape(Shape::Circle(CircleCanva {
                             center: Point::new(0., 0.),
                             radius: 0.0,
+                         color:Color::BLACK
                         }))),
                     CircleButton::new("")
                         .style(BT::Primary)
@@ -101,6 +109,7 @@ impl<'a> Component<'a> for AnnotationTools {
                                 startPoint: std::default::Default::default(),
                                 width: 0.0,
                                 height: 0.0,
+                            color:Color::BLACK
                             }
                         ))),
                     CircleButton::new("")
@@ -110,7 +119,8 @@ impl<'a> Component<'a> for AnnotationTools {
                         .padding(8)
                         .on_press(app::Message::SelectShape(Shape::Arrow(ArrowCanva {
                             starting_point: std::default::Default::default(),
-                            ending_point: std::default::Default::default()
+                            ending_point: std::default::Default::default(),
+                         color:Color::BLACK
                         }))),
                     CircleButton::new("")
                         .style(BT::Primary)
@@ -119,7 +129,8 @@ impl<'a> Component<'a> for AnnotationTools {
                         .padding(8)
                         .on_press(app::Message::SelectShape(Shape::Line(LineCanva {
                             starting_point: std::default::Default::default(),
-                            ending_point: std::default::Default::default()
+                            ending_point: std::default::Default::default(),
+                         color:Color::BLACK
                         }))),
                     CircleButton::new("")
                         .style(BT::Primary)
@@ -154,7 +165,7 @@ impl<'a> Component<'a> for AnnotationTools {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        if let Some(_) = self.window_id {
+       if let Some(_) = self.window_id {
             event::listen_with(|event, _status| match event {
                 Event::Window(_id, window::Event::Closed) => Some(MessageAnnotation::CloseRequested),
                 _ => None,

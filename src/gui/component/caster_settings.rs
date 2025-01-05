@@ -1,6 +1,7 @@
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{container, pick_list, row};
-use iced::{Command, Length::Fill, Subscription};
+use iced::{Color, Command, Length::Fill, Subscription};
+use iced_aw::color_picker;
 use xcap::Monitor;
 use crate::column_iced;
 use crate::gui::component::Component;
@@ -8,12 +9,12 @@ use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::RectangleButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
-use crate::gui::theme::widget::Element;
+use crate::gui::theme::widget::{Button, Element, Text};
 use crate::gui::{app, resource};
 
 pub struct CasterSettings {
     pub available_displays: Vec<Monitor>,
-    pub selected_display: Monitor
+    pub selected_display: Monitor,
 }
 
 #[derive(Debug, Clone)]
@@ -55,6 +56,7 @@ impl<'a> Component<'a> for CasterSettings {
     }
 
     fn view(&self) -> Element<'_, app::Message> {
+
         let back_button = container(row![CircleButton::new("")
             .style(Style::Danger)
             .icon(Icon::BackLeft)

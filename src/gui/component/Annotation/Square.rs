@@ -22,7 +22,8 @@ pub struct CanvasWidget {
     pub selected_shape: Option<Shape>,
     pub textSelected:TextCanva,
     pub all_text_selected:Vec<TextCanva>,
-    pub text_status:Status
+    pub text_status:Status,
+    pub selected_color:Color
 }
 
 #[derive(Debug)]
@@ -46,30 +47,35 @@ pub struct RectangleCanva {
     pub(crate) startPoint:Point,
     pub(crate) width: f32,
     pub(crate) height: f32,
+    pub(crate) color: Color,
 }
 
 #[derive(Clone, Debug)]
 pub struct TextCanva{
     pub(crate) position:Point,
-    pub(crate) text:String
+    pub(crate) text:String,
+    pub color: Color
 }
 
 #[derive(Debug, Clone)]
 pub struct CircleCanva {
     pub(crate) center: Point,
     pub(crate) radius: f32,
+    pub(crate) color: Color,
 }
 
 #[derive(Debug, Clone)]
 pub struct ArrowCanva {
     pub(crate) starting_point: Point,
     pub(crate) ending_point: Point,
+    pub(crate) color: Color,
 }
 
 #[derive(Debug, Clone)]
 pub struct LineCanva {
     pub(crate) starting_point: Point,
     pub(crate) ending_point: Point,
+    pub(crate) color: Color,
 }
 
 
@@ -89,7 +95,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
         cursor: Cursor,
     ) -> Vec<canvas::Geometry> {
         let content = self.cache.draw(renderer, bounds.size(), |frame: &mut Frame| {
-
+            println!("{:?}",self.selected_color);
             frame.stroke(
                 &Path::rectangle(Point::ORIGIN, frame.size()),
                 Stroke::default().with_width(3.0),
@@ -101,7 +107,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                     Shape::Line(line)=>{
                         let rect_path = Path::line(line.starting_point,line.ending_point);
                         frame.stroke(&rect_path, Stroke{
-                            style:Style::Solid(Color::BLACK),
+                            style:Style::Solid(line.color),
                             width: 3.0,
                             line_cap: Default::default(),
                             line_join: Default::default(),
@@ -114,7 +120,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                             Size::new(rect.width, rect.height),
                         );
                         frame.stroke(&rect_path, Stroke{
-                            style:Style::Solid(Color::BLACK),
+                            style:Style::Solid(rect.color),
                             width: 3.0,
                             line_cap: Default::default(),
                             line_join: Default::default(),
@@ -124,7 +130,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                     Shape::Circle(circle) => {
                         let circle_path = Path::circle(circle.center, circle.radius);
                         frame.stroke(&circle_path, Stroke{
-                            style:Style::Solid(Color::BLACK),
+                            style:Style::Solid(circle.color),
                             width: 3.0,
                             line_cap: Default::default(),
                             line_join: Default::default(),
@@ -172,7 +178,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
 
                         // Disegna la freccia
                         frame.stroke(&arrow_path,Stroke{
-                            style:Style::Solid(Color::BLACK),
+                            style:Style::Solid(arrow.color),
                             width: 3.0,
                             line_cap: Default::default(),
                             line_join: Default::default(),
@@ -186,7 +192,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                 let my_text = Text {
                     content: text.clone().text,
                     position:text.position, // Posizione del testo
-                    color: Color::from_rgb(0.0, 0.0, 0.0), // Colore nero
+                    color: text.color, // Colore nero
                     size: Pixels(20.), // Dimensione del testo
                     ..Default::default()
                 };
@@ -293,6 +299,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                                                Some(Message::AddShape(Shape::Line(LineCanva{
                                                    starting_point: from,
                                                    ending_point: cursor_position,
+                                                   color:self.selected_color
                                                }))),
                                            );
                                        }
@@ -303,6 +310,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                                                    startPoint: from,
                                                    width: cursor_position.x - from.x,
                                                    height: cursor_position.y - from.y,
+                                                   color:self.selected_color
                                                }))),
                                            );
                                        }
@@ -315,6 +323,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                                                Some(Message::AddShape(Shape::Circle(CircleCanva {
                                                    center: from,
                                                    radius,
+                                                   color:self.selected_color
                                                }))),
                                            );
                                        }
@@ -324,6 +333,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                                                Some(Message::AddShape(Shape::Arrow(ArrowCanva {
                                                    starting_point: from,
                                                    ending_point: cursor_position,
+                                                   color:self.selected_color
                                                }))),
                                            );
                                        },
@@ -338,6 +348,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                                         Some(Message::AddShape(Shape::Circle(CircleCanva {
                                             center: from,
                                             radius,
+                                            color:self.selected_color
                                         }))),
                                     );
                                 }
@@ -364,9 +375,10 @@ impl CanvasWidget {
             end_point: Default::default(),
             cache: Cache::new(),
             selected_shape:None,
-            textSelected:TextCanva{ position: Default::default(), text: "".to_string() },
+            textSelected:TextCanva{ position: Default::default(), text: "".to_string(), color: Default::default() },
             all_text_selected: vec![],
             text_status: Status::None,
+            selected_color: Color::BLACK,
         }
     }
     pub fn update(&mut self, message: Message) {
@@ -384,6 +396,7 @@ impl CanvasWidget {
                 self.shapes.push(Shape::Arrow(ArrowCanva {
                     starting_point: from,
                     ending_point: to,
+                    color:Color::BLACK
                 }));
                 self.cache.clear(); // Forza il ridisegno
             }

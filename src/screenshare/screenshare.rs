@@ -16,6 +16,7 @@ use std::ptr;
 use std::ptr;
 #[cfg(target_os = "linux")]
 use std::slice;
+use core_graphics::display::CGDisplay;
 #[cfg(target_os = "windows")]
 use winapi::shared::windef::HBITMAP;
 #[cfg(target_os = "windows")]
@@ -30,7 +31,6 @@ use x11::xfixes::*;
 use x11::xlib;
 #[cfg(target_os = "linux")]
 use x11::xlib::*;
-
 pub async fn start_screen_sharing(
     monitor: Arc<std::sync::Mutex<Monitor>>,
     stop_flag: Arc<AtomicBool>,
