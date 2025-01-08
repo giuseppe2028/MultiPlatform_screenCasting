@@ -248,8 +248,8 @@ impl Application for App {
     }
 
     fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
-        println!("entro sempr");
-        println!("{:?}",message);
+        //println!("entro sempr");
+        //println!("{:?}",message);
         match message {
             Message::CloseRequested => {
                // println!("Chiusa finestra secondaria");
@@ -361,12 +361,14 @@ impl Application for App {
                 //creo controller e socket insieme tanto il controller non mi serve prima per il receiver
                 if let Controller::NotDefined = &mut self.controller {
                     let sender = self.sender_receiver.clone();
+                    let mut rng = rand::thread_rng();
+                    let random_digit: u8 = rand::Rng::gen_range(&mut rng, 0..8);                    
                     Command::perform(
                         async move {
                             let receiver_ip = local_ip().unwrap();
                             //println!("{:?}", receiver_ip);
                             let socket = crate::socket::socket::ReceiverSocket::new(
-                                &format!("{}:7878", receiver_ip),
+                                &format!("{}:787{}", receiver_ip, random_digit),
                                 &format!("{}:7878", ip_caster),
                             )
                             .await;
@@ -592,7 +594,7 @@ impl Application for App {
                 if self.annotationTools.show_color_picker {
                     return Command::none();
                 };
-                println!("Aggiorno screen");
+                //println!("Aggiorno screen");
                 match &self.controller {
                     Controller::ReceiverController(controller) => {
                         let frame = {
@@ -941,7 +943,7 @@ impl Application for App {
         let mut subscriptions =
             vec![];
         if !self.annotationTools.show_color_picker{
-            println!("entro??");
+            //println!("entro??");
             subscriptions.push(time::every(Duration::from_millis(10)).map(|_| Message::UpdateScreen))
         }
         // Add `WindowPartScreen`'s subscription only if on `Page::WindowPartScreen`

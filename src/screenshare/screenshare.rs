@@ -16,6 +16,7 @@ use std::ptr;
 use std::ptr;
 #[cfg(target_os = "linux")]
 use std::slice;
+#[cfg(target_os = "macos")]
 use core_graphics::display::CGDisplay;
 #[cfg(target_os = "windows")]
 use winapi::shared::windef::HBITMAP;
