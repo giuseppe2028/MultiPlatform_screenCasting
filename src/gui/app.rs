@@ -268,12 +268,12 @@ impl Application for App {
                         min_size: None,
                         max_size: None,
                         visible: true,
-                        resizable: true,
+                        resizable: false,
                         decorations: true,
                         transparent: true,
                         level: Level::default(),
                         icon: None,
-                        exit_on_close_request: true,
+                        exit_on_close_request: false,
                         platform_specific: PlatformSpecific::default(),
                     });
                     self.third_window_id = Some(window_id);
