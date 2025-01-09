@@ -1,9 +1,14 @@
+use futures::future;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{net::IpAddr, sync::Arc};
 use std::collections::HashMap;
-use tokio::{net::UdpSocket, sync::{watch, RwLock}};
-use xcap::image::RgbaImage;
+use std::{net::IpAddr, sync::Arc};
 use thiserror::Error;
+use tokio::{
+    net::UdpSocket,
+    sync::{watch, RwLock},
+};
+use xcap::image::RgbaImage;
 
 const MTU: usize = 1500; // Dimensione massima del pacchetto
 const UDP_HEADER_SIZE: usize = 8; // Dimensione dell'header UDP
@@ -17,7 +22,6 @@ pub struct SerializableImage {
     data: Vec<u8>,
 }
 impl SerializableImage {
-  
     pub fn width(&self) -> u32 {
         self.width
     }
@@ -33,17 +37,15 @@ impl SerializableImage {
 
 #[derive(Clone, Debug)]
 pub struct CasterSocket {
-//    ip_addr: String,
+    //    ip_addr: String,
     socket: Arc<Option<UdpSocket>>,
     receiver_sockets: Arc<RwLock<Vec<String>>>,
     termination_tx: watch::Sender<bool>, // Mittente del segnale di terminazione
     termination_rx: watch::Receiver<bool>, // Ricevitore del segnale di terminazione
     notification_tx: watch::Sender<usize>, // Canale per notifiche
-
 }
 
 impl CasterSocket {
-
     pub async fn new(ip_addr: &str, notification_tx: watch::Sender<usize>) -> Self {
         let socket = UdpSocket::bind(ip_addr).await.unwrap();
         let receiver_sockets = Arc::new(RwLock::new(vec![]));
@@ -51,10 +53,9 @@ impl CasterSocket {
 
         let (termination_tx, termination_rx) = watch::channel(false); // Canale per terminazione
 
-
         let instance = CasterSocket {
             receiver_sockets,
-            //ip_addr: ip_addr.to_string(), SERVE DAVVERO?? 
+            //ip_addr: ip_addr.to_string(), SERVE DAVVERO??
             socket: socket_clone,
             termination_tx,
             termination_rx,
@@ -75,7 +76,8 @@ impl CasterSocket {
     }
 
     pub async fn send_to_receivers(&self, frame: RgbaImage) {
-        if let Some(socket) = self.socket.as_ref() {
+        let socket = self.socket.clone();
+        {
             let serializable_image = SerializableImage {
                 width: frame.width(),
                 height: frame.height(),
@@ -85,30 +87,47 @@ impl CasterSocket {
             let serialized = bincode::serialize(&serializable_image).unwrap();
             let total_packets = (serialized.len() + MAX_PAYLOAD - 8 - 1) / (MAX_PAYLOAD - 8);
 
-            // Usa una read-lock per accedere ai destinatari
-            let receivers = self.receiver_sockets.read().await;
+            // Usa un read-lock per accedere ai destinatari e crea una lista clonabile
+            let receivers = {
+                let lock = self.receiver_sockets.read().await;
+                lock.clone() // Clona la lista dei destinatari
+            };
 
-            for address in &*receivers {
-                for i in 0..total_packets {
-                    let start = i * (MAX_PAYLOAD - 8);
-                    let end = ((i + 1) * (MAX_PAYLOAD - 8)).min(serialized.len());
-                    let chunk = &serialized[start..end];
+            let serialized_arc = Arc::new(serialized); // Condividi i dati serializzati in modo thread-safe
 
-                    let mut packet = Vec::with_capacity(MAX_PAYLOAD);
-                    packet.extend(&(i as u32).to_be_bytes()); // Numero del pacchetto
-                    packet.extend(&(total_packets as u32).to_be_bytes()); // Numero totale di pacchetti
-                    packet.extend(chunk); // Dati del pacchetto
+            // Colleziona tutti i task
+            let tasks: Vec<_> = receivers
+                .into_par_iter()
+                .map(|address| {
+                    let socket = Arc::clone(&socket);
+                    let serialized_ref = Arc::clone(&serialized_arc);
 
-                    if let Err(e) = socket.send_to(&packet, address).await {
-                        eprintln!(
-                            "Errore durante l'invio del pacchetto {} a {}: {}",
-                            i, address, e
-                        );
-                    }
-                }
-            }
-        } else {
-            eprintln!("Socket non inizializzato o distrutto.");
+                    tokio::spawn(async move {
+                        for i in 0..total_packets {
+                            let start = i * (MAX_PAYLOAD - 8);
+                            let end = ((i + 1) * (MAX_PAYLOAD - 8)).min(serialized_ref.len());
+                            let chunk = &serialized_ref[start..end];
+
+                            let mut packet = Vec::with_capacity(MAX_PAYLOAD);
+                            packet.extend(&(i as u32).to_be_bytes()); // Numero del pacchetto
+                            packet.extend(&(total_packets as u32).to_be_bytes()); // Numero totale di pacchetti
+                            packet.extend(chunk); // Dati del pacchetto
+
+                            if let Some(sock_ref) = socket.as_ref() {
+                                if let Err(e) = sock_ref.send_to(&packet, &address).await {
+                                    eprintln!(
+                                        "Errore durante l'invio del pacchetto {} a {}: {}",
+                                        i, address, e
+                                    );
+                                }
+                            }
+                        }
+                    })
+                })
+                .collect();
+
+            // Aspetta che tutti i task siano completati
+            future::join_all(tasks).await;
         }
     }
 
@@ -166,7 +185,6 @@ impl CasterSocket {
         }
     }
 
-
     pub fn destroy(&mut self) {
         let _ = self.termination_tx.send(true); // Segnala al task di terminare
         self.socket = Arc::new(None);
@@ -203,7 +221,6 @@ pub enum RegistrationError {
     UnknownError(String),
 }
 
-
 #[derive(Clone, Debug)]
 pub struct ReceiverSocket {
     ip_addr_caster: String,
@@ -220,49 +237,83 @@ impl ReceiverSocket {
             socket: Arc::new(Some(socket)),
         }
     }
-
     pub async fn receive_from(
         &self,
     ) -> Result<SerializableImage, Box<dyn std::error::Error + Send + Sync>> {
-        if let Some(socket) = self.socket.as_ref() {
-            let mut buf = vec![0u8; MAX_PAYLOAD];
-            let mut received_packets = HashMap::new();
-            let mut total_packets = None;
-
-            while total_packets.map_or(true, |total| received_packets.len() < total as usize) {
-                let received_bytes = socket.recv(&mut buf).await?;
-                let packet_num = u32::from_be_bytes(buf[0..4].try_into()?);
-                let total = u32::from_be_bytes(buf[4..8].try_into()?);
-
-                if total_packets.is_none() {
-                    total_packets = Some(total);
-                }
-
-                received_packets.insert(packet_num, buf[8..received_bytes].to_vec());
+        if let socket = self.socket.clone() {
+            let buf = vec![0u8; MAX_PAYLOAD];
+            let received_packets = Arc::new(std::sync::Mutex::new(HashMap::new()));
+            let total_packets = Arc::new(tokio::sync::Mutex::new(None));
+    
+            // Phase 1: Receive packets
+            while total_packets
+                .lock()
+                .await
+                .map_or(true, |total| received_packets.lock().unwrap().len() < total as usize)
+            {
+                let mut buf_clone = buf.clone();
+                let socket_clone = socket.clone();
+                let received_packets_clone = Arc::clone(&received_packets);
+                let total_packets_clone = Arc::clone(&total_packets);
+    
+                tokio::spawn(async move {
+                    let binding = socket_clone.as_ref().as_ref();
+                    if let Ok(received_bytes) = binding.unwrap().recv(&mut buf_clone).await {
+                        let packet_num = u32::from_be_bytes(buf_clone[0..4].try_into().unwrap());
+                        let total = u32::from_be_bytes(buf_clone[4..8].try_into().unwrap());
+    
+                        {
+                            let mut total_packets_guard = total_packets_clone.lock().await;
+                            if total_packets_guard.is_none() {
+                                *total_packets_guard = Some(total);
+                            }
+                        }
+    
+                        let mut packets_guard = received_packets_clone.lock().unwrap();
+                        packets_guard.insert(packet_num, buf_clone[8..received_bytes].to_vec());
+                    }
+                })
+                .await?; // Await the spawned task to ensure proper error propagation
             }
-
-            let mut compressed_data = Vec::new();
-            for i in 0..total_packets.unwrap() {
-                compressed_data.extend(received_packets.remove(&i).unwrap());
+    
+            // Phase 2: Reconstruct ordered packet list
+            let total = total_packets.lock().await.unwrap_or(0);
+            if total == 0 {
+                return Err("Failed to determine the total number of packets.".into());
             }
-
-            let deserialized_image: SerializableImage = bincode::deserialize(&compressed_data)?;
-
+    
+            let packets = received_packets.lock().unwrap();
+            let ordered_packets: Vec<Vec<u8>> = (0..total)
+                .map(|i| {
+                    packets
+                        .get(&i)
+                        .cloned()
+                        .unwrap_or_else(|| panic!("Missing packet: {}", i))
+                })
+                .collect();
+    
+            // Phase 3: Flatten and process data in parallel
+            let compressed_data: Vec<u8> = ordered_packets.into_par_iter().flatten().collect();
+    
+            // Phase 4: Deserialize compressed data
+            let deserialized_image: SerializableImage =
+                bincode::deserialize(&compressed_data).map_err(|e| {
+                    println!("Deserialization failed: {}", e);
+                    e
+                })?;
+    
             Ok(deserialized_image)
         } else {
-            Err("Socket non disponibile".into())
+            Err("Socket not available.".into())
         }
-    }
-
-    pub async fn register_with_caster(
-        &self,
-    ) -> Result<(), RegistrationError> {
+    }   
+    pub async fn register_with_caster(&self) -> Result<(), RegistrationError> {
         // Controlla se l'indirizzo IP del caster è valido
         let ip_parts: Vec<&str> = self.ip_addr_caster.split(':').collect();
         if ip_parts.len() != 2 {
             return Err(RegistrationError::InvalidIp);
         }
-    
+
         // Valida l'IP
         let ip = ip_parts[0].parse::<IpAddr>();
         if ip.is_err() {
@@ -278,32 +329,37 @@ impl ReceiverSocket {
         let ip_parts_receiver: Vec<&str> = self.ip_addr.split(':').collect();
         let ip_receiver = ip_parts_receiver[0].parse::<IpAddr>().unwrap();
         let port_receiver = ip_parts_receiver[1].parse::<u16>().unwrap();
-        println!("Receiver: {} {}", ip_receiver, port_receiver);
-        
-        // Crea il messaggio di registrazione
+        //println!("Receiver: {} {}", ip_receiver, port_receiver);
+      // Crea il messaggio di registrazione
         let message = RegistrationMessage {
             ip: ip_receiver.to_string(),
             port: port_receiver,
             action: Action::Register,
         };
-    
+
         let serialized = match bincode::serialize(&message) {
             Ok(data) => data,
-            Err(_) => return Err(RegistrationError::UnknownError("Serialization failed".into())),
+            Err(_) => {
+                return Err(RegistrationError::UnknownError(
+                    "Serialization failed".into(),
+                ))
+            }
         };
-    
+
         // Controlla se la socket è disponibile
         if let Some(socket) = self.socket.as_ref() {
             // Invia il messaggio di registrazione
             match socket.send_to(&serialized, &self.ip_addr_caster).await {
                 Ok(_) => Ok(()),
-                Err(e) => {
-                    match e.kind() {
-                        tokio::io::ErrorKind::ConnectionReset => Err(RegistrationError::ConnectionReset),
-                        tokio::io::ErrorKind::AddrNotAvailable => Err(RegistrationError::NetworkUnreachable),
-                        _ => Err(RegistrationError::UnknownError(e.to_string())),
+                Err(e) => match e.kind() {
+                    tokio::io::ErrorKind::ConnectionReset => {
+                        Err(RegistrationError::ConnectionReset)
                     }
-                }
+                    tokio::io::ErrorKind::AddrNotAvailable => {
+                        Err(RegistrationError::NetworkUnreachable)
+                    }
+                    _ => Err(RegistrationError::UnknownError(e.to_string())),
+                },
             }
         } else {
             Err(RegistrationError::SocketNotInitialized)

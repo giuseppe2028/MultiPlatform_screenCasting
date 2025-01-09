@@ -139,7 +139,6 @@ pub async fn start_screen_sharing(
             // Invia il frame ai socket dei peer
             let sock_lock = socket.lock().await;
             if let Some(sock) = sock_lock.as_ref() {
-                let sock_clone = sock.clone(); // Clone the Arc
 
                 if blanking_flag.load(Ordering::Relaxed) {
                     //frame nero
@@ -147,16 +146,12 @@ pub async fn start_screen_sharing(
                     let black_frame_data = vec![0u8; (width * height * 4) as usize]; // RGBA: 4 byte per pixel
                     if let Some(black_frame) = RgbaImage::from_raw(width, height, black_frame_data)
                     {
-                        tokio::spawn(async move {
-                            sock_clone.send_to_receivers(black_frame).await;
-                        });
+                        sock.send_to_receivers(black_frame).await;
                     } else {
                         eprintln!("Error creating black frame");
                     }
                 } else {
-                    tokio::spawn(async move {
-                        sock_clone.send_to_receivers(new_frame).await;
-                    });
+                        sock.send_to_receivers(new_frame).await;
                 }
             } else {
                 eprintln!("No CasterSocket available");
@@ -178,31 +173,36 @@ pub async fn start_screen_receiving(
         // non possiamo metterla four dal while perchè si bugga nela chiusura
         let sock_lock = socket.lock().await;
 
+        let start_time = tokio::time::Instant::now();
+
+        //iniziare un timer qui
         // Timeout di 1 secondo per la ricezione
         match timeout(Duration::from_secs(100), sock_lock.receive_from()).await {
             Ok(Ok(serialized_image)) => {
+                //stoppare il timer qui e stampare quanto tempo è passato
                 if let Some(image) = RgbaImage::from_raw(
                     serialized_image.width(),
                     serialized_image.height(),
                     serialized_image.data().to_vec(),
                 ) {
-                     println!(
+                    /*println!(
                         "Received a frame of size {}x{}",
                         image.width(),
                         image.height()
-                    );
+                    );*/
                     if let Err(send_err) = sender.send(image).await {
                         eprintln!("Error sending frame data: {:?}", send_err);
                     }
                 } else {
                     eprintln!("Error creating RgbaImage from received data");
                 }
+                let elapsed_time = start_time.elapsed();
+                println!("Ricezione completata in {} ms", elapsed_time.as_millis());
             }
             Ok(Err(e)) => {
                 eprintln!("Error receiving frame {}", e);
             }
             Err(_) => {
-               // println!("timeout");
                 // Timeout scaduto, controlla lo stop_flag
                 if stop_flag.load(Ordering::Relaxed) {
                     break;
@@ -322,7 +322,6 @@ pub async fn start_partial_sharing(
 
                     let sock_lock = socket.lock().await;
                     if let Some(sock) = sock_lock.as_ref() {
-                        let sock_clone = sock.clone(); // Clone the Arc
 
                         if blanking_flag.load(Ordering::Relaxed) {
                             //frame nero
@@ -331,16 +330,12 @@ pub async fn start_partial_sharing(
                             if let Some(black_frame) =
                                 RgbaImage::from_raw(width, height, black_frame_data)
                             {
-                                tokio::spawn(async move {
-                                    sock_clone.send_to_receivers(black_frame).await;
-                                });
+                                sock.send_to_receivers(black_frame).await;
                             } else {
                                 eprintln!("Error creating black frame");
                             }
                         } else {
-                            tokio::spawn(async move {
-                                sock_clone.send_to_receivers(new_frame).await;
-                            });
+                            sock.send_to_receivers(new_frame).await;
                         }
                     } else {
                         eprintln!("No CasterSocket available");

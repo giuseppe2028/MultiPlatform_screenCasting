@@ -11,7 +11,8 @@ mod socket;
 mod utils;
 mod model;
 
-#[tokio::main]
+
+#[tokio::main(flavor = "multi_thread", worker_threads = 8)] // 8 thread
 pub async fn main() -> iced::Result {
     App::run(Settings{
         id: None,
