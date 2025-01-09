@@ -385,7 +385,6 @@ impl CanvasWidget {
         match message {
             Message::PendingOne(Pending::One { from }) => {
                 self.start_point = from;
-                //println!("almento o qua");
             }
             Message::PendingTwo(Pending::Two { from, to }) => {
                 //println!("almento o qua1");

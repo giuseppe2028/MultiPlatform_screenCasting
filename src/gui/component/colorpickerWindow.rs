@@ -45,7 +45,8 @@ impl<'a> Component<'a> for ColorPickerWindow {
             app::Message::SubmitColor,
         );
         container(color_picker)
-            .into()    }
+            .into()
+    }
 
     fn subscription(&self) -> Subscription<Self::Message> {
         todo!()

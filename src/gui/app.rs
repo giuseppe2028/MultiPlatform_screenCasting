@@ -248,8 +248,6 @@ impl Application for App {
     }
 
     fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
-        println!("entro sempr");
-        println!("{:?}",message);
         match message {
             Message::CloseRequested => {
                // println!("Chiusa finestra secondaria");
@@ -292,7 +290,9 @@ impl Application for App {
             Message::SubmitColor(color) => {
                 self.color_picker_window.selected_color = color;
                 self.annotationTools.canvas_widget.selected_color = color;
-                close(self.third_window_id.unwrap())
+                let cl = close(self.third_window_id.unwrap());
+                self.third_window_id = None;
+                cl
             }
             Message::PendingTwo(pending) => {
                 if let Pending::Two { from: _, to } = pending {
@@ -592,7 +592,6 @@ impl Application for App {
                 if self.annotationTools.show_color_picker {
                     return Command::none();
                 };
-                println!("Aggiorno screen");
                 match &self.controller {
                     Controller::ReceiverController(controller) => {
                         let frame = {
@@ -898,7 +897,9 @@ impl Application for App {
                 Command::none()
             }
             Message::CancelColor => {
-                close(self.third_window_id.unwrap())
+                let cl = close(self.third_window_id.unwrap());
+                self.third_window_id = None;
+                cl
             }
             _ => Command::none(),
         }
@@ -941,7 +942,6 @@ impl Application for App {
         let mut subscriptions =
             vec![];
         if !self.annotationTools.show_color_picker{
-            println!("entro??");
             subscriptions.push(time::every(Duration::from_millis(10)).map(|_| Message::UpdateScreen))
         }
         // Add `WindowPartScreen`'s subscription only if on `Page::WindowPartScreen`
