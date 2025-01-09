@@ -2,6 +2,12 @@
 edition = "2021"
 name = "MultiPlatform_screenCasting"
 version = "0.1.0"
+description = "multiplatform screen casting application"
+
+[package.metadata.bundle]
+name = "MultiPlatform_screenCasting"
+identifier = "io.github.giuseppe2028.MultiPlatform_screenCasting"
+short_description = "multiplatform screen casting application"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
