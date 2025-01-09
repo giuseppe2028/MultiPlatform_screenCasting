@@ -361,12 +361,14 @@ impl Application for App {
                 //creo controller e socket insieme tanto il controller non mi serve prima per il receiver
                 if let Controller::NotDefined = &mut self.controller {
                     let sender = self.sender_receiver.clone();
+                    let mut rng = rand::thread_rng();
+                    let random_digit: u8 = rand::Rng::gen_range(&mut rng, 0..8);
                     Command::perform(
                         async move {
                             let receiver_ip = local_ip().unwrap();
                             //println!("{:?}", receiver_ip);
                             let socket = crate::socket::socket::ReceiverSocket::new(
-                                &format!("{}:7878", receiver_ip),
+                                &format!("{}:787{}", receiver_ip, random_digit),
                                 &format!("{}:7878", ip_caster),
                             )
                             .await;
@@ -897,9 +899,7 @@ impl Application for App {
                 Command::none()
             }
             Message::CancelColor => {
-                let cl = close(self.third_window_id.unwrap());
-                self.third_window_id = None;
-                cl
+                close(self.third_window_id.unwrap())
             }
             _ => Command::none(),
         }
@@ -942,6 +942,7 @@ impl Application for App {
         let mut subscriptions =
             vec![];
         if !self.annotationTools.show_color_picker{
+            println!("entro??");
             subscriptions.push(time::every(Duration::from_millis(10)).map(|_| Message::UpdateScreen))
         }
         // Add `WindowPartScreen`'s subscription only if on `Page::WindowPartScreen`
