@@ -77,58 +77,62 @@ impl CasterSocket {
 
     pub async fn send_to_receivers(&self, frame: RgbaImage) {
         let socket = self.socket.clone();
-        {
-            let serializable_image = SerializableImage {
-                width: frame.width(),
-                height: frame.height(),
-                data: frame.into_raw(),
-            };
-
-            let serialized = bincode::serialize(&serializable_image).unwrap();
-            let total_packets = (serialized.len() + MAX_PAYLOAD - 8 - 1) / (MAX_PAYLOAD - 8);
-
-            // Usa un read-lock per accedere ai destinatari e crea una lista clonabile
-            let receivers = {
-                let lock = self.receiver_sockets.read().await;
-                lock.clone() // Clona la lista dei destinatari
-            };
-
-            let serialized_arc = Arc::new(serialized); // Condividi i dati serializzati in modo thread-safe
-
-            // Colleziona tutti i task
-            let tasks: Vec<_> = receivers
-                .into_par_iter()
-                .map(|address| {
-                    let socket = Arc::clone(&socket);
-                    let serialized_ref = Arc::clone(&serialized_arc);
-
-                    tokio::spawn(async move {
-                        for i in 0..total_packets {
-                            let start = i * (MAX_PAYLOAD - 8);
-                            let end = ((i + 1) * (MAX_PAYLOAD - 8)).min(serialized_ref.len());
-                            let chunk = &serialized_ref[start..end];
-
-                            let mut packet = Vec::with_capacity(MAX_PAYLOAD);
-                            packet.extend(&(i as u32).to_be_bytes()); // Numero del pacchetto
-                            packet.extend(&(total_packets as u32).to_be_bytes()); // Numero totale di pacchetti
-                            packet.extend(chunk); // Dati del pacchetto
-
-                            if let Some(sock_ref) = socket.as_ref() {
-                                if let Err(e) = sock_ref.send_to(&packet, &address).await {
-                                    eprintln!(
-                                        "Errore durante l'invio del pacchetto {} a {}: {}",
-                                        i, address, e
-                                    );
-                                }
+        let serializable_image = SerializableImage {
+            width: frame.width(),
+            height: frame.height(),
+            data: frame.into_raw(),
+        };
+    
+        let serialized = bincode::serialize(&serializable_image).unwrap();
+        let total_packets = (serialized.len() + MAX_PAYLOAD - 8 - 1) / (MAX_PAYLOAD - 8);
+    
+        // Usa un read-lock per accedere ai destinatari e crea una lista clonabile
+        let receivers = {
+            let lock = self.receiver_sockets.read().await;
+            lock.clone() // Clona la lista dei destinatari
+        };
+    
+        let serialized_arc = Arc::new(serialized); // Condividi i dati serializzati in modo thread-safe
+    
+        // Colleziona tutti i task per inviare i pacchetti ai destinatari
+        let tasks: Vec<_> = receivers
+            .into_iter()
+            .map(|address| {
+                let socket = Arc::clone(&socket);
+                let serialized_ref = Arc::clone(&serialized_arc);
+    
+                // Mappa per inviare pacchetti
+                tokio::spawn(async move {
+                    let mut packet = Vec::with_capacity(MAX_PAYLOAD);
+    
+                    // Cicla su tutti i pacchetti da inviare
+                    for i in 0..total_packets {
+                        let start = i * (MAX_PAYLOAD - 8);
+                        let end = ((i + 1) * (MAX_PAYLOAD - 8)).min(serialized_ref.len());
+                        let chunk = &serialized_ref[start..end];
+    
+                        // Costruisci il pacchetto con il numero del pacchetto e i dati
+                        packet.clear(); // Pulisci il pacchetto per riutilizzarlo
+                        packet.extend(&(i as u32).to_be_bytes()); // Numero del pacchetto
+                        packet.extend(&(total_packets as u32).to_be_bytes()); // Numero totale di pacchetti
+                        packet.extend(chunk); // Dati del pacchetto
+    
+                        // Invia il pacchetto
+                        if let Some(sock_ref) = socket.as_ref() {
+                            if let Err(e) = sock_ref.send_to(&packet, &address).await {
+                                eprintln!(
+                                    "Errore durante l'invio del pacchetto {} a {}: {}",
+                                    i, address, e
+                                );
                             }
                         }
-                    })
+                    }
                 })
-                .collect();
-
-            // Aspetta che tutti i task siano completati
-            future::join_all(tasks).await;
-        }
+            })
+            .collect();
+    
+        // Aspetta che tutti i task siano completati
+        future::join_all(tasks).await;
     }
 
     pub async fn listen_for_registration_unregistration(
@@ -240,73 +244,63 @@ impl ReceiverSocket {
     pub async fn receive_from(
         &self,
     ) -> Result<SerializableImage, Box<dyn std::error::Error + Send + Sync>> {
-        if let socket = self.socket.clone() {
-            let buf = vec![0u8; MAX_PAYLOAD];
-            let received_packets = Arc::new(std::sync::Mutex::new(HashMap::new()));
-            let total_packets = Arc::new(tokio::sync::Mutex::new(None));
+        let socket = self.socket.clone();
+        let mut buf = vec![0u8; MAX_PAYLOAD];
+        let mut received_packets: HashMap<u32, Vec<u8>> = HashMap::new();
+        let mut total_packets: Option<u32> = None;
     
-            // Phase 1: Receive packets
-            while total_packets
-                .lock()
-                .await
-                .map_or(true, |total| received_packets.lock().unwrap().len() < total as usize)
-            {
-                let mut buf_clone = buf.clone();
-                let socket_clone = socket.clone();
-                let received_packets_clone = Arc::clone(&received_packets);
-                let total_packets_clone = Arc::clone(&total_packets);
+        // Buffer per accumulare i dati ricevuti
+        let mut all_data: Vec<u8> = Vec::new();
     
-                tokio::spawn(async move {
-                    let binding = socket_clone.as_ref().as_ref();
-                    if let Ok(received_bytes) = binding.unwrap().recv(&mut buf_clone).await {
-                        let packet_num = u32::from_be_bytes(buf_clone[0..4].try_into().unwrap());
-                        let total = u32::from_be_bytes(buf_clone[4..8].try_into().unwrap());
+        loop {
+            let (received_bytes, _) = socket
+                .as_ref()
+                .as_ref()
+                .unwrap()
+                .recv_from(&mut buf)
+                .await?;
     
-                        {
-                            let mut total_packets_guard = total_packets_clone.lock().await;
-                            if total_packets_guard.is_none() {
-                                *total_packets_guard = Some(total);
-                            }
-                        }
+            // Estrarre numero di pacchetto e totale
+            let packet_num = u32::from_be_bytes(buf[0..4].try_into().unwrap());
+            let total = u32::from_be_bytes(buf[4..8].try_into().unwrap());
     
-                        let mut packets_guard = received_packets_clone.lock().unwrap();
-                        packets_guard.insert(packet_num, buf_clone[8..received_bytes].to_vec());
-                    }
-                })
-                .await?; // Await the spawned task to ensure proper error propagation
+            // Impostare il totale solo una volta
+            if total_packets.is_none() {
+                total_packets = Some(total);
+                all_data.reserve((total as usize) * (MAX_PAYLOAD - 8)); // Prealloca spazio sufficiente
             }
     
-            // Phase 2: Reconstruct ordered packet list
-            let total = total_packets.lock().await.unwrap_or(0);
-            if total == 0 {
-                return Err("Failed to determine the total number of packets.".into());
+            // Salvare il pacchetto ricevuto
+            let packet_data = buf[8..received_bytes].to_vec();
+            received_packets.insert(packet_num, packet_data);
+    
+            // Verificare se tutti i pacchetti sono stati ricevuti
+            if let Some(total) = total_packets {
+                if received_packets.len() as u32 == total {
+                    break;
+                }
             }
-    
-            let packets = received_packets.lock().unwrap();
-            let ordered_packets: Vec<Vec<u8>> = (0..total)
-                .map(|i| {
-                    packets
-                        .get(&i)
-                        .cloned()
-                        .unwrap_or_else(|| panic!("Missing packet: {}", i))
-                })
-                .collect();
-    
-            // Phase 3: Flatten and process data in parallel
-            let compressed_data: Vec<u8> = ordered_packets.into_par_iter().flatten().collect();
-    
-            // Phase 4: Deserialize compressed data
-            let deserialized_image: SerializableImage =
-                bincode::deserialize(&compressed_data).map_err(|e| {
-                    println!("Deserialization failed: {}", e);
-                    e
-                })?;
-    
-            Ok(deserialized_image)
-        } else {
-            Err("Socket not available.".into())
         }
-    }   
+    
+        // Ricostruire i dati ordinati
+        let total = total_packets.ok_or("Total packets not determined.")?;
+        for i in 0..total {
+            let packet = received_packets
+                .remove(&i)
+                .ok_or_else(|| format!("Missing packet: {}", i))?;
+            all_data.extend(packet);
+        }
+    
+        // Deserializzazione dei dati compressi
+        let deserialized_image: SerializableImage =
+            bincode::deserialize(&all_data).map_err(|e| {
+                println!("Deserialization failed: {}", e);
+                e
+            })?;
+    
+        Ok(deserialized_image)
+    }
+
     pub async fn register_with_caster(&self) -> Result<(), RegistrationError> {
         // Controlla se l'indirizzo IP del caster è valido
         let ip_parts: Vec<&str> = self.ip_addr_caster.split(':').collect();
