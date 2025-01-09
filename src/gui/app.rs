@@ -1,4 +1,3 @@
-use std::cmp::PartialEq;
 use super::component::caster_streaming;
 use super::component::AnnotationToolsComponent::MessageAnnotation;
 use crate::controller::app_controller::AppController;
@@ -18,7 +17,9 @@ use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
 use crate::gui::component::{home, Component};
 use crate::gui::theme::widget::{Container, Element};
 use iced::multi_window::Application;
+use std::cmp::PartialEq;
 
+use crate::gui::component::colorpickerWindow::ColorPickerWindow;
 use crate::gui::component::Annotation::Square::{
     CanvasWidget, LineCanva, Pending, RectangleCanva, Shape, Status,
 };
@@ -35,6 +36,7 @@ use iced::widget::container::Appearance;
 use iced::window::settings::PlatformSpecific;
 use iced::window::{close, Level, Position};
 use iced::{executor, font, window, Border, Color, Command, Point, Size, Subscription};
+use local_ip_address::local_ip;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, RwLock};
 use tokio::sync::{
@@ -43,8 +45,6 @@ use tokio::sync::{
 };
 use xcap::image::RgbaImage;
 use xcap::Monitor;
-use local_ip_address::local_ip;
-use crate::gui::component::colorpickerWindow::ColorPickerWindow;
 
 pub struct App {
     current_page: Page,
@@ -64,7 +64,7 @@ pub struct App {
     second_window_id: Option<window::Id>,
     third_window_id: Option<window::Id>,
     annotationTools: AnnotationTools,
-    color_picker_window: ColorPickerWindow
+    color_picker_window: ColorPickerWindow,
 }
 
 enum Controller {
@@ -79,7 +79,7 @@ pub enum Modality {
     Full,
 }
 
-#[derive(Debug, Clone,PartialEq,Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Page {
     Home,
     Connection,
@@ -129,9 +129,9 @@ pub enum Message {
     TextCanvasChanged(String),
     SaveTextPosition(Point),
     SetColor,
-    CloseRequested
+    CloseRequested,
+    CloseRequestedColorPicker,
 }
-
 
 impl Application for App {
     type Executor = executor::Default;
@@ -147,8 +147,9 @@ impl Application for App {
         let shortcut_controller = ShortcutController::new_from_file();
         (
             Self {
-                color_picker_window:ColorPickerWindow{
-                    selected_color:Color::BLACK
+                color_picker_window: ColorPickerWindow {
+                    selected_color: Color::BLACK,
+                    window_id: None,
                 },
                 current_page: Page::Home,
                 home: Home {},
@@ -206,7 +207,7 @@ impl Application for App {
                 shortcut_controller,
                 notification_rx: None,
                 second_window_id: None,
-                third_window_id:None,
+                third_window_id: None,
                 annotationTools: AnnotationTools {
                     canvas_widget: CanvasWidget::new(),
                     set_selected_annotation: false,
@@ -214,7 +215,6 @@ impl Application for App {
                     selected_color: Color::from_rgba8(0, 0, 0, 1.0),
                     window_id: None,
                 },
-
             },
             Command::batch(vec![
                 font::load(include_bytes!("../../resources/home-icon.ttf").as_slice())
@@ -249,8 +249,16 @@ impl Application for App {
 
     fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
         match message {
+            Message::CloseRequestedColorPicker => {
+                println!("entro??");
+                let result = window::close::<Message>(self.third_window_id.unwrap()); // Chiude la finestra solo se valida
+                result.actions();
+                self.third_window_id = None;
+                self.annotationTools.show_color_picker = false;
+                Command::none()
+            }
             Message::CloseRequested => {
-               // println!("Chiusa finestra secondaria");
+                // println!("Chiusa finestra secondaria");
                 // Controllo se la finestra è valida prima di chiuderla
                 let result = window::close::<Message>(self.second_window_id.unwrap()); // Chiude la finestra solo se valida
                 result.actions();
@@ -261,7 +269,7 @@ impl Application for App {
             Message::SetColor => {
                 if self.third_window_id.is_some() {
                     Command::none()
-                }else{
+                } else {
                     let (window_id, command) = window::spawn::<Message>(window::Settings {
                         size: Size::new(600.0, 300.0),
                         position: Position::default(),
@@ -269,7 +277,7 @@ impl Application for App {
                         max_size: None,
                         visible: true,
                         resizable: false,
-                        decorations: true,
+                        decorations: false,
                         transparent: true,
                         level: Level::default(),
                         icon: None,
@@ -277,10 +285,10 @@ impl Application for App {
                         platform_specific: PlatformSpecific::default(),
                     });
                     self.third_window_id = Some(window_id);
+                    self.color_picker_window.window_id = Some(window_id);
                     self.annotationTools.show_color_picker = true;
                     command
                 }
-
             }
             Message::ChooseColor => {
                 self.annotationTools.show_color_picker = true;
@@ -503,54 +511,56 @@ impl Application for App {
                 }
             },
             Message::KeyShortcut(key_code) => {
-                if let Controller::CasterController(caster) = &mut self.controller {
-                    let key_code = from_key_to_string(key_code);
-                    if self.shortcut_screen.blancking_screen == key_code {
-                        self.caster_streaming.warning_message =
-                            !self.caster_streaming.warning_message;
-                        caster.blanking_streaming();
-                    } else if self.shortcut_screen.terminate_session == key_code {
-                        caster.close_streaming();
-                        self.current_page = Page::Home;
-                    } else if self.shortcut_screen.manage_transmission == key_code {
-                        if caster.is_just_stopped {
-                            match self.caster_streaming.modality {
-                                Modality::Partial(x, y, start_x, start_y) => {
-                                    let screen_scaled = get_screen_scaled(
-                                        x as f64,
-                                        y as f64,
-                                        (
-                                            caster.get_measures().0 as u64,
-                                            caster.get_measures().1 as u64,
-                                        ),
-                                    );
-                                    let start_screen_scaled = get_screen_scaled(
-                                        start_x,
-                                        start_y,
-                                        (
-                                            caster.get_measures().0 as u64,
-                                            caster.get_measures().1 as u64,
-                                        ),
-                                    );
-                                    caster.start_sharing_partial_sharing([
-                                        start_screen_scaled,
-                                        (screen_scaled),
-                                    ]);
+                if self.second_window_id.is_none() && self.third_window_id.is_none() {
+                    if let Controller::CasterController(caster) = &mut self.controller {
+                        let key_code = from_key_to_string(key_code);
+                        if self.shortcut_screen.blancking_screen == key_code {
+                            self.caster_streaming.warning_message =
+                                !self.caster_streaming.warning_message;
+                            caster.blanking_streaming();
+                        } else if self.shortcut_screen.terminate_session == key_code {
+                            caster.close_streaming();
+                            self.current_page = Page::Home;
+                        } else if self.shortcut_screen.manage_transmission == key_code {
+                            if caster.is_just_stopped {
+                                match self.caster_streaming.modality {
+                                    Modality::Partial(x, y, start_x, start_y) => {
+                                        let screen_scaled = get_screen_scaled(
+                                            x as f64,
+                                            y as f64,
+                                            (
+                                                caster.get_measures().0 as u64,
+                                                caster.get_measures().1 as u64,
+                                            ),
+                                        );
+                                        let start_screen_scaled = get_screen_scaled(
+                                            start_x,
+                                            start_y,
+                                            (
+                                                caster.get_measures().0 as u64,
+                                                caster.get_measures().1 as u64,
+                                            ),
+                                        );
+                                        caster.start_sharing_partial_sharing([
+                                            start_screen_scaled,
+                                            (screen_scaled),
+                                        ]);
+                                    }
+                                    Modality::Full => {
+                                        caster.start_sharing();
+                                    }
                                 }
-                                Modality::Full => {
-                                    caster.start_sharing();
-                                }
+                                self.caster_streaming.stop = false;
+                                caster.set_is_just_stopped(false);
+                            } else {
+                                caster.stop_streaming();
+                                self.caster_streaming.stop = true;
+                                caster.set_is_just_stopped(true);
                             }
-                            self.caster_streaming.stop = false;
-                            caster.set_is_just_stopped(false);
-                        } else {
-                            caster.stop_streaming();
-                            self.caster_streaming.stop = true;
-                            caster.set_is_just_stopped(true);
                         }
+                    } else {
+                        eprintln!("Dovrebbe essere impossibile arrivare qui SHORTCUT!!");
                     }
-                } else {
-                    eprintln!("Dovrebbe essere impossibile arrivare qui SHORTCUT!!");
                 }
                 Command::none()
             }
@@ -733,7 +743,7 @@ impl Application for App {
                                     caster.get_measures().1 as u64,
                                 ),
                             );
-                           /* println!(
+                            /* println!(
                                 "x: {} y: {} start_x: {} start_y: {}",
                                 x, y, screen_scaled.0, screen_scaled.1
                             );*/
@@ -823,7 +833,7 @@ impl Application for App {
             }
             Message::AddShape(shape) => {
                 self.annotationTools.canvas_widget.shapes.push(shape);
-               /*  println!(
+                /*  println!(
                     "SONO O NON SONO IN Add shape {:?}",
                     self.annotationTools.canvas_widget.shapes
                 );*/
@@ -840,7 +850,7 @@ impl Application for App {
                             Some(Shape::Line(LineCanva {
                                 starting_point: Default::default(),
                                 ending_point: Default::default(),
-                                color:Color::BLACK
+                                color: Color::BLACK,
                             }));
                         Command::none()
                     }
@@ -851,7 +861,7 @@ impl Application for App {
                                 startPoint: Default::default(),
                                 width: 0.0,
                                 height: 0.0,
-                                color:Color::BLACK
+                                color: Color::BLACK,
                             }));
                         Command::none()
                     }
@@ -875,8 +885,9 @@ impl Application for App {
                 Command::none()
             }
             Message::TextPressed(condition) => {
-                println!("{:?}",self.annotationTools.canvas_widget.selected_color);
-                self.annotationTools.canvas_widget.textSelected.color = self.annotationTools.canvas_widget.selected_color;
+                println!("{:?}", self.annotationTools.canvas_widget.selected_color);
+                self.annotationTools.canvas_widget.textSelected.color =
+                    self.annotationTools.canvas_widget.selected_color;
                 if !condition {
                     self.annotationTools
                         .canvas_widget
@@ -922,18 +933,14 @@ impl Application for App {
             }
         } else if Some(window_id) == self.second_window_id {
             match self.current_page {
-                Page::CasterStreaming => {
-                        self.annotationTools.view()
-                }
+                Page::CasterStreaming => self.annotationTools.view(),
                 _ => {
                     panic!("NON DOVREBBE MAI ENTRARE");
                 }
             }
         } else {
             match self.current_page {
-                Page::CasterStreaming => {
-                    self.color_picker_window.view()
-                }
+                Page::CasterStreaming => self.color_picker_window.view(),
                 _ => {
                     panic!("NON DOVREBBE MAI ENTRARE");
                 }
@@ -942,11 +949,11 @@ impl Application for App {
     }
     fn subscription(&self) -> Subscription<Self::Message> {
         // Always refresh the screen
-        let mut subscriptions =
-            vec![];
-        if !self.annotationTools.show_color_picker{
-            println!("entro??");
-            subscriptions.push(time::every(Duration::from_millis(10)).map(|_| Message::UpdateScreen))
+        let mut subscriptions = vec![];
+        if !self.annotationTools.show_color_picker {
+            //println!("entro??");
+            subscriptions
+                .push(time::every(Duration::from_millis(10)).map(|_| Message::UpdateScreen))
         }
         // Add `WindowPartScreen`'s subscription only if on `Page::WindowPartScreen`
         if let Page::WindowPartScreen = self.current_page {
@@ -963,8 +970,9 @@ impl Application for App {
                     .map(MessageUpdate::into),
             );
             subscriptions.push(
-                self.annotationTools.subscription()
-                .map(MessageAnnotation::into)
+                self.annotationTools
+                    .subscription()
+                    .map(MessageAnnotation::into),
             )
         }
 

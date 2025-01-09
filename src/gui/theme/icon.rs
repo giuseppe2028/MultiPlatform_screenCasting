@@ -24,7 +24,8 @@ pub enum Icon {
     Viewers,
     Line,
     Circle,
-    Minus
+    Minus,
+    Brush
 
 }
 
@@ -53,7 +54,8 @@ impl From<&Icon> for char {
             Icon::Viewers => '\u{F064}',
             Icon::Line => '\u{E80E}',
             Icon::Minus => '\u{E80F}',
-            Icon::Circle => '\u{F1DB}'
+            Icon::Circle => '\u{F1DB}',
+            Icon::Brush => '\u{F1FB}',
         }
     }
 }

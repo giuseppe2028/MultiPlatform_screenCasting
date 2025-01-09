@@ -3,33 +3,35 @@ use crate::gui::component::Component;
 use crate::gui::theme::widget::{Button, Canvas, Container, Element, Text};
 use iced::{event, Color, Command, Event, Length, Point, Subscription};
 use iced::widget::container;
+use iced::advanced::graphics::core::window;
 use iced_aw::color_picker;
 use crate::column_iced;
 
 pub struct ColorPickerWindow {
-    pub(crate) selected_color:Color
+    pub(crate) selected_color:Color,
+    pub window_id:Option<window::Id> 
 }
 
 #[derive(Debug, Clone)]
-pub enum MessageAnnotation {
+pub enum MessageColorPicker {
     CloseRequested,
 }
 
-impl From<MessageAnnotation> for app::Message {
-    fn from(message: MessageAnnotation) -> Self {
+impl From<MessageColorPicker> for app::Message {
+    fn from(message: MessageColorPicker) -> Self {
         match message {
-            _ => app::Message::CloseRequested,
+            _ => app::Message::CloseRequestedColorPicker,
         }
     }
 }
 
 impl<'a> Component<'a> for ColorPickerWindow {
-    type Message = MessageAnnotation;
+    type Message = MessageColorPicker;
 
     fn update(&mut self, message: Self::Message) -> iced::Command<app::Message> {
         match message {
-            MessageAnnotation::CloseRequested => {
-                app::Message::CloseRequested;
+            MessageColorPicker::CloseRequested => {
+                app::Message::CloseRequestedColorPicker;
                 Command::none()
             },
         }
@@ -49,6 +51,16 @@ impl<'a> Component<'a> for ColorPickerWindow {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        todo!()
-    }
+        if let Some(_) = self.window_id {
+             event::listen_with(|event, _status| match event {
+                 Event::Window(_id, window::Event::Closed) => {
+                    println!("t;rigger");
+                    Some(MessageColorPicker::CloseRequested)
+                 },
+                 _ => None,
+             })
+         } else {
+             Subscription::none()
+         }
+     }
 }

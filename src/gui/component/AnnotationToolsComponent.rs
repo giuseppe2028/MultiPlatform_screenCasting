@@ -77,9 +77,9 @@ impl<'a> Component<'a> for AnnotationTools {
         } else {
             annotation_buttons = container(
                 column_iced![
-                         CircleButton::new("")
+                         CircleButton::new("Color picker")
                         .style(BT::Primary)
-                        .icon(crate::gui::theme::icon::Icon::Rubber)
+                        .icon(crate::gui::theme::icon::Icon::Brush)
                         .build(30)
                         .padding(8)
                         .on_press(app::Message::SetColor),
