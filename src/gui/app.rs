@@ -899,7 +899,10 @@ impl Application for App {
                 Command::none()
             }
             Message::CancelColor => {
-                close(self.third_window_id.unwrap())
+                let cl = close(self.third_window_id.unwrap());
+                self.third_window_id = None;
+                cl
+
             }
             _ => Command::none(),
         }
