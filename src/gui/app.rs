@@ -301,6 +301,7 @@ impl Application for App {
                 self.annotationTools.canvas_widget.selected_color = color;
                 let cl = close(self.third_window_id.unwrap());
                 self.third_window_id = None;
+                self.annotationTools.show_color_picker = false;
                 cl
             }
             Message::PendingTwo(pending) => {
@@ -602,9 +603,6 @@ impl Application for App {
                 Command::none()
             }
             Message::UpdateScreen => {
-                if self.annotationTools.show_color_picker {
-                    return Command::none();
-                };
                 match &self.controller {
                     Controller::ReceiverController(controller) => {
                         let frame = {
@@ -913,6 +911,7 @@ impl Application for App {
             Message::CancelColor => {
                 let cl = close(self.third_window_id.unwrap());
                 self.third_window_id = None;
+                self.annotationTools.show_color_picker = false;
                 cl
 
             }
