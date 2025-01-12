@@ -4,7 +4,7 @@ use rand::{thread_rng, Rng};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::thread;
+use std::{fs, thread};
 use tokio::runtime::Runtime;
 use tokio::sync::{mpsc::Sender, Mutex};
 use tokio::task;
@@ -108,8 +108,15 @@ impl ReceiverController {
             let _ = thread::spawn(move || {
                 let mut counter_guard = counter.blocking_lock(); // Clona il contatore
                 *counter_guard += 1;
-                let path = format!("./target/monitors/monitors-{}.png", *counter_guard);
-                if let Err(e) = image.save(&path) {
+                let folder_path = "./target/monitors";
+                let file_path = format!("{}/monitors-{}.png", folder_path, *counter_guard);
+                // Crea la directory se non esiste
+                if let Err(e) = fs::create_dir_all(folder_path) {
+                    eprintln!("Error creating directory {}: {}", folder_path, e);
+                    return;
+                }
+
+                if let Err(e) = image.save(&file_path) {
                     eprintln!("Error saving image: {}", e);
                 } else {
                     //println!("Image saved to {}", path);
