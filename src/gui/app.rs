@@ -15,7 +15,7 @@ use crate::gui::component::receiver_streaming::{ReceiverStreaming, UpdateMessage
 use crate::gui::component::shorcut::{Shortcut, ShortcutMessage, Shortcuts};
 use crate::gui::component::window_part_screen::{MessagePress, WindowPartScreen};
 use crate::gui::component::{home, Component};
-use crate::gui::theme::widget::{Container, Element};
+use crate::gui::theme::widget::Element;
 use iced::multi_window::Application;
 use std::cmp::PartialEq;
 
@@ -185,6 +185,7 @@ impl Application for App {
                     cursor_position: (0.0, 0.0),
                     screen_dimension: (0.0, 0.0),
                     measures: (0, 0),
+                    draw_rectangle: false,
                 },
                 controller: Controller::NotDefined,
                 sender_caster,
@@ -433,7 +434,7 @@ impl Application for App {
                     Page::ReceiverStreaming => Page::Home,
                     Page::CasterSettings => Page::Home,
                     Page::CasterStreaming => Page::Home,
-                    Page::WindowPartScreen => Page::Home,
+                    Page::WindowPartScreen => Page::CasterSettings,
                     Page::Shortcut => Page::Home,
                 };
                 Command::none()
@@ -885,7 +886,7 @@ impl Application for App {
                 Command::none()
             }
             Message::TextPressed(condition) => {
-                println!("{:?}", self.annotationTools.canvas_widget.selected_color);
+                //println!("{:?}", self.annotationTools.canvas_widget.selected_color);
                 self.annotationTools.canvas_widget.textSelected.color =
                     self.annotationTools.canvas_widget.selected_color;
                 if !condition {
@@ -947,13 +948,14 @@ impl Application for App {
             }
         }
     }
+
     fn subscription(&self) -> Subscription<Self::Message> {
         // Always refresh the screen
         let mut subscriptions = vec![];
         if !self.annotationTools.show_color_picker {
             //println!("entro??");
             subscriptions
-                .push(time::every(Duration::from_millis(10)).map(|_| Message::UpdateScreen))
+                .push(time::every(Duration::from_millis(50)).map(|_| Message::UpdateScreen))
         }
         // Add `WindowPartScreen`'s subscription only if on `Page::WindowPartScreen`
         if let Page::WindowPartScreen = self.current_page {

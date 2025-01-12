@@ -256,7 +256,7 @@ pub async fn start_partial_sharing(
                             }
                         }
                         else {
-                            println!("finita");
+                            //println!("finita");
                         }
                     }
                 }

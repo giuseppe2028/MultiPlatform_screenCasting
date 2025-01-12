@@ -149,7 +149,7 @@ impl<'a> Component<'a> for CasterStreaming {
                     .style(Style::Secondary)
                     .icon(crate::gui::theme::icon::Icon::Viewers)
                     .build()
-                    .padding(8)
+                    .padding(12)
                     //.on_press(app::Message::Back(app::Page::CasterStreaming)),
             ]
             .align_items(iced::Alignment::Center)
@@ -177,7 +177,7 @@ impl<'a> Component<'a> for CasterStreaming {
                     .style(Style::Secondary)
                     .icon(crate::gui::theme::icon::Icon::Viewers)
                     .build()
-                    .padding(8),
+                    .padding(12),
             ]
             .align_items(iced::Alignment::Center)
             .padding(8)
