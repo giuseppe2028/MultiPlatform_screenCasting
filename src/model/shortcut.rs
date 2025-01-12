@@ -4,7 +4,11 @@ use serde_json;
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::error::Error;
+use std::fs;
 use std::io::Write;
+use std::path::Path;
+use serde_json::json;
+
 #[derive(Debug)]
 pub struct ShortcutController {
     manage_trasmition: Key,
@@ -15,7 +19,30 @@ pub struct ShortcutController {
 impl ShortcutController {
     pub fn new_from_file() -> Self {
         let path = "src/model/test_shortcuts.json";
+        // Valori di default specificati
+        let default_data = json!({
+        "terminate_session": "C",
+        "blanking_screen": "B",
+        "manage_trasmition": "A"
+    });
 
+        // Verifica se il file esiste
+        if !Path::new(path).exists() {
+            eprintln!("File JSON non trovato. Creazione di un file con valori di default.");
+
+            // Crea il file con valori di default
+            // Crea le directory mancanti
+            if let Some(parent) = Path::new(path).parent() {
+                if let Err(err) = fs::create_dir_all(parent) {
+                    eprintln!("Errore durante la creazione delle directory: {}", err);
+                }
+            }
+
+            // Scrivi il file con valori di default
+            if let Err(err) = fs::write(path, default_data.to_string()) {
+                eprintln!("Errore durante la creazione del file JSON: {}", err);
+            }
+        }
         // Prova ad aprire il file
         let file = File::open(path);
         //println!("result {:?}",file);

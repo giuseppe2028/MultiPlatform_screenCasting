@@ -1,5 +1,1 @@
-{
-  "terminate_session": "P",
-  "manage_trasmition": "H",
-  "blanking_screen": "N"
-}
+{"blanking_screen":"B","manage_trasmition":"A","terminate_session":"C"}
