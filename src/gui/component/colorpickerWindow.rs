@@ -1,11 +1,10 @@
 use crate::gui::app;
 use crate::gui::component::Component;
-use crate::gui::theme::widget::{Button, Canvas, Container, Element, Text};
-use iced::{event, Color, Command, Event, Length, Point, Subscription};
+use crate::gui::theme::widget::{Button, Element, Text};
+use iced::{event, Color, Command, Event, Subscription};
 use iced::widget::container;
 use iced::advanced::graphics::core::window;
 use iced_aw::color_picker;
-use crate::column_iced;
 
 pub struct ColorPickerWindow {
     pub(crate) selected_color:Color,

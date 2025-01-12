@@ -1,7 +1,6 @@
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{container, pick_list, row};
-use iced::{Color, Command, Length::Fill, Subscription};
-use iced_aw::color_picker;
+use iced::{Command, Length::Fill, Subscription};
 use xcap::Monitor;
 use crate::column_iced;
 use crate::gui::component::Component;
@@ -9,7 +8,7 @@ use crate::gui::theme::button::circle_button::CircleButton;
 use crate::gui::theme::button::RectangleButton;
 use crate::gui::theme::button::Style;
 use crate::gui::theme::icon::Icon;
-use crate::gui::theme::widget::{Button, Element, Text};
+use crate::gui::theme::widget::Element;
 use crate::gui::{app, resource};
 
 pub struct CasterSettings {

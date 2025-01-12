@@ -1,16 +1,12 @@
-use futures::pending;
-use iced::{Length, mouse, Pixels, Point, Size};
-use iced::widget::{canvas};
+use iced::{mouse, Pixels, Point, Size};
+use iced::widget::canvas;
 use iced::{Color, Rectangle, Renderer};
 use iced::mouse::Cursor;
 
-use iced::widget::canvas::{Cache, Frame, Geometry, Path, Program, Stroke, Style, Text};
-use iced::widget::canvas::path::lyon_path::geom::size;
+use iced::widget::canvas::{Cache, Frame, Geometry, Path, Stroke, Style, Text};
 use crate::gui::app::Message;
 use crate::gui::theme::Theme;
-use crate::gui::theme::widget::Canvas;
 use iced::widget::canvas::event::{Event,self};
-use url::Position;
 // First, we define the data we need for drawing
 
 #[derive(Debug)]
@@ -94,8 +90,9 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
         bounds: Rectangle,
         cursor: Cursor,
     ) -> Vec<canvas::Geometry> {
+        let _ = theme;
         let content = self.cache.draw(renderer, bounds.size(), |frame: &mut Frame| {
-            println!("{:?}",self.selected_color);
+            //println!("{:?}",self.selected_color);
             frame.stroke(
                 &Path::rectangle(Point::ORIGIN, frame.size()),
                 Stroke::default().with_width(3.0),
@@ -165,7 +162,7 @@ impl canvas::Program<Message,Theme> for CanvasWidget{
                         );
 
                         // Crea il percorso della freccia
-                        let mut arrow_path = Path::new(|builder| {
+                        let arrow_path = Path::new(|builder| {
                             // Linea principale
                             builder.move_to(starting_point);
                             builder.line_to(ending_point);
@@ -404,7 +401,7 @@ impl CanvasWidget {
                 self.shapes.push(shape);
                 self.cache.clear(); // Forza il ridisegno
             },
-            Message::SaveTextPosition(cord)=>{
+            Message::SaveTextPosition(_cord)=>{
                 //println!("almento qua");
             }
             Message::ClearShape => {
@@ -468,7 +465,7 @@ impl Pending {
 
                     Curve::draw_all(&[curve], &mut frame);
                 }
-                Pending::None{position} => {}
+                Pending::None{position: _} => {}
             };
         }
 
