@@ -9,11 +9,10 @@ use crate::gui::theme::button::{MyButton, Style as BT};
 use crate::gui::theme::container::Style;
 use crate::gui::theme::text::text;
 use crate::gui::theme::textinput::textinput;
-use crate::gui::theme::widget::{Button, Canvas, Element, Text};
+use crate::gui::theme::widget::{Canvas, Element};
 use iced::advanced::graphics::core::window;
 use iced::widget::{container, row, Container as CT};
 use iced::{event, Color, Command, Event, Length, Point, Subscription};
-use iced_aw::color_picker;
 
 pub struct AnnotationTools {
     pub canvas_widget: CanvasWidget,
