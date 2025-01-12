@@ -980,6 +980,7 @@ impl Application for App {
         Subscription::batch(subscriptions)
     }
 }
+
 struct TransparentStyle;
 
 impl container::StyleSheet for TransparentStyle {
