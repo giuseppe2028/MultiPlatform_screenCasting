@@ -4,7 +4,7 @@ use rand::{thread_rng, Rng};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::{fs, thread};
+use std::{env, fs, thread};
 use tokio::runtime::Runtime;
 use tokio::sync::{mpsc::Sender, Mutex};
 use tokio::task;
@@ -115,6 +115,17 @@ impl ReceiverController {
                     eprintln!("Error creating directory {}: {}", folder_path, e);
                     return;
                 }
+/*Per debug*/
+                match env::current_dir() {
+                    Ok(current_path) => {
+                        println!("Current working directory: {}", current_path.display());
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to get current directory: {}", e);
+                        return;
+                    }
+                }
+
 
                 if let Err(e) = image.save(&file_path) {
                     eprintln!("Error saving image: {}", e);
