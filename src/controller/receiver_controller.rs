@@ -141,6 +141,9 @@ impl ReceiverController {
         if self.is_recording.load(Ordering::Relaxed) {
             let actual_fps = "8"; // Sostituisci con il frame rate effettivo
             let input_pattern = "monitors-%d.png";
+            let counter = Arc::clone(&self.counter);
+            let mut counter_guard = counter.blocking_lock(); // Clona il contatore
+                *counter_guard =0;
             let output_file = Self::generate_random_filename();
             let working_dir = "./target/monitors"; // Specifica la directory di lavoro corretta
 
