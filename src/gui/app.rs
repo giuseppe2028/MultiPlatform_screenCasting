@@ -251,7 +251,7 @@ impl Application for App {
     fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
         match message {
             Message::CloseRequestedColorPicker => {
-                println!("entro??");
+                //println!("entro??");
                 let result = window::close::<Message>(self.third_window_id.unwrap()); // Chiude la finestra solo se valida
                 result.actions();
                 self.third_window_id = None;
@@ -368,8 +368,10 @@ impl Application for App {
                 )
             }
             Message::ReceiverSharing(ip_caster) => {
+                //println!("bottone cliccato 1");
                 //creo controller e socket insieme tanto il controller non mi serve prima per il receiver
                 if let Controller::NotDefined = &mut self.controller {
+                    //println!("bottone cliccato 2");
                     let sender = self.sender_receiver.clone();
                     let mut rng = rand::thread_rng();
                     let random_digit: u8 = rand::Rng::gen_range(&mut rng, 0..8);
@@ -383,18 +385,22 @@ impl Application for App {
                             )
                             .await;
                             let page = Page::ReceiverStreaming;
+                            //println!("NAMO");
                             (socket, sender, page)
                         },
                         move |(socket, sender, page)| {
                             // Once the operation is complete, send a "ControllerCreated" message
                             //self.controller = caster_controller;
+                            //println!("NAMO 2");
                             Message::ReceiverControllerCreated(socket, sender, page)
                         },
                     )
                 } else {
                     if let Controller::ReceiverController(receiver) = &mut self.controller {
+                        //println!("bottone cliccato 2");
                         match receiver.register() {
                             Ok(_) => {
+                                //println!("cambio pagina");
                                 self.current_page = Page::ReceiverStreaming;
                                 receiver.start_receiving();
                             }
@@ -432,11 +438,23 @@ impl Application for App {
                         self.receiver_ip.message = "".to_string();
                         Page::Home
                     }
-                    Page::ReceiverStreaming => Page::Home,
-                    Page::CasterSettings => Page::Home,
-                    Page::CasterStreaming => Page::Home,
+                    Page::ReceiverStreaming => {
+                        self.controller = Controller::NotDefined;
+                        Page::Home
+                    },
+                    Page::CasterSettings =>{ 
+                        self.controller = Controller::NotDefined;
+                        Page::Home
+                    }
+                    Page::CasterStreaming => {
+                        self.controller = Controller::NotDefined;
+                        Page::Home
+                    }
                     Page::WindowPartScreen => Page::CasterSettings,
-                    Page::Shortcut => Page::Home,
+                    Page::Shortcut => {
+                        self.controller = Controller::NotDefined;
+                        Page::Home
+                    }
                 };
                 Command::none()
             }
